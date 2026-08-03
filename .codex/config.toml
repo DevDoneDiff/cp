@@ -1,0 +1,11 @@
+# Project-scoped Codex execution baseline.
+# Provider, model, authentication, and secrets remain machine-local.
+
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+sandbox_mode = "workspace-write"
+
+model_reasoning_summary = "detailed"
+model_verbosity = "medium"
+[sandbox_workspace_write]
+network_access = true

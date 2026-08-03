@@ -1,0 +1,93 @@
+# Agent working state, ephemeral and never committed
+.harness/work/
+
+# Unapproved visual exploration
+references/_working/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.secret
+*.secrets
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Operating system and editor state
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+*.iml
+.history/
+*.swp
+*.swo
+*~
+.vscode/*.local.json
+.vscode/settings.local.json
+
+# Logs, temporary files, and tool caches
+*.log
+logs/
+tmp/
+temp/
+.cache/
+.eslintcache
+.stylelintcache
+
+# JavaScript and TypeScript dependencies and package caches
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/install-state.gz
+.bun/
+
+# Generated application and framework output
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.turbo/
+.vite/
+.vercel/
+.netlify/
+.wrangler/
+*.tsbuildinfo
+
+# Test and coverage output
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+cypress/screenshots/
+cypress/videos/
+
+# Python artifacts if Python enters the stack
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local database state
+*.local.db
+*.local.sqlite
+*.local.sqlite3
+*.db-journal
+*.sqlite-journal
+
+# Keep lockfiles, committed examples, migrations, references, and CI configuration tracked.
