@@ -123,14 +123,18 @@ export function PreAccountRuntime({
       </header>
 
       <div className="s2-notice-region" aria-live="polite">
-        {snapshot.restore_status === "restored" ? (
-          <p className="s2-notice" role="status">
-            This project was restored from this browser session.
-          </p>
-        ) : null}
         {snapshot.error_code ? (
           <p className="s2-error" role="alert">
             {ERROR_COPY[snapshot.error_code]}
+          </p>
+        ) : assetFailed ? (
+          <p className="s2-error" role="status">
+            Seeded demo property image unavailable. Property identity and
+            details remain unchanged.
+          </p>
+        ) : snapshot.restore_status === "restored" ? (
+          <p className="s2-notice" role="status">
+            This project was restored from this browser session.
           </p>
         ) : null}
       </div>

@@ -630,6 +630,12 @@ test("a scene-asset failure keeps the same candidate, outline, source labels, co
       name: /property image unavailable.*identity is unchanged/i,
     }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({
+      hasText:
+        "Seeded demo property image unavailable. Property identity and details remain unchanged.",
+    }),
+  ).toBeVisible();
   await expect(page.getByText("Scene image unavailable")).toBeVisible();
   await expect(page.getByText("Demo property match")).toBeVisible();
   await expect(page.getByText("Modeled", { exact: true })).toBeVisible();

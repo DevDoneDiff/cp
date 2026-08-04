@@ -794,7 +794,7 @@ input:focus-visible,
   position: absolute;
   top: 12px;
   left: 50%;
-  max-width: min(520px, calc(100% - 56px));
+  max-width: min(380px, calc(100% - 56px));
   border-radius: 10px;
   margin: 0;
   padding: 10px 14px;

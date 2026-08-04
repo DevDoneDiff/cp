@@ -652,6 +652,15 @@ describe("S1 address-entry experience", () => {
         name: /property image unavailable.*identity is unchanged/i,
       }),
     ).toBeVisible();
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((status) =>
+          status.textContent?.includes(
+            "Seeded demo property image unavailable. Property identity and details remain unchanged.",
+          ),
+        ),
+    ).toBe(true);
     expect(screen.getByText("Scene image unavailable")).toBeVisible();
     expect(scene).toHaveAttribute(
       "data-property-id",
