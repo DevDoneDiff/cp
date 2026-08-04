@@ -1,6 +1,6 @@
 /**
  * MODULE: scripts/production-smoke.mjs
- * PURPOSE: Build once and prove the production root route starts, succeeds, and leaves no server process behind.
+ * PURPOSE: Build once and prove the semantic pre-account runtime route starts, succeeds, and leaves no server process behind.
  * PUBLIC API / ENTRYPOINTS:
  *   - CLI: performs the self-contained production smoke contract.
  * CONTROL_FLOW:
@@ -10,6 +10,7 @@
  * INVARIANTS:
  *   - [INV-SINGLE-BUILD] One invocation performs exactly one production build and preserves its .next output.
  *   - [INV-CLEAN-SHUTDOWN] Success and failure both wait until the spawned server exits.
+ *   - [INV-RUNTIME-READINESS-MARKER] Initial server HTML contains the stable product-runtime marker without waiting for hydration.
  * BOUNDARIES:
  *   - Playwright owns separate browser behavior proof and reuses this build output.
  * RELATED:
@@ -87,13 +88,14 @@ async function waitForRoot(url, child) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(1_000) });
       const body = await response.text();
+      // @ah INV-RUNTIME-READINESS-MARKER
       if (
         response.status === 200 &&
-        body.includes("Repository foundation ready")
+        body.includes('data-product-surface="s1-s2-pre-account-runtime"')
       ) {
         return;
       }
-      lastError = `received HTTP ${response.status} without the expected foundation content`;
+      lastError = `received HTTP ${response.status} without the expected runtime marker`;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
     }

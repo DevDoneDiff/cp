@@ -231,7 +231,7 @@ Bootstrap: false
 Source_spec: docs/specs/B-s1-s2-continuous-entry-and-property-analysis.md
 Priority: P1
 Depends_on: [T-0001]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
