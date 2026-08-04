@@ -29,7 +29,7 @@ No implementation task may become ready while required architecture within its s
 | Backend | Next.js server modules, route handlers, and job interfaces | Same release train | Avoid a separate service before scale requires it |
 | Database | Postgres on Neon | Managed stable service | Transactional authority after account claim |
 | ORM | Drizzle | Pin exact version | Typed schema and migrations |
-| Auth | OTP through an adapter | Provider selected during foundation | Product requires OTP without provider lock-in |
+| Auth | Clerk email OTP behind a project-owned port and adapter | SDK and exact integration deferred to the approved authentication spec | Custom product UI and replaceable provider boundary |
 | Payments | Stripe Checkout test mode + webhook | Current stable API version pinned in config | Canonical demo transaction |
 | Property | Address, imagery, and solar adapters with seeded fallback | Provider APIs versioned per adapter | Replaceable vendor boundary and demo reliability |
 | State | TypeScript state machine using discriminated unions and reducers | No workflow dependency | Explicit transitions without a generalized engine |
@@ -119,7 +119,9 @@ Rules:
 Assembly status uses Server-Sent Events with bounded polling fallback. Events carry project/session ID, version, stage, readiness, and object identifiers. Polling or transport choice cannot change domain state.
 
 ## Authentication and Authorization
-- Identity source: OTP account adapter at S4.
+- Identity source: Clerk email OTP through a project-owned auth port and adapter at S4; Clerk owns no project-domain or account-claim authority.
+- UI boundary: the application uses a custom authentication interface; Clerk's prebuilt interface is not product UI.
+- Foundation boundary: no Clerk SDK, credential, environment value, hosted resource, call, or runtime behavior exists until the later approved authentication spec.
 - Session model: anonymous browser-session project before claim; authenticated session after claim.
 - Authorization: project-scoped role and permission checks in application services.
 - Permission enforcement: server command boundary and provider disclosure adapter.
@@ -139,7 +141,7 @@ Assembly status uses Server-Sent Events with bounded polling fallback. Events ca
 |---|---|---|---|---|
 | Address/Maps adapter | normalize address and property candidate | address and location query | correction path and seeded demo fallback | debounce, cache permitted results |
 | Solar/property adapter | roof, imagery, solar model inputs | property location | labeled partial/unknown state and seeded fallback | adapter cache and request budget |
-| OTP provider | account claim | contact identifier and challenge | retry or blocked account gate | rate limit and abuse controls |
+| Clerk email OTP adapter | account claim | contact identifier and challenge | retry or blocked account gate through replaceable normalized errors | rate limit and abuse controls |
 | Stripe | test checkout and payment state | fee, project reference, customer session | authoritative failed/pending state | one checkout session per idempotency key |
 | Neon | durable project data after claim | canonical project entities | fail closed for durable mutation | managed limits and connection pooling |
 

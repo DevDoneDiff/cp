@@ -71,6 +71,8 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
+output/playwright/
+.playwright-cli/
 cypress/screenshots/
 cypress/videos/
 

@@ -1,0 +1,4 @@
+{
+  "modulePath": "src/example.ts",
+  "source": "/**\n * PURPOSE: Break the canonical field order.\n * MODULE: src/wrong.ts\n * INVARIANTS:\n *   - [INV-MISSING-MARKER] This declaration has no marker.\n * ACTIVE_TASK: [T-0001]\n */\nexport const example = \"invalid\";\n"
+}

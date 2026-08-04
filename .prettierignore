@@ -1,0 +1,11 @@
+.agents/
+.harness/
+.next/
+AGENTS.md
+coverage/
+docs/
+node_modules/
+playwright-report/
+pnpm-lock.yaml
+references/
+test-results/

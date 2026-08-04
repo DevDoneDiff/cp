@@ -6,9 +6,9 @@ Canonical queue for approved active work. Specs define outcomes. Tasks are coher
 
 ## Control
 
-- `RUN_MODE`: manual
-- `MERGE_MODE`: manual
-- `NEXT_TASK_TAG`: 0001
+- `RUN_MODE`: autonomous
+- `MERGE_MODE`: autonomous
+- `NEXT_TASK_TAG`: 0002
 - `NEXT_REFACTOR_TAG`: 0001
 
 Only explicit user instruction may change `RUN_MODE` or `MERGE_MODE`.
@@ -73,12 +73,12 @@ Split only for:
 
 For a normal task, `Ready: true` means:
 
-- the task set was explicitly approved
 - the source spec is approved
 - material questions are resolved
-- scope and acceptance are explicit
+- task boundaries, order, dependencies, scope, and acceptance are correctly derived
 - every required reference artifact exists and is approved
 - required validation and delivery configuration exists
+- no material blocker exists
 
 Dependencies need not be complete for readiness.
 
@@ -149,7 +149,7 @@ Source_spec: docs/specs/<approved-spec>.md
 Priority: P0 | P1 | P2
 Depends_on: none | [T-####], [R-####]
 Status: queued | working | blocked | passed
-Ready: false
+Ready: false | true
 Pass: false
 Objective:
 - <single coherent result>
@@ -177,4 +177,50 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-No tasks yet.
+### [T-0001] Repository foundation
+Type: feature
+Bootstrap: true
+Source_spec: docs/specs/A-repository-foundation.md
+Priority: P1
+Depends_on: none
+Status: working
+Ready: true
+Pass: false
+Objective:
+- Establish the approved repository foundation from the existing `main` baseline, including replacing every required `<unset>` field in `.harness/validation.md`, proving the non-product application shell, and configuring its guarded delivery path.
+Scope:
+- Preflight the approved repository identity, preserved baseline and bounded authoring handoff, local tools, GitHub authentication and permissions, and available protection capabilities before implementation mutation.
+- Create and prove the exact pinned cross-platform Next.js foundation, minimal `src/app` smoke shell, truthful validation contracts, CI checks, documentation, annotation enforcement, and repository security policy required by the source spec.
+- Complete the source spec's independent reviews, tasks-only closeout, latest-head CI, protection or procedural fallback, guarded autonomous merge, and post-merge proof as one bootstrap outcome.
+Non_goals:
+- S1-S10 product behavior or visual authority, persistence, schemas, migrations, provider integration or SDKs, empty architecture layers, deployment, speculative validation families, or unrelated infrastructure.
+- Repository creation, Git initialization, replacement baseline, history rewrite, force push, administrator bypass, or direct implementation commits on `main`.
+Acceptance_criteria:
+- Bootstrap preflight freshly verifies `DevDoneDiff/cp` with `visibility: public` / `private: false`, HTTPS `origin`, tracked `main`, preserved history, bounded approved authoring changes, supported tools, and sufficient GitHub authentication and permissions before mutation.
+- Exact approved versions, a frozen `pnpm-lock.yaml`, machine-readable runtime settings, cross-platform commands, and the accessible non-product `GET /` shell satisfy the source spec without product dependencies or runtime environment values.
+- Meaningful unit, integration, component, self-contained production-smoke, and Chromium proofs pass; browser CI reuses the smoke contract's production build without a second build.
+- Annotation-header candidate-clean validation, repository security-policy validation, truthful `.harness/validation.md` reconciliation, and exact checks `CI / baseline` and `CI / browser-smoke` pass with immutable action SHAs, least privilege, no secrets, and deterministic concurrency.
+- Read-only content and security reviews pass for the reviewed-content SHA, then the tasks-only closeout and latest-head CI pass for its separate closeout SHA before autonomous merge.
+- Any authorized squash merge is guarded by the expected latest head SHA without administrator bypass, preserves `[T-0001]` in `main`, and proves ancestry, subject, and task-branch deletion; unsupported protections have their strongest available configuration and documented procedural fallback.
+- Clerk email OTP is recorded only as a future replaceable project-owned adapter decision, with no Clerk SDK, credentials, environment values, hosted resources, UI, calls, or runtime behavior.
+Expected_surfaces:
+- Repository package-manager, runtime, dependency, lockfile, lint, formatting, type-check, and documentation surfaces.
+- `src/app` non-product smoke shell and native styling.
+- Foundation unit, integration, component, smoke, Chromium, annotation, and repository-security proof surfaces.
+- GitHub Actions and repository delivery and protection procedures.
+- `.harness/validation.md` and applicable architecture and local-context documentation.
+Reference_artifacts:
+- none
+Validation_sets:
+- bootstrap-preflight
+- baseline
+- agent-review
+- frontend-component
+- frontend-e2e
+- security
+- security-review
+- smoke
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0001.md
