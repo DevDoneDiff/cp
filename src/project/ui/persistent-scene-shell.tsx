@@ -1,109 +1,133 @@
 /**
  * MODULE: src/project/ui/persistent-scene-shell.tsx
- * PURPOSE: Render one stable semantic property-scene boundary across confirmation, assembly, and minimum readiness.
+ * PURPOSE: Render one stable local property-scene boundary and separate candidate-outline layer across S2 confirmation and assembly.
  * PUBLIC API / ENTRYPOINTS:
- *   - PersistentSceneShell: data-bound scene, camera, roof, panel, fact, and readiness semantics.
+ *   - PersistentSceneShell: candidate-bound scene image, accessible outline, fallback, and continuity instrumentation.
  * INVARIANTS:
- *   - [INV-SCENE-CONTINUITY] The scene element remains at one stable component type and JSX position as accepted work changes.
- *   - [INV-FACT-EVENT-GATING] Roof, panel, energy, and readiness content appears only when its canonical projection data exists.
+ *   - [INV-SCENE-CONTINUITY] The scene element remains at one stable component type and JSX position through confirmation.
+ *   - [INV-SEPARATE-PROPERTY-OUTLINE] The candidate boundary is fixture-bound SVG geometry and never baked into the raster scene.
  * BOUNDARIES:
- *   - This is a temporary semantic shell, not the final S2 composition, imagery, outline layer, or renderer.
+ *   - This task renders no roof geometry, panel object, energy fact, assembly transport, or final live-assembly composition.
  * RELATED:
- *   - src/project/ui/pre-account-runtime.tsx: keeps this component in one stable JSX position.
- *   - src/project/domain/model.ts: defines the stable scene and panel data rendered here.
+ *   - src/project/ui/pre-account-runtime.tsx: keeps this component in one stable JSX position and owns asset-failure view state.
+ *   - src/project/domain/model.ts: defines stable candidate, scene, and normalized fixture geometry contracts.
+ *   - src/project/adapters/seeded-demo.ts: supplies the trusted local candidate outline.
  */
+import Image from "next/image";
+
+import { SEEDED_DEMO_FIXTURE } from "../adapters/seeded-demo";
 import type { SessionProjectProjection } from "../domain/model";
+
+const SCENE_VIEWBOX_WIDTH = 1000;
+const SCENE_VIEWBOX_HEIGHT = 667;
+
+export const PROPERTY_SCENE_ASSET = {
+  id: "seeded-maple-austin-property-scene-v1",
+  src: "/images/s2-property-scene.png",
+} as const;
 
 export interface PersistentSceneShellProps {
   projection: SessionProjectProjection;
+  assetFailed: boolean;
+  onAssetError: () => void;
+}
+
+function candidateOutlinePoints(projection: SessionProjectProjection): string {
+  const property = projection.property;
+  const scene = projection.scene;
+  if (
+    property?.fixture_property_key !==
+      SEEDED_DEMO_FIXTURE.property.fixture_property_key ||
+    scene?.fixture_scene_key !== SEEDED_DEMO_FIXTURE.scene.fixture_scene_key
+  ) {
+    return "";
+  }
+  return SEEDED_DEMO_FIXTURE.property.outline_polygon
+    .map(
+      (point) =>
+        `${Math.round(point.x * SCENE_VIEWBOX_WIDTH)},${Math.round(point.y * SCENE_VIEWBOX_HEIGHT)}`,
+    )
+    .join(" ");
 }
 
 export function PersistentSceneShell({
   projection,
+  assetFailed,
+  onAssetError,
 }: PersistentSceneShellProps) {
   const scene = projection.scene;
   const property = projection.property;
   if (scene === null || property === null) return null;
 
+  const outlinePoints = candidateOutlinePoints(projection);
+
   // @ah INV-SCENE-CONTINUITY
   return (
     <section
-      className="scene-shell"
-      aria-labelledby="scene-shell-title"
+      className="property-scene"
+      aria-labelledby="property-scene-title"
       data-scene-shell="persistent"
+      data-render-boundary="property-scene-v1"
+      data-scene-coordinate-system="fixture-normalized-v1"
       data-scene-id={scene.scene_id}
       data-camera-id={scene.camera_id}
       data-property-id={property.property_id}
+      data-scene-asset-id={PROPERTY_SCENE_ASSET.id}
+      data-scene-asset-src={PROPERTY_SCENE_ASSET.src}
     >
-      <div>
-        <p className="eyebrow">Semantic scene boundary</p>
-        <h2 id="scene-shell-title">Persistent property scene</h2>
-        <p>
-          This temporary contract shell keeps one scene and camera context while
-          accepted roof and panel objects are added.
-        </p>
+      <h2 id="property-scene-title" className="visually-hidden">
+        Seeded demo property scene
+      </h2>
+      <div className="property-scene-media">
+        {assetFailed ? (
+          <div
+            className="property-scene-fallback"
+            role="img"
+            aria-label="Seeded demo property image unavailable. The selected property identity is unchanged."
+          >
+            <span>Scene image unavailable</span>
+            <p>
+              Candidate details remain available. You can still confirm or
+              correct this property.
+            </p>
+          </div>
+        ) : (
+          <Image
+            className="property-scene-image"
+            src={PROPERTY_SCENE_ASSET.src}
+            alt=""
+            aria-hidden="true"
+            fill
+            priority
+            sizes="(max-width: 760px) calc(100vw - 52px), (max-width: 1100px) 70vw, 1000px"
+            unoptimized
+            onError={onAssetError}
+            data-property-scene-image="true"
+          />
+        )}
+        <div className="property-scene-scrim" aria-hidden="true" />
+        {/* @ah INV-SEPARATE-PROPERTY-OUTLINE */}
+        <svg
+          className="property-outline-layer"
+          viewBox={`0 0 ${SCENE_VIEWBOX_WIDTH} ${SCENE_VIEWBOX_HEIGHT}`}
+          preserveAspectRatio="xMidYMid slice"
+          role="img"
+          aria-labelledby="property-outline-title property-outline-description"
+          data-property-outline="fixture-bound"
+          data-outline-property-id={property.property_id}
+          data-outline-points={outlinePoints}
+        >
+          <title id="property-outline-title">
+            Likely demo property candidate boundary
+          </title>
+          <desc id="property-outline-description">
+            A modeled boundary outlines the likely property candidate for
+            homeowner confirmation. It is separate from the scene image and is
+            not roof geometry.
+          </desc>
+          <polygon points={outlinePoints} vectorEffect="non-scaling-stroke" />
+        </svg>
       </div>
-
-      <dl className="identity-grid" aria-label="Stable project identities">
-        <div>
-          <dt>Scene ID</dt>
-          <dd data-testid="scene-id">{scene.scene_id}</dd>
-        </div>
-        <div>
-          <dt>Camera ID</dt>
-          <dd data-testid="camera-id">{scene.camera_id}</dd>
-        </div>
-        <div>
-          <dt>Property ID</dt>
-          <dd data-testid="property-id">{property.property_id}</dd>
-        </div>
-      </dl>
-
-      {/* @ah INV-FACT-EVENT-GATING */}
-      {projection.roof_facts ? (
-        <p data-testid="roof-facts">
-          Modeled roof area: {projection.roof_facts.modeled_roof_area_sq_ft} sq
-          ft
-        </p>
-      ) : (
-        <p>Roof geometry has not been accepted yet.</p>
-      )}
-
-      <div aria-live="polite" aria-atomic="true">
-        <p>Stable panel objects: {projection.panel_objects.length}</p>
-        {projection.panel_objects.length > 0 ? (
-          <ol className="panel-object-list" aria-label="Accepted panel objects">
-            {projection.panel_objects.map((panel) => (
-              <li
-                key={panel.panel_id}
-                data-panel-id={panel.panel_id}
-                data-surface-id={panel.surface_id}
-                data-placement-rank={panel.placement_rank}
-              >
-                Panel {panel.placement_rank}: rendered, unselected
-              </li>
-            ))}
-          </ol>
-        ) : null}
-      </div>
-
-      {projection.energy_model ? (
-        <p data-testid="energy-model">
-          Modeled annual energy: {projection.energy_model.modeled_annual_kwh}{" "}
-          kWh
-        </p>
-      ) : null}
-
-      <p
-        role="status"
-        data-minimum-usable-ready={
-          projection.minimum_usable_ready ? "true" : "false"
-        }
-      >
-        {projection.minimum_usable_ready
-          ? "Minimum usable property and panel model ready"
-          : "Minimum usable model is not ready"}
-      </p>
     </section>
   );
 }

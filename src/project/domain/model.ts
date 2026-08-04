@@ -8,6 +8,7 @@
  * INVARIANTS:
  *   - [INV-S1-S2-STATE-BOUNDARY] Visible product state is limited to ADDRESS_ENTRY, PROPERTY_CONFIRMATION, and LIVE_ROOF_ASSEMBLY.
  *   - [INV-STABLE-PROJECT-IDENTITY] Persisted project, property, scene, camera, surface, panel, and event identities are explicit data.
+ *   - [INV-FIXTURE-SCENE-COORDINATES] Candidate outlines use normalized fixture coordinates and remain separate from event-gated roof geometry.
  * BOUNDARIES:
  *   - This module defines data contracts only; transition legality, persistence, browser APIs, and rendering belong elsewhere.
  * RELATED:
@@ -236,6 +237,8 @@ export interface SeededFixtureContract {
   property: {
     fixture_property_key: string;
     display_address: string;
+    // @ah INV-FIXTURE-SCENE-COORDINATES
+    outline_polygon: readonly PointGeometry[];
   };
   scene: {
     fixture_scene_key: string;

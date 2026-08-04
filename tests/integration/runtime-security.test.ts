@@ -52,6 +52,34 @@ describe("session runtime trust boundaries", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it("rejects stored flags that attempt to bypass explicit property confirmation", () => {
+    const source = createRuntimeHarness();
+    const confirmation = startProject(source.runtime);
+    const forgedCases = [
+      { ...structuredClone(confirmation), visible_state: "LIVE_ROOF_ASSEMBLY" },
+      { ...structuredClone(confirmation), minimum_usable_ready: true },
+    ];
+
+    for (const forged of forgedCases) {
+      const storage = new MemoryStorage();
+      storage.values.set(SESSION_PROJECT_STORAGE_KEY, JSON.stringify(forged));
+      const target = createRuntimeHarness({ storage });
+
+      expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+        ok: true,
+        outcome: "empty",
+      });
+      expect(target.runtime.getSnapshot()).toMatchObject({
+        projection: null,
+        visible_state: "ADDRESS_ENTRY",
+        restore_status: "recovered_invalid",
+      });
+      expect(storage.storedProject()).toBeNull();
+      expect(storage.writes).toBe(0);
+      expect(storage.removals).toBe(1);
+    }
+  });
+
   it("rejects malformed, unsafe, foreign, replay-collision, and impossible event input atomically", () => {
     const { runtime, schedule, adapters, storage } = createRuntimeHarness();
     startProject(runtime);

@@ -187,7 +187,7 @@ test("keyboard entry completes the real S1 workflow through one client runtime t
 
   const runtimeHeading = page.getByRole("heading", {
     level: 1,
-    name: "Property confirmation runtime",
+    name: "Is this your property?",
   });
   await expect(runtimeHeading).toBeVisible();
   await expect(runtimeHeading).toBeFocused();
@@ -222,6 +222,25 @@ test("keyboard entry completes the real S1 workflow through one client runtime t
   ).toBeTruthy();
   expect((projection?.scene as { scene_id?: string }).scene_id).toBeTruthy();
   expect((projection?.scene as { camera_id?: string }).camera_id).toBeTruthy();
+  expect(projection).toMatchObject({
+    roof_surfaces: [],
+    roof_facts: null,
+    panel_objects: [],
+    energy_model: null,
+    minimum_usable_ready: false,
+  });
+  await expect(
+    page.getByRole("button", { name: "Yes, this is my property" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Not your property?" }),
+  ).toBeVisible();
+  await expect(page.getByText("Demo property match")).toBeVisible();
+  await expect(page.getByText("Modeled", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-property-outline]")).toHaveAttribute(
+    "data-outline-property-id",
+    /.+/,
+  );
 
   await expectNoHorizontalOverflow(page);
   expect(observations.browserErrors).toEqual([]);
@@ -229,7 +248,7 @@ test("keyboard entry completes the real S1 workflow through one client runtime t
   expect(observations.externalRequests).toEqual([]);
 });
 
-test("pointer selection preserves the persistent scene and stable objects through readiness and reload", async ({
+test("explicit confirmation preserves the document, scene, asset, outline, and identities without starting work", async ({
   page,
 }) => {
   const observations = observe(page);
@@ -239,7 +258,7 @@ test("pointer selection preserves the persistent scene and stable objects throug
   await input.fill("123 Maple");
   await page.getByRole("option").click();
   await expect(
-    page.getByRole("heading", { name: "Property confirmation runtime" }),
+    page.getByRole("heading", { name: "Is this your property?" }),
   ).toBeVisible();
 
   const scene = page.locator('[data-scene-shell="persistent"]');
@@ -248,13 +267,22 @@ test("pointer selection preserves the persistent scene and stable objects throug
     (node as HTMLElement & { __continuityToken?: string }).__continuityToken =
       "same-scene-node";
   });
-  const sceneId = await page.getByTestId("scene-id").textContent();
-  const cameraId = await page.getByTestId("camera-id").textContent();
-  const propertyId = await page.getByTestId("property-id").textContent();
+  const identities = await scene.evaluate((node) => ({
+    assetId: node.getAttribute("data-scene-asset-id"),
+    assetSrc: node.getAttribute("data-scene-asset-src"),
+    cameraId: node.getAttribute("data-camera-id"),
+    propertyId: node.getAttribute("data-property-id"),
+    sceneId: node.getAttribute("data-scene-id"),
+  }));
+  const sceneImage = scene.locator("[data-property-scene-image]");
+  const outline = scene.locator("[data-property-outline]");
+  const imageSrc = await sceneImage.getAttribute("src");
+  const outlinePoints = await outline.getAttribute("data-outline-points");
+  const requestCountBeforeConfirmation = observations.requests.length;
 
-  await page.getByRole("button", { name: "Confirm demo property" }).click();
+  await page.getByRole("button", { name: "Yes, this is my property" }).click();
   await expect(
-    page.getByRole("heading", { name: "Live roof assembly runtime" }),
+    page.getByRole("heading", { name: "Property confirmed." }),
   ).toBeFocused();
   expect(
     await scene.evaluate(
@@ -263,40 +291,108 @@ test("pointer selection preserves the persistent scene and stable objects throug
           .__continuityToken,
     ),
   ).toBe("same-scene-node");
+  await expect(scene).toHaveAttribute(
+    "data-scene-id",
+    identities.sceneId ?? "",
+  );
+  await expect(scene).toHaveAttribute(
+    "data-camera-id",
+    identities.cameraId ?? "",
+  );
+  await expect(scene).toHaveAttribute(
+    "data-property-id",
+    identities.propertyId ?? "",
+  );
+  await expect(scene).toHaveAttribute(
+    "data-scene-asset-id",
+    identities.assetId ?? "",
+  );
+  await expect(sceneImage).toHaveAttribute("src", imageSrc ?? "");
+  await expect(outline).toHaveAttribute(
+    "data-outline-points",
+    outlinePoints ?? "",
+  );
+  expect(observations.requests).toHaveLength(requestCountBeforeConfirmation);
 
-  for (let step = 0; step < 7; step += 1) {
-    await page
-      .getByRole("button", { name: "Apply next modeled work event" })
-      .click();
-  }
+  const confirmed = await readStoredProjection(page);
+  expect(confirmed).toMatchObject({
+    project_version: 2,
+    visible_state: "LIVE_ROOF_ASSEMBLY",
+    latest_cursor: 2,
+    roof_surfaces: [],
+    roof_facts: null,
+    panel_objects: [],
+    energy_model: null,
+    minimum_usable_ready: false,
+  });
+  expect(
+    (confirmed?.events as Array<{ type: string }>).map((event) => event.type),
+  ).toEqual(["ADDRESS_RESOLVED", "PROPERTY_CONFIRMED"]);
+  await expect(page.locator("[data-panel-id]")).toHaveCount(0);
   await expect(
-    page.getByText("Minimum usable property and panel model ready"),
-  ).toBeVisible();
-  await expect(page.locator("[data-panel-id]")).toHaveCount(4);
-  const panelIds = await page
-    .locator("[data-panel-id]")
-    .evaluateAll((nodes) =>
-      nodes.map((node) => node.getAttribute("data-panel-id")),
-    );
-  expect(new Set(panelIds).size).toBe(4);
+    page.getByText(/apply next modeled work|roof progress|energy model ready/i),
+  ).toHaveCount(0);
   await expect(
     page.getByText(/pricing|update system|project lenses/i),
   ).toHaveCount(0);
+  expect(observations.browserErrors).toEqual([]);
+  expect(observations.httpErrors).toEqual([]);
+  expect(observations.externalRequests).toEqual([]);
+});
+
+test("same-session reload and direct project entry restore the identical confirmation projection", async ({
+  page,
+}) => {
+  const observations = observe(page);
+  await page.goto("/");
+  await enterAddressWithKeyboard(page);
+  await expect(
+    page.getByRole("heading", { name: "Is this your property?" }),
+  ).toBeVisible();
+  const scene = page.locator('[data-scene-shell="persistent"]');
+  const expected = await scene.evaluate((node) => ({
+    asset: node.getAttribute("data-scene-asset-id"),
+    camera: node.getAttribute("data-camera-id"),
+    property: node.getAttribute("data-property-id"),
+    scene: node.getAttribute("data-scene-id"),
+  }));
+  const outlinePoints = await page
+    .locator("[data-property-outline]")
+    .getAttribute("data-outline-points");
 
   await page.reload();
   await expect(
     page.getByText("This project was restored from this browser session."),
   ).toBeVisible();
-  await expect(page.getByTestId("scene-id")).toHaveText(sceneId ?? "");
-  await expect(page.getByTestId("camera-id")).toHaveText(cameraId ?? "");
-  await expect(page.getByTestId("property-id")).toHaveText(propertyId ?? "");
-  expect(
-    await page
-      .locator("[data-panel-id]")
-      .evaluateAll((nodes) =>
-        nodes.map((node) => node.getAttribute("data-panel-id")),
-      ),
-  ).toEqual(panelIds);
+  await expect(
+    page.getByRole("heading", { name: "Is this your property?" }),
+  ).toBeVisible();
+  await expect(scene).toHaveAttribute("data-scene-id", expected.scene ?? "");
+  await expect(scene).toHaveAttribute("data-camera-id", expected.camera ?? "");
+  await expect(scene).toHaveAttribute(
+    "data-property-id",
+    expected.property ?? "",
+  );
+  await expect(scene).toHaveAttribute(
+    "data-scene-asset-id",
+    expected.asset ?? "",
+  );
+  await expect(page.locator("[data-property-outline]")).toHaveAttribute(
+    "data-outline-points",
+    outlinePoints ?? "",
+  );
+
+  await page.goto("/");
+  await page.goto("/project");
+  await expect(
+    page.getByRole("heading", { name: "Is this your property?" }),
+  ).toBeVisible();
+  await expect(scene).toHaveAttribute("data-scene-id", expected.scene ?? "");
+  await expect(scene).toHaveAttribute("data-camera-id", expected.camera ?? "");
+  await expect(scene).toHaveAttribute(
+    "data-property-id",
+    expected.property ?? "",
+  );
   expect(observations.browserErrors).toEqual([]);
   expect(observations.httpErrors).toEqual([]);
   expect(observations.externalRequests).toEqual([]);
@@ -306,7 +402,19 @@ test("correction clears the pending latch and reselection preserves the project 
   page,
 }) => {
   const observations = observe(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "__cpCorrectionDocumentToken", {
+      configurable: false,
+      value: globalThis.crypto.randomUUID(),
+      writable: false,
+    });
+  });
   await page.goto("/");
+  const documentToken = await page.evaluate(
+    () =>
+      (window as Window & { __cpCorrectionDocumentToken?: string })
+        .__cpCorrectionDocumentToken,
+  );
   let input = page.getByRole("combobox", { name: "Home address" });
   await page.getByRole("button", { name: "How it works" }).click();
   await expect(
@@ -316,20 +424,44 @@ test("correction clears the pending latch and reselection preserves the project 
   await input.fill("123 Maple St");
   await page.getByRole("option").click();
   await expect(
-    page.getByRole("heading", { name: "Property confirmation runtime" }),
+    page.getByRole("heading", { name: "Is this your property?" }),
   ).toBeVisible();
   await expect(page.getByRole("dialog", { name: "How it works" })).toHaveCount(
     0,
   );
   const firstProjection = await readStoredProjection(page);
 
-  await page.getByRole("button", { name: "Correct seeded address" }).click();
+  await page.getByRole("button", { name: "Not your property?" }).click();
+  await expect(page).toHaveURL(`${APP_ORIGIN}/`);
   input = page.getByRole("combobox", { name: "Home address" });
   await expect(input).toHaveValue("123 Maple St, Austin, TX 78704");
   await expect(input).toBeFocused();
   await expect(
     page.getByText("No active browser-session project was found"),
   ).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as Window & { __cpCorrectionDocumentToken?: string })
+          .__cpCorrectionDocumentToken,
+    ),
+  ).toBe(documentToken);
+  const correctedProjection = await readStoredProjection(page);
+  expect(correctedProjection).toMatchObject({
+    session_project_id: firstProjection?.session_project_id,
+    visible_state: "ADDRESS_ENTRY",
+    normalized_address: null,
+    source_kind: null,
+    certainty_kind: null,
+    property: null,
+    scene: null,
+    roof_surfaces: [],
+    roof_facts: null,
+    panel_objects: [],
+    energy_model: null,
+    minimum_usable_ready: false,
+  });
+  await expect(page.locator('[data-scene-shell="persistent"]')).toHaveCount(0);
   await page.evaluate((storageKey) => {
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function failCorrectionOnce(key, value) {
@@ -360,7 +492,7 @@ test("correction clears the pending latch and reselection preserves the project 
   expect(failedProjection?.property).toBeNull();
   await page.getByRole("button", { name: "Retry demo lookup" }).click();
   await expect(
-    page.getByRole("heading", { name: "Property confirmation runtime" }),
+    page.getByRole("heading", { name: "Is this your property?" }),
   ).toBeVisible();
   const secondProjection = await readStoredProjection(page);
 
@@ -372,6 +504,12 @@ test("correction clears the pending latch and reselection preserves the project 
   ).not.toBe(
     (firstProjection?.property as { property_id?: string }).property_id,
   );
+  expect((secondProjection?.scene as { scene_id?: string }).scene_id).not.toBe(
+    (firstProjection?.scene as { scene_id?: string }).scene_id,
+  );
+  expect(
+    (secondProjection?.scene as { camera_id?: string }).camera_id,
+  ).not.toBe((firstProjection?.scene as { camera_id?: string }).camera_id);
   expect(
     (secondProjection?.events as Array<{ type: string }>).map(
       (event) => event.type,
@@ -413,7 +551,7 @@ test("a thrown seeded lookup is recoverable, preserves input, and retries withou
 
   await page.getByRole("button", { name: "Retry demo lookup" }).click();
   await expect(
-    page.getByRole("heading", { name: "Property confirmation runtime" }),
+    page.getByRole("heading", { name: "Is this your property?" }),
   ).toBeVisible();
   const projection = await readStoredProjection(page);
   expect(projection?.events).toHaveLength(1);
@@ -456,11 +594,162 @@ test("an unavailable first session write stays in S1 and succeeds atomically on 
 
   await page.getByRole("button", { name: "Retry demo lookup" }).click();
   await expect(
-    page.getByRole("heading", { name: "Property confirmation runtime" }),
+    page.getByRole("heading", { name: "Is this your property?" }),
   ).toBeVisible();
   const projection = await readStoredProjection(page);
   expect(projection?.events).toHaveLength(1);
   expect(projection?.project_version).toBe(1);
+});
+
+test("a scene-asset failure keeps the same candidate, outline, source labels, confirmation, and correction", async ({
+  page,
+}) => {
+  const observations = observe(page);
+  await page.goto("/");
+  await enterAddressWithKeyboard(page);
+  await expect(
+    page.getByRole("heading", { name: "Is this your property?" }),
+  ).toBeVisible();
+  const scene = page.locator('[data-scene-shell="persistent"]');
+  const before = await scene.evaluate((node) => ({
+    camera: node.getAttribute("data-camera-id"),
+    property: node.getAttribute("data-property-id"),
+    scene: node.getAttribute("data-scene-id"),
+  }));
+  await scene.evaluate((node) => {
+    (
+      node as HTMLElement & { __assetFailureToken?: string }
+    ).__assetFailureToken = "same-fallback-boundary";
+  });
+  await scene.locator("[data-property-scene-image]").evaluate((node) => {
+    node.dispatchEvent(new Event("error"));
+  });
+
+  await expect(
+    page.getByRole("img", {
+      name: /property image unavailable.*identity is unchanged/i,
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("Scene image unavailable")).toBeVisible();
+  await expect(page.getByText("Demo property match")).toBeVisible();
+  await expect(page.getByText("Modeled", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-property-outline]")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Yes, this is my property" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Not your property?" }),
+  ).toBeVisible();
+  expect(
+    await scene.evaluate(
+      (node) =>
+        (node as HTMLElement & { __assetFailureToken?: string })
+          .__assetFailureToken,
+    ),
+  ).toBe("same-fallback-boundary");
+  await expect(scene).toHaveAttribute("data-scene-id", before.scene ?? "");
+  await expect(scene).toHaveAttribute("data-camera-id", before.camera ?? "");
+  await expect(scene).toHaveAttribute(
+    "data-property-id",
+    before.property ?? "",
+  );
+  await expect(
+    page.getByText(/Nearmap|Google|verified|high confidence/i),
+  ).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Yes, this is my property" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Property confirmed." }),
+  ).toBeFocused();
+  expect(
+    await scene.evaluate(
+      (node) =>
+        (node as HTMLElement & { __assetFailureToken?: string })
+          .__assetFailureToken,
+    ),
+  ).toBe("same-fallback-boundary");
+  expect(observations.browserErrors).toEqual([]);
+  expect(observations.httpErrors).toEqual([]);
+  expect(observations.externalRequests).toEqual([]);
+});
+
+test("keyboard focus and reduced motion preserve the same confirmation information and scene", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await enterAddressWithKeyboard(page);
+  const heading = page.getByRole("heading", { name: "Is this your property?" });
+  const scene = page.locator('[data-scene-shell="persistent"]');
+  const primary = page.getByRole("button", {
+    name: "Yes, this is my property",
+  });
+  const correction = page.getByRole("button", { name: "Not your property?" });
+  await expect(heading).toBeFocused();
+  expect(
+    await page.evaluate(
+      () => matchMedia("(prefers-reduced-motion: reduce)").matches,
+    ),
+  ).toBe(true);
+  expect(
+    await scene.evaluate((node) => ({
+      animationName: getComputedStyle(node).animationName,
+      transform: getComputedStyle(node).transform,
+    })),
+  ).toEqual({ animationName: "none", transform: "none" });
+
+  await page.keyboard.press("Tab");
+  await expect(primary).toBeFocused();
+  expect(await primary.evaluate((node) => node.matches(":focus-visible"))).toBe(
+    true,
+  );
+  await page.keyboard.press("Tab");
+  await expect(correction).toBeFocused();
+  expect(
+    await correction.evaluate((node) => node.matches(":focus-visible")),
+  ).toBe(true);
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Property confirmed." }),
+  ).toBeFocused();
+  await expect(scene).toHaveCount(1);
+  await expect(
+    page.getByText("Roof analysis is pending and has not started yet."),
+  ).toBeVisible();
+  await expect(page.locator("[data-panel-id]")).toHaveCount(0);
+});
+
+test("forged stored state and direct route entry cannot bypass confirmation", async ({
+  page,
+}) => {
+  const observations = observe(page);
+  await page.goto("/");
+  await enterAddressWithKeyboard(page);
+  await expect(
+    page.getByRole("heading", { name: "Is this your property?" }),
+  ).toBeVisible();
+  await page.evaluate((key) => {
+    const serialized = sessionStorage.getItem(key);
+    if (serialized === null) throw new Error("CONFIRMATION_PROJECTION_MISSING");
+    const forged = JSON.parse(serialized) as Record<string, unknown>;
+    forged.visible_state = "LIVE_ROOF_ASSEMBLY";
+    forged.minimum_usable_ready = true;
+    sessionStorage.setItem(key, JSON.stringify(forged));
+  }, SESSION_PROJECT_STORAGE_KEY);
+
+  await page.goto("/project");
+  await expect(
+    page.getByText(/invalid browser-session data was cleared/i),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Build your solar project/ }),
+  ).toBeVisible();
+  await expect(page.locator('[data-scene-shell="persistent"]')).toHaveCount(0);
+  expect(await readStoredProjection(page)).toBeNull();
+  expect(observations.browserErrors).toEqual([]);
+  expect(observations.httpErrors).toEqual([]);
+  expect(observations.externalRequests).toEqual([]);
 });
 
 for (const viewport of [
@@ -517,6 +806,85 @@ for (const viewport of [
   });
 }
 
+for (const viewport of [
+  { width: 1536, height: 1024 },
+  { width: 1440, height: 900 },
+  { width: 1024, height: 768 },
+  { width: 390, height: 844 },
+]) {
+  test(`property confirmation preserves hierarchy, targets, and zero overflow at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await enterAddressWithKeyboard(page);
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Is this your property?",
+      }),
+    ).toBeVisible();
+    const scene = page.locator('[data-scene-shell="persistent"]');
+    const details = page.getByRole("complementary", {
+      name: "Property details",
+    });
+    const summary = page.getByRole("region", {
+      name: "What we know so far",
+    });
+    const primary = page.getByRole("button", {
+      name: "Yes, this is my property",
+    });
+    const correction = page.getByRole("button", {
+      name: "Not your property?",
+    });
+    for (const region of [scene, details, summary, primary, correction]) {
+      await expect(region).toBeVisible();
+      const box = await region.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
+        viewport.width,
+      );
+    }
+    for (const control of [primary, correction]) {
+      const box = await control.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    expect(
+      await page.evaluate(() => {
+        const decision = document.querySelector(".s2-decision");
+        const sceneNode = document.querySelector(".property-scene");
+        const detailsNode = document.querySelector(".s2-details");
+        const known = document.querySelector(".s2-known");
+        if (!decision || !sceneNode || !detailsNode || !known) return false;
+        return (
+          Boolean(
+            decision.compareDocumentPosition(sceneNode) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+          ) &&
+          Boolean(
+            sceneNode.compareDocumentPosition(detailsNode) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+          ) &&
+          Boolean(
+            detailsNode.compareDocumentPosition(known) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+          )
+        );
+      }),
+    ).toBe(true);
+    await expect(page.locator("[data-property-scene-image]")).toHaveCount(1);
+    await expect(page.locator("[data-property-outline]")).toHaveCount(1);
+    await expect(page.locator("[data-panel-id]")).toHaveCount(0);
+    await expect(
+      page.getByText(
+        /Nearmap|Google|May 2025|address verified|high confidence/i,
+      ),
+    ).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+  });
+}
+
 test("a new browser context begins at fresh S1 without another context's session project", async ({
   browser,
 }) => {
@@ -525,7 +893,7 @@ test("a new browser context begins at fresh S1 without another context's session
   await firstPage.goto("/");
   await enterAddressWithKeyboard(firstPage);
   await expect(
-    firstPage.getByRole("heading", { name: "Property confirmation runtime" }),
+    firstPage.getByRole("heading", { name: "Is this your property?" }),
   ).toBeVisible();
 
   const freshContext = await browser.newContext({ baseURL: APP_ORIGIN });
