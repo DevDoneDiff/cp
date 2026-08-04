@@ -1,24 +1,27 @@
 /**
  * MODULE: src/app/layout.tsx
- * PURPOSE: Own the document shell and truthful metadata for the credential-free pre-account runtime.
+ * PURPOSE: Own the document shell and truthful metadata for the credential-free seeded solar project entry.
  * PUBLIC API / ENTRYPOINTS:
- *   - RootLayout: wraps the App Router project-runtime surface.
+ *   - RootLayout: wraps the S1 landing and browser-session project runtime routes.
  * INVARIANTS:
- *   - The root shell initializes no product provider, credential, durable persistence, or external client.
+ *   - The root shell initializes only the local runtime-lifetime provider, with no credential, durable persistence, or external client.
  * BOUNDARIES:
- *   - Final S1-S2 composition and later product metadata belong to their approved visual tasks.
+ *   - Final S2 composition and later-state metadata belong to their approved visual tasks.
  * RELATED:
- *   - src/app/page.tsx: renders the semantic S1-S2 runtime entrypoint.
- *   - src/app/globals.css: supplies bounded temporary native presentation.
+ *   - src/app/page.tsx: renders the approved seeded address entrypoint.
+ *   - src/app/globals.css: supplies the approved S1 native presentation.
+ *   - src/project/ui/session-project-runtime-provider.tsx: preserves one runtime across route transitions.
  */
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { SessionProjectRuntimeProvider } from "../project/ui/session-project-runtime-provider";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Seeded Pre-account Project Runtime",
-  description: "Semantic S1-S2 session project runtime for seeded demo data.",
+  title: "Start Your Solar Project | Seeded Demo",
+  description:
+    "Start an unsaved browser-session solar project with the seeded Maple Street demo address.",
 };
 
 export default function RootLayout({
@@ -26,7 +29,11 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SessionProjectRuntimeProvider>
+          {children}
+        </SessionProjectRuntimeProvider>
+      </body>
     </html>
   );
 }

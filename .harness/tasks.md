@@ -278,9 +278,9 @@ Bootstrap: false
 Source_spec: docs/specs/B-s1-s2-continuous-entry-and-property-analysis.md
 Priority: P1
 Depends_on: [T-0002]
-Status: queued
+Status: passed
 Ready: true
-Pass: false
+Pass: true
 Objective:
 - Deliver and prove the approved seeded S1 address-entry experience through creation of one session project and client transition into the persistent runtime.
 Scope:
