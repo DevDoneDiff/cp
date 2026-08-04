@@ -120,7 +120,9 @@ export function AddressEntryExperience({
     () => lookup ?? new LocalSeededAddressLookup(),
   );
   const [snapshot, setSnapshot] = useState(activeRuntime.getSnapshot);
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(
+    () => activeRuntime.getSnapshot().projection?.address_draft ?? "",
+  );
   const [suggestion, setSuggestion] = useState<SeededAddressSuggestion | null>(
     null,
   );
@@ -165,6 +167,8 @@ export function AddressEntryExperience({
     const unsubscribe = activeRuntime.subscribe(synchronize);
     if (activeRuntime.getSnapshot().restore_status === "not_checked") {
       activeRuntime.dispatch({ type: "RESTORE_SESSION" });
+    } else {
+      synchronize();
     }
     return () => {
       mountedRef.current = false;
@@ -308,7 +312,7 @@ export function AddressEntryExperience({
         data-product-surface="s1-s2-pre-account-runtime"
         data-runtime-contract-version="1"
       >
-        <PreAccountRuntime runtime={activeRuntime} />
+        <PreAccountRuntime runtime={activeRuntime} onNavigate={onNavigate} />
       </main>
     );
   }

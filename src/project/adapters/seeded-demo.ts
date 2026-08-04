@@ -62,6 +62,14 @@ export const SEEDED_DEMO_FIXTURE: SeededFixtureContract = {
   property: {
     fixture_property_key: "maple-austin-property",
     display_address: "123 Maple St, Austin, TX 78704",
+    outline_polygon: [
+      { x: 0.28, y: 0.3 },
+      { x: 0.69, y: 0.25 },
+      { x: 0.84, y: 0.52 },
+      { x: 0.72, y: 0.87 },
+      { x: 0.35, y: 0.79 },
+      { x: 0.2, y: 0.54 },
+    ],
   },
   scene: {
     fixture_scene_key: "maple-austin-scene",

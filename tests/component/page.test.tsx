@@ -23,7 +23,7 @@ import type {
   SeededAddressLookupResult,
 } from "../../src/project/adapters/seeded-address-lookup";
 import { AddressEntryExperience } from "../../src/project/ui/address-entry-experience";
-import { createRuntimeHarness } from "../helpers/project-runtime";
+import { createRuntimeHarness, startProject } from "../helpers/project-runtime";
 
 class ImmediateLookup implements SeededAddressLookup {
   calls: string[] = [];
@@ -287,7 +287,7 @@ describe("S1 address-entry experience", () => {
 
     const runtimeHeading = await screen.findByRole("heading", {
       level: 1,
-      name: "Property confirmation runtime",
+      name: "Is this your property?",
     });
     await waitFor(() => expect(runtimeHeading).toHaveFocus());
     expect(
@@ -326,7 +326,7 @@ describe("S1 address-entry experience", () => {
     await user.type(input, "123 Maple St");
     await user.click(screen.getByRole("option"));
     await screen.findByRole("heading", {
-      name: "Property confirmation runtime",
+      name: "Is this your property?",
     });
     expect(screen.queryByRole("dialog", { name: "How it works" })).toBeNull();
     const firstProjection = runtime.getSnapshot().projection;
@@ -334,7 +334,7 @@ describe("S1 address-entry experience", () => {
     const firstPropertyId = firstProjection?.property?.property_id;
 
     await user.click(
-      screen.getByRole("button", { name: "Correct seeded address" }),
+      screen.getByRole("button", { name: "Not your property?" }),
     );
     input = await readyAddressInput();
     await waitFor(() => expect(input).toHaveFocus());
@@ -361,7 +361,7 @@ describe("S1 address-entry experience", () => {
     storage.setError = false;
     await user.click(screen.getByRole("button", { name: "Retry demo lookup" }));
     await screen.findByRole("heading", {
-      name: "Property confirmation runtime",
+      name: "Is this your property?",
     });
 
     const secondProjection = runtime.getSnapshot().projection;
@@ -374,7 +374,7 @@ describe("S1 address-entry experience", () => {
     ]);
     expect(identity.projectCount).toBe(1);
     expect(storage.writes).toBe(3);
-    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(navigate.mock.calls).toEqual([["/project"], ["/"], ["/project"]]);
   });
 
   it("preserves the selected address through a recoverable lookup failure and succeeds once on retry", async () => {
@@ -409,7 +409,7 @@ describe("S1 address-entry experience", () => {
     await user.click(screen.getByRole("button", { name: "Retry demo lookup" }));
     expect(
       await screen.findByRole("heading", {
-        name: "Property confirmation runtime",
+        name: "Is this your property?",
       }),
     ).toBeVisible();
     expect(lookup.calls).toHaveLength(2);
@@ -443,7 +443,7 @@ describe("S1 address-entry experience", () => {
     await user.click(screen.getByRole("button", { name: "Retry demo lookup" }));
     expect(
       await screen.findByRole("heading", {
-        name: "Property confirmation runtime",
+        name: "Is this your property?",
       }),
     ).toBeVisible();
     expect(identity.projectCount).toBe(2);
@@ -451,10 +451,10 @@ describe("S1 address-entry experience", () => {
     expect(storage.writes).toBe(1);
   });
 
-  it("retains the T-0002 scene, object, readiness, and same-session restoration contracts after S1", async () => {
+  it("renders the truthful confirmation composition and preserves the scene through the sole confirmation authority", async () => {
     const user = userEvent.setup();
     const { runtime, storage } = createRuntimeHarness();
-    const first = render(
+    const rendered = render(
       <AddressEntryExperience
         runtime={runtime}
         lookup={new ImmediateLookup()}
@@ -464,59 +464,225 @@ describe("S1 address-entry experience", () => {
     const input = await readyAddressInput();
     await user.type(input, "123 Maple St");
     await user.click(screen.getByRole("option"));
-    await screen.findByRole("heading", {
-      name: "Property confirmation runtime",
+    const heading = await screen.findByRole("heading", {
+      level: 1,
+      name: "Is this your property?",
     });
+    expect(heading).toHaveFocus();
 
-    const sceneNode = first.container.querySelector(
+    const sceneNode = rendered.container.querySelector(
       '[data-scene-shell="persistent"]',
     );
-    const sceneId = screen.getByTestId("scene-id").textContent;
-    const cameraId = screen.getByTestId("camera-id").textContent;
-    const propertyId = screen.getByTestId("property-id").textContent;
     expect(sceneNode).not.toBeNull();
-
-    await user.click(
-      screen.getByRole("button", { name: "Confirm demo property" }),
+    const sceneId = sceneNode?.getAttribute("data-scene-id");
+    const cameraId = sceneNode?.getAttribute("data-camera-id");
+    const propertyId = sceneNode?.getAttribute("data-property-id");
+    const sceneImage = rendered.container.querySelector(
+      "[data-property-scene-image]",
+    );
+    const propertyOutline = rendered.container.querySelector(
+      "[data-property-outline]",
+    );
+    expect(sceneImage).not.toBeNull();
+    expect(propertyOutline).not.toBeNull();
+    expect(propertyOutline).toHaveAttribute(
+      "data-outline-property-id",
+      propertyId,
+    );
+    expect(propertyOutline?.getAttribute("data-outline-points")).toMatch(
+      /^\d+,\d+( \d+,\d+){5}$/,
     );
     expect(
-      first.container.querySelector('[data-scene-shell="persistent"]'),
-    ).toBe(sceneNode);
-    for (let step = 0; step < 7; step += 1) {
-      await user.click(
-        screen.getByRole("button", { name: "Apply next modeled work event" }),
-      );
-    }
-    expect(
-      screen.getByText("Minimum usable property and panel model ready"),
+      screen.getByRole("img", {
+        name: /likely demo property candidate boundary/i,
+      }),
     ).toBeVisible();
-    expect(first.container.querySelectorAll("[data-panel-id]")).toHaveLength(4);
+    expect(
+      screen.getByRole("button", { name: "Yes, this is my property" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Not your property?" }),
+    ).toBeVisible();
+    expect(screen.getAllByText("Seeded demo imagery").length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getByText("Demo property match")).toBeVisible();
+    expect(screen.getByText("Modeled")).toBeVisible();
+    expect(screen.getByText("Pending confirmation")).toBeVisible();
+    expect(
+      screen.getByText(/no contractor receives this project/i),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(
+        /Nearmap|Google|May 2025|address verified|verified|high confidence|reviews|rating/i,
+      ),
+    ).toBeNull();
+    expect(rendered.container.querySelectorAll("[data-panel-id]")).toHaveLength(
+      0,
+    );
+
+    storage.setError = true;
+    await user.click(
+      screen.getByRole("button", { name: "Yes, this is my property" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "existing project is unchanged",
+    );
+    expect(runtime.getSnapshot().visible_state).toBe("PROPERTY_CONFIRMATION");
+    expect(
+      rendered.container.querySelector('[data-scene-shell="persistent"]'),
+    ).toBe(sceneNode);
+    storage.setError = false;
+    await user.click(
+      screen.getByRole("button", { name: "Yes, this is my property" }),
+    );
+    const confirmedHeading = await screen.findByRole("heading", {
+      level: 1,
+      name: "Property confirmed.",
+    });
+    await waitFor(() => expect(confirmedHeading).toHaveFocus());
+    expect(
+      rendered.container.querySelector('[data-scene-shell="persistent"]'),
+    ).toBe(sceneNode);
+    expect(
+      rendered.container.querySelector("[data-property-scene-image]"),
+    ).toBe(sceneImage);
+    expect(rendered.container.querySelector("[data-property-outline]")).toBe(
+      propertyOutline,
+    );
+    expect(sceneNode).toHaveAttribute("data-scene-id", sceneId);
+    expect(sceneNode).toHaveAttribute("data-camera-id", cameraId);
+    expect(sceneNode).toHaveAttribute("data-property-id", propertyId);
+
+    const confirmed = runtime.getSnapshot().projection;
+    expect(confirmed?.visible_state).toBe("LIVE_ROOF_ASSEMBLY");
+    expect(confirmed?.project_version).toBe(2);
+    expect(confirmed?.latest_cursor).toBe(2);
+    expect(confirmed?.events.map((event) => event.type)).toEqual([
+      "ADDRESS_RESOLVED",
+      "PROPERTY_CONFIRMED",
+    ]);
+    expect(confirmed?.roof_surfaces).toEqual([]);
+    expect(confirmed?.roof_facts).toBeNull();
+    expect(confirmed?.panel_objects).toEqual([]);
+    expect(confirmed?.energy_model).toBeNull();
+    expect(confirmed?.minimum_usable_ready).toBe(false);
+    expect(
+      screen.getByText("Roof analysis is pending and has not started yet."),
+    ).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText(/apply next|progress|energy model/i)).toBeNull();
     expect(
       screen.queryByText(/pricing|update system|project lenses/i),
     ).toBeNull();
+  });
 
-    first.unmount();
-    const restoredHarness = createRuntimeHarness({ storage });
-    const restored = render(
+  it("restores a valid direct confirmation entry with identical candidate identities and no rewrite", async () => {
+    const seededHarness = createRuntimeHarness();
+    const confirmation = startProject(seededHarness.runtime);
+    const writesBeforeRestore = seededHarness.storage.writes;
+    const restoredHarness = createRuntimeHarness({
+      storage: seededHarness.storage,
+    });
+    const rendered = render(
       <AddressEntryExperience
         runtime={restoredHarness.runtime}
         lookup={new ImmediateLookup()}
         onNavigate={vi.fn()}
+        directProjectEntry
       />,
     );
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Is this your property?",
+      }),
+    ).toBeVisible();
     expect(
       await screen.findByText(
         "This project was restored from this browser session.",
       ),
     ).toBeVisible();
-    expect(screen.getByTestId("scene-id")).toHaveTextContent(sceneId ?? "");
-    expect(screen.getByTestId("camera-id")).toHaveTextContent(cameraId ?? "");
-    expect(screen.getByTestId("property-id")).toHaveTextContent(
-      propertyId ?? "",
+    const scene = rendered.container.querySelector(
+      '[data-scene-shell="persistent"]',
     );
-    expect(restored.container.querySelectorAll("[data-panel-id]")).toHaveLength(
-      4,
+    expect(scene).toHaveAttribute(
+      "data-scene-id",
+      confirmation.scene?.scene_id,
     );
+    expect(scene).toHaveAttribute(
+      "data-camera-id",
+      confirmation.scene?.camera_id,
+    );
+    expect(scene).toHaveAttribute(
+      "data-property-id",
+      confirmation.property?.property_id,
+    );
+    expect(scene).toHaveAttribute(
+      "data-scene-asset-src",
+      "/images/s2-property-scene.png",
+    );
+    expect(seededHarness.storage.writes).toBe(writesBeforeRestore);
+  });
+
+  it("keeps candidate identity, source labels, confirmation, and correction available when the scene asset fails", async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    const { runtime } = createRuntimeHarness();
+    const confirmation = startProject(runtime);
+    const rendered = render(
+      <AddressEntryExperience
+        runtime={runtime}
+        lookup={new ImmediateLookup()}
+        onNavigate={navigate}
+      />,
+    );
+    await screen.findByRole("heading", { name: "Is this your property?" });
+    const scene = rendered.container.querySelector(
+      '[data-scene-shell="persistent"]',
+    );
+    const image = rendered.container.querySelector(
+      "[data-property-scene-image]",
+    );
+    expect(image).not.toBeNull();
+    fireEvent.error(image as HTMLImageElement);
+
+    expect(
+      await screen.findByRole("img", {
+        name: /property image unavailable.*identity is unchanged/i,
+      }),
+    ).toBeVisible();
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((status) =>
+          status.textContent?.includes(
+            "Seeded demo property image unavailable. Property identity and details remain unchanged.",
+          ),
+        ),
+    ).toBe(true);
+    expect(screen.getByText("Scene image unavailable")).toBeVisible();
+    expect(scene).toHaveAttribute(
+      "data-property-id",
+      confirmation.property?.property_id,
+    );
+    expect(scene).toHaveAttribute(
+      "data-scene-id",
+      confirmation.scene?.scene_id,
+    );
+    expect(screen.getByText("Demo property match")).toBeVisible();
+    expect(screen.getByText("Modeled")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Yes, this is my property" }),
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: "Not your property?" }),
+    );
+    const input = await readyAddressInput();
+    await waitFor(() => expect(input).toHaveFocus());
+    expect(input).toHaveValue("123 Maple St");
+    expect(runtime.getSnapshot().projection?.property).toBeNull();
+    expect(navigate).toHaveBeenCalledWith("/");
   });
 
   it("recovers malicious session data without interpolating its markup or URL", async () => {

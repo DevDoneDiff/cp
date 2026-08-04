@@ -6,7 +6,7 @@
  * INVARIANTS:
  *   - [INV-PRODUCT-RUNTIME-MARKER] Initial HTML keeps the stable S1-S2 runtime marker consumed by smoke and E2E readiness checks.
  * BOUNDARIES:
- *   - Browser storage is client-owned; final S2 visuals, live assembly transport, S3, pricing, and accounts remain absent.
+ *   - Browser storage is client-owned; final live-assembly visuals, transport, S3, pricing, and accounts remain absent.
  * RELATED:
  *   - src/project/ui/address-entry-experience.tsx: owns the S1 workflow and client runtime handoff.
  *   - src/app/project/page.tsx: supports direct same-session runtime restoration.
