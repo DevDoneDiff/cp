@@ -228,17 +228,26 @@ describe("pre-account session project runtime", () => {
     runtime.dispatch({ type: "APPLY_WORK_EVENT", event: firstPanel });
     const afterPanel = runtime.getSnapshot().projection;
     if (afterPanel === null) throw new Error("PANEL_NOT_ACCEPTED");
+    const nextPanel = schedule.nextEvent(afterPanel);
+    if (nextPanel?.type !== "PANEL_OBJECT_ADDED") {
+      throw new Error("NEXT_PANEL_EVENT_MISSING");
+    }
     const duplicatePanel = {
-      ...firstPanel,
-      event_id: "project-test-1:event:duplicate-panel",
-      cursor: afterPanel.latest_cursor + 1,
-      expected_project_version: afterPanel.project_version,
-      occurred_at: "2026-01-01T00:01:00.000Z",
+      ...nextPanel,
+      payload: {
+        panel: {
+          ...nextPanel.payload.panel,
+          panel_id: firstPanel.payload.panel.panel_id,
+        },
+      },
     };
+    const beforeDuplicate = structuredClone(afterPanel);
+    const writesBeforeDuplicate = storage.writes;
     expect(
       runtime.dispatch({ type: "APPLY_WORK_EVENT", event: duplicatePanel }),
     ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
-    expect(runtime.getSnapshot().projection?.panel_objects).toHaveLength(1);
+    expect(runtime.getSnapshot().projection).toEqual(beforeDuplicate);
+    expect(storage.writes).toBe(writesBeforeDuplicate);
   });
 
   it("rejects modeled work before confirmation and readiness before every prerequisite", () => {
@@ -252,7 +261,14 @@ describe("pre-account session project runtime", () => {
     const readinessEvent = readyTemplate.events.find(
       (event) => event.type === "MINIMUM_USABLE_READY",
     );
-    if (roofEvent === undefined || readinessEvent === undefined) {
+    const energyEvent = readyTemplate.events.find(
+      (event) => event.type === "ENERGY_MODEL_READY",
+    );
+    if (
+      roofEvent === undefined ||
+      readinessEvent === undefined ||
+      energyEvent === undefined
+    ) {
       throw new Error("WORK_EVENT_TEMPLATE_MISSING");
     }
 
@@ -270,6 +286,25 @@ describe("pre-account session project runtime", () => {
       candidateBefore,
     );
     expect(preConfirmation.storage.writes).toBe(candidateWrites);
+
+    const beforePanels = createRuntimeHarness();
+    startProject(beforePanels.runtime);
+    confirmProject(beforePanels.runtime);
+    beforePanels.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const roofOnly = beforePanels.runtime.getSnapshot().projection;
+    if (roofOnly === null) throw new Error("ROOF_ONLY_PROJECT_MISSING");
+    const roofOnlyBefore = structuredClone(roofOnly);
+    const roofOnlyWrites = beforePanels.storage.writes;
+    expect(
+      beforePanels.runtime.dispatch({
+        type: "APPLY_WORK_EVENT",
+        event: retargetEvent(energyEvent, roofOnly),
+      }),
+    ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+    expect(beforePanels.runtime.getSnapshot().projection).toEqual(
+      roofOnlyBefore,
+    );
+    expect(beforePanels.storage.writes).toBe(roofOnlyWrites);
 
     for (const acceptedWorkSteps of [0, 2, 5]) {
       const harness = createRuntimeHarness();

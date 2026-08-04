@@ -5,6 +5,10 @@ import {
   serializeSessionProjectProjection,
 } from "../../src/project/domain/projection";
 import {
+  seededCandidateEventId,
+  seededPanelId,
+} from "../../src/project/domain/identity";
+import {
   advanceProjectToReady,
   confirmProject,
   createRuntimeHarness,
@@ -79,21 +83,72 @@ describe("session project projection validation", () => {
     const cursorGap = clone(ready);
     cursorGap.events[3]!.cursor += 1;
     cases.push(cursorGap);
-    const futureIdentityPoison = clone(ready);
-    const roofIndex = futureIdentityPoison.events.findIndex(
+    const partial = createRuntimeHarness();
+    startProject(partial.runtime);
+    confirmProject(partial.runtime);
+    partial.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const roofReady = partial.runtime.getSnapshot().projection;
+    if (roofReady?.property === null || roofReady === null) {
+      throw new Error("ROOF_READY_PROJECT_MISSING");
+    }
+    const roofIndex = roofReady.events.findIndex(
       (event) => event.type === "ROOF_GEOMETRY_READY",
     );
-    const panelIndex = futureIdentityPoison.events.findIndex(
+    const candidateOrdinal = roofReady.events.filter(
+      (event) => event.type === "ADDRESS_RESOLVED",
+    ).length;
+    const futurePanelEventId = seededCandidateEventId(
+      partial.identity,
+      roofReady.session_project_id,
+      candidateOrdinal,
+      "panel-added:1",
+    );
+    const futurePanelObjectId = seededPanelId(
+      partial.identity,
+      roofReady.session_project_id,
+      roofReady.property.property_id,
+      adapters.fixture.panels[0]!.fixture_panel_key,
+    );
+    if (roofIndex < 0) {
+      throw new Error("ROOF_EVENT_MISSING");
+    }
+
+    const futureEventPoison = clone(roofReady);
+    futureEventPoison.events[roofIndex]!.event_id = futurePanelEventId;
+    futureEventPoison.accepted_event_ids[roofIndex] = futurePanelEventId;
+    cases.push(futureEventPoison);
+
+    const futureSurfacePoison = clone(roofReady);
+    const surfaceEvent = futureSurfacePoison.events[roofIndex];
+    if (surfaceEvent?.type !== "ROOF_GEOMETRY_READY") {
+      throw new Error("ROOF_EVENT_MISSING");
+    }
+    surfaceEvent.payload.surfaces[0]!.surface_id = futurePanelObjectId;
+    futureSurfacePoison.roof_surfaces[0]!.surface_id = futurePanelObjectId;
+    cases.push(futureSurfacePoison);
+
+    partial.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const onePanel = partial.runtime.getSnapshot().projection;
+    if (onePanel?.property === null || onePanel === null) {
+      throw new Error("PANEL_PROJECT_MISSING");
+    }
+    const panelIndex = onePanel.events.findIndex(
       (event) => event.type === "PANEL_OBJECT_ADDED",
     );
-    if (roofIndex < 0 || panelIndex < 0) {
-      throw new Error("IDENTITY_EVENTS_MISSING");
+    const futureSecondPanelId = seededPanelId(
+      partial.identity,
+      onePanel.session_project_id,
+      onePanel.property.property_id,
+      adapters.fixture.panels[1]!.fixture_panel_key,
+    );
+    const futurePanelPoison = clone(onePanel);
+    const poisonedPanelEvent = futurePanelPoison.events[panelIndex];
+    if (poisonedPanelEvent?.type !== "PANEL_OBJECT_ADDED") {
+      throw new Error("PANEL_EVENT_MISSING");
     }
-    const futurePanelEventId =
-      futureIdentityPoison.events[panelIndex]!.event_id;
-    futureIdentityPoison.events[roofIndex]!.event_id = futurePanelEventId;
-    futureIdentityPoison.accepted_event_ids[roofIndex] = futurePanelEventId;
-    cases.push(futureIdentityPoison);
+    poisonedPanelEvent.payload.panel.panel_id = futureSecondPanelId;
+    futurePanelPoison.panel_objects[0]!.panel_id = futureSecondPanelId;
+    cases.push(futurePanelPoison);
     const rawPrototypeKey = JSON.parse(
       `${JSON.stringify(ready).slice(0, -1)},"__proto__":{"polluted":true}}`,
     ) as unknown;
