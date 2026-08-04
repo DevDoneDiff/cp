@@ -242,15 +242,17 @@ function validateMachinePins(snapshot, errors) {
 function validateWorkflow(snapshot, errors) {
   const workflow = snapshot.workflow;
   const permissionsMatches = workflow.match(/^permissions:/gm) ?? [];
+  const permissionsDeclarations = workflow.match(/^\s*permissions\s*:/gm) ?? [];
   const permissionsBlock = workflow
     .match(/^permissions:\r?\n((?: {2}.+(?:\r?\n|$))+)/m)?.[1]
     ?.trim();
   if (
     permissionsMatches.length !== 1 ||
+    permissionsDeclarations.length !== 1 ||
     permissionsBlock !== "contents: read"
   ) {
     errors.push(
-      "workflow permissions must contain only contents: read at top level",
+      "workflow permissions must contain only contents: read at top level with no job-level override",
     );
   }
   if (/\$\{\{\s*secrets\./.test(workflow)) {

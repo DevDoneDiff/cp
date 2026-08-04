@@ -113,6 +113,24 @@ describe("repository security validation", () => {
     );
   });
 
+  it("rejects a job-level permission override", async () => {
+    const fixture = await readFixture("positive");
+    const workflow = fixture.workflow.replace(
+      "  baseline:\n    name:",
+      "  baseline:\n    permissions:\n      contents: write\n    name:",
+    );
+
+    expect(
+      validateSecuritySnapshot({
+        ...fixture,
+        workflow,
+        manifest: manifest(),
+      }),
+    ).toContain(
+      "workflow permissions must contain only contents: read at top level with no job-level override",
+    );
+  });
+
   it("accepts the materialized repository contract", async () => {
     const testDirectory = path.dirname(fileURLToPath(import.meta.url));
     const repositoryRoot = path.resolve(testDirectory, "..", "..");
