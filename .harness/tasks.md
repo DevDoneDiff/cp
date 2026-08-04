@@ -183,9 +183,9 @@ Bootstrap: true
 Source_spec: docs/specs/A-repository-foundation.md
 Priority: P1
 Depends_on: none
-Status: working
+Status: passed
 Ready: true
-Pass: false
+Pass: true
 Objective:
 - Establish the approved repository foundation from the existing `main` baseline, including replacing every required `<unset>` field in `.harness/validation.md`, proving the non-product application shell, and configuring its guarded delivery path.
 Scope:
