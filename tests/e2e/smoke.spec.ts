@@ -192,6 +192,9 @@ test("keyboard entry completes the real S1 workflow through one client runtime t
   await expect(runtimeHeading).toBeVisible();
   await expect(runtimeHeading).toBeFocused();
   await expect(page).toHaveURL(`${APP_ORIGIN}/project`);
+  await expect(
+    page.getByText("This project was restored from this browser session."),
+  ).toHaveCount(0);
   expect(
     await page.evaluate(
       () =>
@@ -294,6 +297,48 @@ test("pointer selection preserves the persistent scene and stable objects throug
         nodes.map((node) => node.getAttribute("data-panel-id")),
       ),
   ).toEqual(panelIds);
+  expect(observations.browserErrors).toEqual([]);
+  expect(observations.httpErrors).toEqual([]);
+  expect(observations.externalRequests).toEqual([]);
+});
+
+test("correction clears the pending latch and reselection preserves the project root", async ({
+  page,
+}) => {
+  const observations = observe(page);
+  await page.goto("/");
+  let input = page.getByRole("combobox", { name: "Home address" });
+  await input.fill("123 Maple St");
+  await page.getByRole("option").click();
+  await expect(
+    page.getByRole("heading", { name: "Property confirmation runtime" }),
+  ).toBeVisible();
+  const firstProjection = await readStoredProjection(page);
+
+  await page.getByRole("button", { name: "Correct seeded address" }).click();
+  input = page.getByRole("combobox", { name: "Home address" });
+  await expect(input).toHaveValue("123 Maple St, Austin, TX 78704");
+  await expect(input).toBeFocused();
+  await input.fill("123 Maple");
+  await page.getByRole("option").click();
+  await expect(
+    page.getByRole("heading", { name: "Property confirmation runtime" }),
+  ).toBeVisible();
+  const secondProjection = await readStoredProjection(page);
+
+  expect(secondProjection?.session_project_id).toBe(
+    firstProjection?.session_project_id,
+  );
+  expect(
+    (secondProjection?.property as { property_id?: string }).property_id,
+  ).not.toBe(
+    (firstProjection?.property as { property_id?: string }).property_id,
+  );
+  expect(
+    (secondProjection?.events as Array<{ type: string }>).map(
+      (event) => event.type,
+    ),
+  ).toEqual(["ADDRESS_RESOLVED", "PROJECT_MUTATED", "ADDRESS_RESOLVED"]);
   expect(observations.browserErrors).toEqual([]);
   expect(observations.httpErrors).toEqual([]);
   expect(observations.externalRequests).toEqual([]);

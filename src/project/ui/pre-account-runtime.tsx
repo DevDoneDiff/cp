@@ -53,7 +53,9 @@ export function PreAccountRuntime({ runtime }: PreAccountRuntimeProps) {
     const unsubscribe = activeRuntime.subscribe(() => {
       setSnapshot(activeRuntime.getSnapshot());
     });
-    activeRuntime.dispatch({ type: "RESTORE_SESSION" });
+    if (activeRuntime.getSnapshot().restore_status === "not_checked") {
+      activeRuntime.dispatch({ type: "RESTORE_SESSION" });
+    }
     return unsubscribe;
   }, [activeRuntime]);
 

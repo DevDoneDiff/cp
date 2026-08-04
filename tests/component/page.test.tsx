@@ -290,6 +290,11 @@ describe("S1 address-entry experience", () => {
       name: "Property confirmation runtime",
     });
     await waitFor(() => expect(runtimeHeading).toHaveFocus());
+    expect(
+      screen.queryByText(
+        "This project was restored from this browser session.",
+      ),
+    ).toBeNull();
     expect(navigate).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith("/project");
     expect(identity.projectCount).toBe(1);
@@ -301,6 +306,56 @@ describe("S1 address-entry experience", () => {
     expect(projection?.certainty_kind).toBe("DEMO_PROPERTY_MATCH");
     expect(projection?.project_version).toBe(1);
     expect(projection?.latest_cursor).toBe(1);
+  });
+
+  it("clears the submission latch after correction and reselects within the same project runtime", async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    const { runtime, identity, storage } = createRuntimeHarness();
+    render(
+      <AddressEntryExperience
+        runtime={runtime}
+        lookup={new ImmediateLookup()}
+        onNavigate={navigate}
+      />,
+    );
+    let input = await readyAddressInput();
+    await user.type(input, "123 Maple St");
+    await user.click(screen.getByRole("option"));
+    await screen.findByRole("heading", {
+      name: "Property confirmation runtime",
+    });
+    const firstProjection = runtime.getSnapshot().projection;
+    const firstProjectId = firstProjection?.session_project_id;
+    const firstPropertyId = firstProjection?.property?.property_id;
+
+    await user.click(
+      screen.getByRole("button", { name: "Correct seeded address" }),
+    );
+    input = await readyAddressInput();
+    await waitFor(() => expect(input).toHaveFocus());
+    expect(input).toHaveValue("123 Maple St, Austin, TX 78704");
+    expect(runtime.getSnapshot().visible_state).toBe("ADDRESS_ENTRY");
+    expect(runtime.getSnapshot().projection?.property).toBeNull();
+
+    await user.clear(input);
+    await user.type(input, "123 Maple");
+    await user.click(screen.getByRole("option"));
+    await screen.findByRole("heading", {
+      name: "Property confirmation runtime",
+    });
+
+    const secondProjection = runtime.getSnapshot().projection;
+    expect(secondProjection?.session_project_id).toBe(firstProjectId);
+    expect(secondProjection?.property?.property_id).not.toBe(firstPropertyId);
+    expect(secondProjection?.events.map((event) => event.type)).toEqual([
+      "ADDRESS_RESOLVED",
+      "PROJECT_MUTATED",
+      "ADDRESS_RESOLVED",
+    ]);
+    expect(identity.projectCount).toBe(1);
+    expect(storage.writes).toBe(3);
+    expect(navigate).toHaveBeenCalledTimes(2);
   });
 
   it("preserves the selected address through a recoverable lookup failure and succeeds once on retry", async () => {

@@ -10,9 +10,11 @@
  * RELATED:
  *   - src/app/page.tsx: renders the approved seeded address entrypoint.
  *   - src/app/globals.css: supplies the approved S1 native presentation.
+ *   - src/project/ui/session-project-runtime-provider.tsx: preserves one runtime across route transitions.
  */
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { SessionProjectRuntimeProvider } from "../project/ui/session-project-runtime-provider";
 
 import "./globals.css";
 
@@ -27,7 +29,11 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SessionProjectRuntimeProvider>
+          {children}
+        </SessionProjectRuntimeProvider>
+      </body>
     </html>
   );
 }

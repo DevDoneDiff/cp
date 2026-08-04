@@ -45,6 +45,7 @@ import {
 } from "../adapters/seeded-address-lookup";
 import { SessionProjectRuntime } from "../application/session-project-runtime";
 import { PreAccountRuntime } from "./pre-account-runtime";
+import { useSharedSessionProjectRuntime } from "./session-project-runtime-provider";
 
 const SIGN_IN_MESSAGE =
   "Sign-in is not available in this pre-account demo. Enter an address to begin.";
@@ -150,6 +151,10 @@ export function AddressEntryExperience({
         next.projection?.visible_state === "ADDRESS_ENTRY" &&
         next.projection.property === null
       ) {
+        pendingRef.current = false;
+        setLoading(false);
+        setFeedback(null);
+        setRetryInput(null);
         const preservedDraft = next.projection.address_draft;
         setAddress(preservedDraft);
         setSuggestion(suggestSeededAddress(preservedDraft));
@@ -157,7 +162,9 @@ export function AddressEntryExperience({
       }
     };
     const unsubscribe = activeRuntime.subscribe(synchronize);
-    activeRuntime.dispatch({ type: "RESTORE_SESSION" });
+    if (activeRuntime.getSnapshot().restore_status === "not_checked") {
+      activeRuntime.dispatch({ type: "RESTORE_SESSION" });
+    }
     return () => {
       mountedRef.current = false;
       unsubscribe();
@@ -589,8 +596,11 @@ export function AddressEntryRoute({
   directProjectEntry = false,
 }: AddressEntryRouteProps) {
   const router = useRouter();
+  const sharedRuntime = useSharedSessionProjectRuntime();
+  const runtimeProps = sharedRuntime === null ? {} : { runtime: sharedRuntime };
   return (
     <AddressEntryExperience
+      {...runtimeProps}
       directProjectEntry={directProjectEntry}
       onNavigate={(href) => {
         router.push(href);
