@@ -12,19 +12,28 @@
  *   - Inputs must first pass event parsing; cursor and project version own ordering while timestamps remain provenance metadata.
  *   - Persistence and publication order belong to the application runtime.
  * RELATED:
+ *   - src/project/domain/identity.ts: derives the only valid stable slot for each seeded ID.
  *   - src/project/domain/work-events.ts: owns untrusted envelope parsing.
  *   - src/project/domain/projection.ts: uses replay to prove restored projection coherence.
- *   - src/project/adapters/seeded-demo.ts: supplies the replaceable fixture contract.
  */
 import {
   SESSION_PROJECT_SCHEMA_VERSION,
   type AddressResolvedEvent,
+  type IdentitySource,
   type PanelObject,
   type ProjectEvent,
   type RoofSurface,
   type SeededFixtureContract,
   type SessionProjectProjection,
 } from "./model";
+import {
+  expectedSeededEventId,
+  seededCameraId,
+  seededPanelId,
+  seededPropertyId,
+  seededSceneId,
+  seededSurfaceId,
+} from "./identity";
 import { projectEventsEqual } from "./work-events";
 import { sameValue } from "./validation";
 
@@ -72,6 +81,8 @@ function inputMatchesFixture(
 function addressEventMatchesFixture(
   event: AddressResolvedEvent,
   fixture: SeededFixtureContract,
+  identity: IdentitySource,
+  candidateOrdinal: number,
 ): boolean {
   const { payload } = event;
   return (
@@ -80,11 +91,34 @@ function addressEventMatchesFixture(
     payload.source_kind === fixture.source_kind &&
     payload.certainty_kind === fixture.certainty_kind &&
     payload.property.property_id === event.property_id &&
+    event.event_id ===
+      expectedSeededEventId(identity, event, candidateOrdinal) &&
+    payload.property.property_id ===
+      seededPropertyId(
+        identity,
+        event.session_project_id,
+        fixture.property.fixture_property_key,
+        candidateOrdinal,
+      ) &&
     payload.property.fixture_property_key ===
       fixture.property.fixture_property_key &&
     payload.property.display_address === fixture.property.display_address &&
     payload.scene.fixture_scene_key === fixture.scene.fixture_scene_key &&
     payload.scene.fixture_camera_key === fixture.scene.fixture_camera_key &&
+    payload.scene.scene_id ===
+      seededSceneId(
+        identity,
+        event.session_project_id,
+        fixture.scene.fixture_scene_key,
+        candidateOrdinal,
+      ) &&
+    payload.scene.camera_id ===
+      seededCameraId(
+        identity,
+        event.session_project_id,
+        fixture.scene.fixture_camera_key,
+        candidateOrdinal,
+      ) &&
     new Set([
       event.event_id,
       event.session_project_id,
@@ -118,8 +152,12 @@ function historicalObjectIds(
 
 function roofMatchesFixture(
   surfaces: RoofSurface[],
+  projection: SessionProjectProjection,
   fixture: SeededFixtureContract,
+  identity: IdentitySource,
 ): boolean {
+  const property = projection.property;
+  if (property === null) return false;
   return (
     surfaces.length === fixture.roof.surfaces.length &&
     new Set(surfaces.map((surface) => surface.surface_id)).size ===
@@ -128,6 +166,13 @@ function roofMatchesFixture(
       const expected = fixture.roof.surfaces[index];
       return (
         expected !== undefined &&
+        surface.surface_id ===
+          seededSurfaceId(
+            identity,
+            projection.session_project_id,
+            property.property_id,
+            expected.fixture_surface_key,
+          ) &&
         surface.fixture_surface_key === expected.fixture_surface_key &&
         sameValue(surface.polygon, expected.polygon) &&
         surface.pitch_degrees === expected.pitch_degrees &&
@@ -141,6 +186,7 @@ function panelMatchesFixture(
   panel: PanelObject,
   projection: SessionProjectProjection,
   fixture: SeededFixtureContract,
+  identity: IdentitySource,
 ): boolean {
   const expected = fixture.panels.find(
     (candidate) => candidate.fixture_panel_key === panel.fixture_panel_key,
@@ -151,6 +197,14 @@ function panelMatchesFixture(
   return (
     expected !== undefined &&
     surface !== undefined &&
+    projection.property !== null &&
+    panel.panel_id ===
+      seededPanelId(
+        identity,
+        projection.session_project_id,
+        projection.property.property_id,
+        expected.fixture_panel_key,
+      ) &&
     surface.fixture_surface_key === expected.fixture_surface_key &&
     panel.placement_rank === expected.placement_rank &&
     sameValue(panel.geometry, expected.geometry) &&
@@ -223,6 +277,7 @@ export function applyProjectEvent(
   projection: SessionProjectProjection | null,
   event: ProjectEvent,
   fixture: SeededFixtureContract,
+  identity: IdentitySource,
 ): TransitionResult {
   if (projection === null) {
     if (
@@ -230,7 +285,7 @@ export function applyProjectEvent(
       event.fixture_version !== fixture.fixture_version ||
       event.cursor !== 1 ||
       event.expected_project_version !== 0 ||
-      !addressEventMatchesFixture(event, fixture)
+      !addressEventMatchesFixture(event, fixture, identity, 1)
     ) {
       return rejected("INVALID_EVENT_ORDER");
     }
@@ -251,6 +306,19 @@ export function applyProjectEvent(
     event.session_project_id !== projection.session_project_id
   ) {
     return rejected("FOREIGN_EVENT");
+  }
+  const acceptedCandidateCount = projection.events.filter(
+    (candidate) => candidate.type === "ADDRESS_RESOLVED",
+  ).length;
+  const eventCandidateOrdinal =
+    event.type === "ADDRESS_RESOLVED"
+      ? acceptedCandidateCount + 1
+      : acceptedCandidateCount;
+  if (
+    event.event_id !==
+    expectedSeededEventId(identity, event, eventCandidateOrdinal)
+  ) {
+    return rejected("FIXTURE_MISMATCH");
   }
   const reservedObjectIds = historicalObjectIds(projection);
   if (reservedObjectIds.has(event.event_id)) {
@@ -276,7 +344,12 @@ export function applyProjectEvent(
           event.payload.scene.scene_id,
           event.payload.scene.camera_id,
         ].some((identity) => reservedObjectIds.has(identity)) ||
-        !addressEventMatchesFixture(event, fixture)
+        !addressEventMatchesFixture(
+          event,
+          fixture,
+          identity,
+          eventCandidateOrdinal,
+        )
       ) {
         return rejected("INVALID_EVENT_ORDER");
       }
@@ -347,7 +420,12 @@ export function applyProjectEvent(
             reservedObjectIds.has(surface.surface_id) ||
             surface.surface_id === event.event_id,
         ) ||
-        !roofMatchesFixture(event.payload.surfaces, fixture) ||
+        !roofMatchesFixture(
+          event.payload.surfaces,
+          projection,
+          fixture,
+          identity,
+        ) ||
         !sameValue(event.payload.roof_facts, fixture.roof.facts)
       ) {
         return rejected("INVALID_EVENT_ORDER");
@@ -375,7 +453,7 @@ export function applyProjectEvent(
         reservedObjectIds.has(panel.panel_id) ||
         panel.panel_id === event.event_id ||
         panel.placement_rank !== projection.panel_objects.length + 1 ||
-        !panelMatchesFixture(panel, projection, fixture)
+        !panelMatchesFixture(panel, projection, fixture, identity)
       ) {
         return rejected(
           projection.panel_objects.some(
@@ -432,10 +510,11 @@ export function applyProjectEvent(
 export function replayProjectEvents(
   events: readonly ProjectEvent[],
   fixture: SeededFixtureContract,
+  identity: IdentitySource,
 ): SessionProjectProjection | null {
   let projection: SessionProjectProjection | null = null;
   for (const event of events) {
-    const result = applyProjectEvent(projection, event, fixture);
+    const result = applyProjectEvent(projection, event, fixture, identity);
     if (result.kind !== "accepted") {
       return null;
     }

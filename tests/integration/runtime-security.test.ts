@@ -5,6 +5,10 @@ import {
   createPropertyConfirmedEvent,
   createPropertyCorrectionEvent,
 } from "../../src/project/adapters/seeded-demo";
+import {
+  seededCandidateEventId,
+  seededPanelId,
+} from "../../src/project/domain/identity";
 import type { ProjectEvent } from "../../src/project/domain/model";
 import {
   confirmProject,
@@ -165,6 +169,97 @@ describe("session runtime trust boundaries", () => {
       expect(target.runtime.getSnapshot().projection).toEqual(before);
       expect(target.storage.writes).toBe(writes);
     }
+  });
+
+  it("rejects future event and object identity collisions without poisoning legitimate progress", () => {
+    const { runtime, schedule, adapters, identity, storage } =
+      createRuntimeHarness();
+    startProject(runtime);
+    const confirmed = confirmProject(runtime);
+    const property = confirmed.property;
+    const validRoof = schedule.nextEvent(confirmed);
+    if (property === null || validRoof?.type !== "ROOF_GEOMETRY_READY") {
+      throw new Error("ROOF_EVENT_MISSING");
+    }
+    const candidateOrdinal = confirmed.events.filter(
+      (event) => event.type === "ADDRESS_RESOLVED",
+    ).length;
+    const futurePanelEventId = seededCandidateEventId(
+      identity,
+      confirmed.session_project_id,
+      candidateOrdinal,
+      "panel-added:1",
+    );
+    const futurePanelObjectId = seededPanelId(
+      identity,
+      confirmed.session_project_id,
+      property.property_id,
+      adapters.fixture.panels[0]!.fixture_panel_key,
+    );
+    const beforeRoof = structuredClone(confirmed);
+    const writesBeforeRoof = storage.writes;
+
+    for (const forgedRoof of [
+      { ...validRoof, event_id: futurePanelEventId },
+      {
+        ...validRoof,
+        payload: {
+          ...validRoof.payload,
+          surfaces: validRoof.payload.surfaces.map((surface, index) =>
+            index === 0
+              ? { ...surface, surface_id: futurePanelObjectId }
+              : surface,
+          ),
+        },
+      },
+    ]) {
+      expect(
+        runtime.dispatch({ type: "APPLY_WORK_EVENT", event: forgedRoof }),
+      ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+      expect(runtime.getSnapshot().projection).toEqual(beforeRoof);
+      expect(storage.writes).toBe(writesBeforeRoof);
+    }
+
+    expect(
+      runtime.dispatch({ type: "APPLY_WORK_EVENT", event: validRoof }),
+    ).toEqual({ ok: true, outcome: "accepted" });
+    const roofAccepted = runtime.getSnapshot().projection;
+    if (roofAccepted === null) throw new Error("ROOF_NOT_ACCEPTED");
+    const validPanel = schedule.nextEvent(roofAccepted);
+    if (validPanel?.type !== "PANEL_OBJECT_ADDED") {
+      throw new Error("PANEL_EVENT_MISSING");
+    }
+    const futureSecondPanelId = seededPanelId(
+      identity,
+      roofAccepted.session_project_id,
+      property.property_id,
+      adapters.fixture.panels[1]!.fixture_panel_key,
+    );
+    const beforePanel = structuredClone(roofAccepted);
+    const writesBeforePanel = storage.writes;
+    expect(
+      runtime.dispatch({
+        type: "APPLY_WORK_EVENT",
+        event: {
+          ...validPanel,
+          payload: {
+            panel: {
+              ...validPanel.payload.panel,
+              panel_id: futureSecondPanelId,
+            },
+          },
+        },
+      }),
+    ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+    expect(runtime.getSnapshot().projection).toEqual(beforePanel);
+    expect(storage.writes).toBe(writesBeforePanel);
+
+    expect(
+      runtime.dispatch({ type: "APPLY_WORK_EVENT", event: validPanel }),
+    ).toEqual({ ok: true, outcome: "accepted" });
+    expect(runtime.getSnapshot().projection?.panel_objects).toEqual([
+      validPanel.payload.panel,
+    ]);
   });
 
   it("bounds malformed address input before normalization, identity, or persistence", () => {

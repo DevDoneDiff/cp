@@ -221,10 +221,14 @@ describe("browser-session project persistence", () => {
 
   it("rejects a noncanonical projection before writing it", () => {
     const storage = new MemoryStorage();
-    const { runtime, adapters } = createRuntimeHarness({ storage });
+    const { runtime, adapters, identity } = createRuntimeHarness({ storage });
     const valid = startProject(runtime);
     const writes = storage.writes;
-    const store = new BrowserSessionProjectStore(adapters, () => storage);
+    const store = new BrowserSessionProjectStore(
+      adapters,
+      identity,
+      () => storage,
+    );
     expect(store.save({ ...valid, source_kind: "GOOGLE" } as never)).toEqual({
       ok: false,
       reason: "INVALID",

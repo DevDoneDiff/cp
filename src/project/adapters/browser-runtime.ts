@@ -53,6 +53,7 @@ function browserSessionStorage(): StorageLike {
 export class BrowserSessionProjectStore implements SessionProjectStore {
   constructor(
     private readonly adapters: SeededDemoAdapters,
+    private readonly identity: IdentitySource,
     private readonly storageProvider: StorageProvider = browserSessionStorage,
   ) {}
 
@@ -94,6 +95,7 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
     const parsed = parseSessionProjectProjection(
       unknownProjection,
       this.adapters.fixture,
+      this.identity,
     );
     if (!parsed.ok) {
       this.discardInvalid(storage);
@@ -109,6 +111,7 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
     const serialized = serializeSessionProjectProjection(
       projection,
       this.adapters.fixture,
+      this.identity,
     );
     if (!serialized.ok) {
       return { ok: false, reason: "INVALID" };
@@ -162,7 +165,7 @@ export function createBrowserSessionProjectRuntime(): SessionProjectRuntime {
   const adapters = createSeededDemoAdapters();
   const identity = new BrowserIdentitySource();
   const clock = new SystemClock();
-  const store = new BrowserSessionProjectStore(adapters);
+  const store = new BrowserSessionProjectStore(adapters, identity);
   const schedule = new SeededManualSchedule(adapters, identity, clock);
   return new SessionProjectRuntime({
     adapters,

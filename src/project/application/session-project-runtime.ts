@@ -151,6 +151,7 @@ export class SessionProjectRuntime {
     const parsed = parseSessionProjectProjection(
       proposed,
       this.dependencies.adapters.fixture,
+      this.dependencies.identity,
     );
     if (!parsed.ok) {
       return this.publishError("DOMAIN_REJECTED");
@@ -237,6 +238,7 @@ export class SessionProjectRuntime {
       current,
       event,
       this.dependencies.adapters.fixture,
+      this.dependencies.identity,
     );
     return transition.kind === "accepted"
       ? this.commit(transition.projection)
@@ -289,6 +291,7 @@ export class SessionProjectRuntime {
       current,
       parsed.event,
       this.dependencies.adapters.fixture,
+      this.dependencies.identity,
     );
     if (transition.kind === "idempotent") {
       return { ok: true, outcome: "idempotent" };

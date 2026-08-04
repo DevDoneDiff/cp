@@ -12,6 +12,7 @@
  *   - This module owns demo facts and event construction, not persistence, rendering, or domain acceptance.
  * RELATED:
  *   - src/project/domain/model.ts: defines the fixture and event contracts.
+ *   - src/project/domain/identity.ts: supplies the shared semantic identity slots.
  *   - src/project/application/session-project-runtime.ts: coordinates adapters with persistence.
  */
 import {
@@ -35,6 +36,15 @@ import {
   type SeededFixtureContract,
   type SessionProjectProjection,
 } from "../domain/model";
+import {
+  seededAddressResolvedEventId,
+  seededCameraId,
+  seededCandidateEventId,
+  seededPanelId,
+  seededPropertyId,
+  seededSceneId,
+  seededSurfaceId,
+} from "../domain/identity";
 
 export const SEEDED_DEMO_FIXTURE: SeededFixtureContract = {
   fixture_version: "seeded-maple-austin-v1",
@@ -224,21 +234,27 @@ class SeededPropertyAdapter implements PropertyFixtureAdapter {
   ) {
     return {
       property: {
-        property_id: identity.stableId(
+        property_id: seededPropertyId(
+          identity,
           sessionProjectId,
-          `property:${SEEDED_DEMO_FIXTURE.property.fixture_property_key}:${candidateOrdinal}`,
+          SEEDED_DEMO_FIXTURE.property.fixture_property_key,
+          candidateOrdinal,
         ),
         fixture_property_key: SEEDED_DEMO_FIXTURE.property.fixture_property_key,
         display_address: SEEDED_DEMO_FIXTURE.property.display_address,
       },
       scene: {
-        scene_id: identity.stableId(
+        scene_id: seededSceneId(
+          identity,
           sessionProjectId,
-          `scene:${SEEDED_DEMO_FIXTURE.scene.fixture_scene_key}:${candidateOrdinal}`,
+          SEEDED_DEMO_FIXTURE.scene.fixture_scene_key,
+          candidateOrdinal,
         ),
-        camera_id: identity.stableId(
+        camera_id: seededCameraId(
+          identity,
           sessionProjectId,
-          `camera:${SEEDED_DEMO_FIXTURE.scene.fixture_camera_key}:${candidateOrdinal}`,
+          SEEDED_DEMO_FIXTURE.scene.fixture_camera_key,
+          candidateOrdinal,
         ),
         fixture_scene_key: SEEDED_DEMO_FIXTURE.scene.fixture_scene_key,
         fixture_camera_key: SEEDED_DEMO_FIXTURE.scene.fixture_camera_key,
@@ -258,9 +274,11 @@ class SeededRoofAdapter implements RoofFixtureAdapter {
     }
     return {
       surfaces: SEEDED_DEMO_FIXTURE.roof.surfaces.map((surface) => ({
-        surface_id: identity.stableId(
+        surface_id: seededSurfaceId(
+          identity,
           projection.session_project_id,
-          `surface:${property.property_id}:${surface.fixture_surface_key}`,
+          property.property_id,
+          surface.fixture_surface_key,
         ),
         fixture_surface_key: surface.fixture_surface_key,
         polygon: surface.polygon.map((point) => ({ ...point })),
@@ -293,9 +311,11 @@ class SeededPanelAdapter implements PanelFixtureAdapter {
       return null;
     }
     return {
-      panel_id: identity.stableId(
+      panel_id: seededPanelId(
+        identity,
         projection.session_project_id,
-        `panel:${property.property_id}:${expected.fixture_panel_key}`,
+        property.property_id,
+        expected.fixture_panel_key,
       ),
       surface_id: surface.surface_id,
       fixture_panel_key: expected.fixture_panel_key,
@@ -340,9 +360,11 @@ function commonEventFields(
   return {
     schema_version: PROJECT_EVENT_SCHEMA_VERSION,
     fixture_version: projection.fixture_version,
-    event_id: identity.stableId(
+    event_id: seededCandidateEventId(
+      identity,
       projection.session_project_id,
-      `event:${candidateOrdinal}:${semanticEventKey}`,
+      candidateOrdinal,
+      semanticEventKey,
     ),
     session_project_id: projection.session_project_id,
     property_id: projection.property.property_id,
@@ -372,9 +394,10 @@ export function createAddressResolvedEvent(input: {
   return {
     schema_version: PROJECT_EVENT_SCHEMA_VERSION,
     fixture_version: input.adapters.fixture.fixture_version,
-    event_id: input.identity.stableId(
+    event_id: seededAddressResolvedEventId(
+      input.identity,
       input.sessionProjectId,
-      `event:address-resolved:${input.candidateOrdinal}`,
+      input.candidateOrdinal,
     ),
     session_project_id: input.sessionProjectId,
     property_id: match.property.property_id,

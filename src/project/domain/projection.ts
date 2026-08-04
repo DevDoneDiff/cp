@@ -8,7 +8,7 @@
  *   - [COMPAT-PROJECTION-SCHEMA] Only the current exact projection and fixture versions may restore.
  *   - [SEC-UNTRUSTED-RESTORE] Derived state must equal a legal replay of the bounded accepted event record.
  * BOUNDARIES:
- *   - Raw JSON size and browser API failures are handled by the storage adapter; this module owns domain shape and coherence.
+ *   - Raw JSON size and browser API failures are handled by the storage adapter; this module owns domain shape, semantic identity, and replay coherence.
  * RELATED:
  *   - src/project/domain/reducer.ts: reconstructs legal state from accepted events.
  *   - src/project/adapters/browser-runtime.ts: owns the sessionStorage access boundary.
@@ -16,6 +16,7 @@
 import {
   SESSION_PROJECT_SCHEMA_VERSION,
   VISIBLE_PROJECT_STATES,
+  type IdentitySource,
   type ProjectEvent,
   type SeededFixtureContract,
   type SessionProjectProjection,
@@ -114,6 +115,7 @@ function parseAcceptedEvents(
 export function parseSessionProjectProjection(
   value: unknown,
   fixture: SeededFixtureContract,
+  identity: IdentitySource,
 ): ProjectionParseResult {
   try {
     const record = expectRecord(value);
@@ -158,7 +160,7 @@ export function parseSessionProjectProjection(
       }),
       events: parseAcceptedEvents(record.events, fixtureVersion),
     };
-    const replayed = replayProjectEvents(parsed.events, fixture);
+    const replayed = replayProjectEvents(parsed.events, fixture, identity);
     if (replayed === null || !sameValue(parsed, replayed)) {
       throw new DomainValidationError();
     }
@@ -174,8 +176,9 @@ export function parseSessionProjectProjection(
 export function serializeSessionProjectProjection(
   value: unknown,
   fixture: SeededFixtureContract,
+  identity: IdentitySource,
 ): ProjectionSerializeResult {
-  const parsed = parseSessionProjectProjection(value, fixture);
+  const parsed = parseSessionProjectProjection(value, fixture, identity);
   if (!parsed.ok) {
     return parsed;
   }
