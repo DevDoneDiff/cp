@@ -308,19 +308,57 @@ test("correction clears the pending latch and reselection preserves the project 
   const observations = observe(page);
   await page.goto("/");
   let input = page.getByRole("combobox", { name: "Home address" });
+  await page.getByRole("button", { name: "How it works" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "How it works" }),
+  ).toBeVisible();
+  await input.click();
   await input.fill("123 Maple St");
   await page.getByRole("option").click();
   await expect(
     page.getByRole("heading", { name: "Property confirmation runtime" }),
   ).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "How it works" })).toHaveCount(
+    0,
+  );
   const firstProjection = await readStoredProjection(page);
 
   await page.getByRole("button", { name: "Correct seeded address" }).click();
   input = page.getByRole("combobox", { name: "Home address" });
   await expect(input).toHaveValue("123 Maple St, Austin, TX 78704");
   await expect(input).toBeFocused();
+  await expect(
+    page.getByText("No active browser-session project was found"),
+  ).toHaveCount(0);
+  await page.evaluate((storageKey) => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function failCorrectionOnce(key, value) {
+      if (key === storageKey) {
+        Storage.prototype.setItem = original;
+        throw new DOMException(
+          "Injected corrected-project session write failure",
+          "QuotaExceededError",
+        );
+      }
+      return original.call(this, key, value);
+    };
+  }, SESSION_PROJECT_STORAGE_KEY);
   await input.fill("123 Maple");
   await page.getByRole("option").click();
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "could not be saved in this browser session" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Retry demo lookup" }),
+  ).toBeVisible();
+  const failedProjection = await readStoredProjection(page);
+  expect(failedProjection?.session_project_id).toBe(
+    firstProjection?.session_project_id,
+  );
+  expect(failedProjection?.property).toBeNull();
+  await page.getByRole("button", { name: "Retry demo lookup" }).click();
   await expect(
     page.getByRole("heading", { name: "Property confirmation runtime" }),
   ).toBeVisible();

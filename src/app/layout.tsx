@@ -4,7 +4,7 @@
  * PUBLIC API / ENTRYPOINTS:
  *   - RootLayout: wraps the S1 landing and browser-session project runtime routes.
  * INVARIANTS:
- *   - The root shell initializes no product provider, credential, durable persistence, or external client.
+ *   - The root shell initializes only the local runtime-lifetime provider, with no credential, durable persistence, or external client.
  * BOUNDARIES:
  *   - Final S2 composition and later-state metadata belong to their approved visual tasks.
  * RELATED:

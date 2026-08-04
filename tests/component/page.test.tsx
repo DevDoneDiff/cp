@@ -320,11 +320,15 @@ describe("S1 address-entry experience", () => {
       />,
     );
     let input = await readyAddressInput();
+    await user.click(screen.getByRole("button", { name: "How it works" }));
+    expect(screen.getByRole("dialog", { name: "How it works" })).toBeVisible();
+    await user.click(input);
     await user.type(input, "123 Maple St");
     await user.click(screen.getByRole("option"));
     await screen.findByRole("heading", {
       name: "Property confirmation runtime",
     });
+    expect(screen.queryByRole("dialog", { name: "How it works" })).toBeNull();
     const firstProjection = runtime.getSnapshot().projection;
     const firstProjectId = firstProjection?.session_project_id;
     const firstPropertyId = firstProjection?.property?.property_id;
@@ -337,10 +341,25 @@ describe("S1 address-entry experience", () => {
     expect(input).toHaveValue("123 Maple St, Austin, TX 78704");
     expect(runtime.getSnapshot().visible_state).toBe("ADDRESS_ENTRY");
     expect(runtime.getSnapshot().projection?.property).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "How it works" })).toBeNull();
 
+    storage.setError = true;
     await user.clear(input);
     await user.type(input, "123 Maple");
     await user.click(screen.getByRole("option"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "could not be saved in this browser session",
+    );
+    expect(
+      screen.getByRole("button", { name: "Retry demo lookup" }),
+    ).toBeVisible();
+    expect(runtime.getSnapshot().projection?.session_project_id).toBe(
+      firstProjectId,
+    );
+    expect(runtime.getSnapshot().projection?.property).toBeNull();
+
+    storage.setError = false;
+    await user.click(screen.getByRole("button", { name: "Retry demo lookup" }));
     await screen.findByRole("heading", {
       name: "Property confirmation runtime",
     });

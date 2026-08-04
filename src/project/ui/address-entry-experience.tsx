@@ -149,7 +149,8 @@ export function AddressEntryExperience({
       setSnapshot(next);
       if (
         next.projection?.visible_state === "ADDRESS_ENTRY" &&
-        next.projection.property === null
+        next.projection.property === null &&
+        next.error_code === null
       ) {
         pendingRef.current = false;
         setLoading(false);
@@ -200,6 +201,7 @@ export function AddressEntryExperience({
     async (commandInput: string) => {
       if (!restoreReady || pendingRef.current) return;
       pendingRef.current = true;
+      setHelpOpen(false);
       setRetryInput(commandInput);
       setAddress(commandInput);
       setSuggestionOpen(false);
@@ -357,7 +359,9 @@ export function AddressEntryExperience({
               Invalid browser-session data was cleared. A fresh address entry is
               ready.
             </p>
-          ) : directProjectEntry && snapshot.restore_status === "empty" ? (
+          ) : directProjectEntry &&
+            snapshot.restore_status === "empty" &&
+            snapshot.projection === null ? (
             <p className="s1-recovery" role="status">
               No active browser-session project was found. Start again with the
               seeded demo address.
