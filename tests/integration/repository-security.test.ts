@@ -83,6 +83,7 @@ describe("repository security validation", () => {
         "TypeScript 7 must not enter pnpm-lock.yaml",
         expect.stringContaining("alternative lockfiles are forbidden"),
         "foundation workflow must not reference secrets",
+        "both CI jobs must enable the pnpm shim and install exact pnpm 11.18.0",
         expect.stringContaining("remote action is not pinned"),
         expect.stringContaining("local environment files are forbidden"),
       ]),

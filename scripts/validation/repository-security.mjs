@@ -265,6 +265,15 @@ function validateWorkflow(snapshot, errors) {
   ) {
     errors.push("both CI jobs must install with pnpm --frozen-lockfile");
   }
+  if (
+    (workflow.match(/^\s+corepack enable pnpm\s*$/gm) ?? []).length !== 2 ||
+    (workflow.match(/^\s+corepack install --global pnpm@11\.18\.0\s*$/gm) ?? [])
+      .length !== 2
+  ) {
+    errors.push(
+      "both CI jobs must enable the pnpm shim and install exact pnpm 11.18.0",
+    );
+  }
 
   const usesLines = workflow
     .split(/\r?\n/)
