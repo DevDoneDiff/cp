@@ -1,36 +1,20 @@
 /**
  * MODULE: src/app/page.tsx
- * PURPOSE: Compose the root pre-account project runtime and its server-rendered availability marker.
+ * PURPOSE: Compose the approved S1 address-entry landing and its server-rendered runtime-readiness marker.
  * PUBLIC API / ENTRYPOINTS:
- *   - Home: Next.js root route component for GET /.
+ *   - Home: Next.js root route for the seeded S1 landing.
  * INVARIANTS:
- *   - [INV-PRODUCT-RUNTIME-MARKER] The initial HTML exposes a stable marker for the available S1-S2 runtime contract.
+ *   - [INV-PRODUCT-RUNTIME-MARKER] Initial HTML keeps the stable S1-S2 runtime marker consumed by smoke and E2E readiness checks.
  * BOUNDARIES:
- *   - Browser storage is client-owned; final visual compositions, live assembly transport, S3, pricing, and accounts are absent.
+ *   - Browser storage is client-owned; final S2 visuals, live assembly transport, S3, pricing, and accounts remain absent.
  * RELATED:
- *   - src/project/ui/pre-account-runtime.tsx: owns client restore and semantic runtime controls.
- *   - src/app/layout.tsx: supplies truthful route metadata.
+ *   - src/project/ui/address-entry-experience.tsx: owns the S1 workflow and client runtime handoff.
+ *   - src/app/project/page.tsx: supports direct same-session runtime restoration.
  *   - scripts/production-smoke.mjs: verifies this route from a production server.
  */
-import { PreAccountRuntime } from "../project/ui/pre-account-runtime";
+import { AddressEntryRoute } from "../project/ui/address-entry-experience";
 
 export default function Home() {
   // @ah INV-PRODUCT-RUNTIME-MARKER
-  return (
-    <main
-      aria-labelledby="runtime-title"
-      data-product-surface="s1-s2-pre-account-runtime"
-      data-runtime-contract-version="1"
-    >
-      <header className="runtime-header">
-        <p className="eyebrow">Runtime contract proof</p>
-        <h1 id="runtime-title">Pre-account project runtime</h1>
-        <p>
-          A semantic implementation surface for the continuous seeded S1-S2
-          project environment.
-        </p>
-      </header>
-      <PreAccountRuntime />
-    </main>
-  );
+  return <AddressEntryRoute />;
 }

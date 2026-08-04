@@ -1,8 +1,8 @@
 /**
  * MODULE: src/project/ui/pre-account-runtime.tsx
- * PURPOSE: Hydrate the browser-session runtime and expose a truthful temporary semantic shell for its S1-S2 contracts.
+ * PURPOSE: Hydrate the browser-session runtime and expose the truthful semantic S2 intermediate shell reached from S1.
  * PUBLIC API / ENTRYPOINTS:
- *   - PreAccountRuntime: client subscription, restore, command controls, and state semantics.
+ *   - PreAccountRuntime: client subscription, restore, focus, command controls, and state semantics.
  * INVARIANTS:
  *   - [INV-ONE-RUNTIME-SHELL] One application-runtime instance owns projection state for the mounted pre-account environment.
  *   - [INV-NO-S3-SURFACE] The shell stops at minimum usability and renders no S3 controls, pricing, account, or later state.
@@ -15,7 +15,7 @@
  */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type RuntimeErrorCode,
   SessionProjectRuntime,
@@ -47,6 +47,7 @@ export function PreAccountRuntime({ runtime }: PreAccountRuntimeProps) {
     () => runtime ?? createBrowserSessionProjectRuntime(),
   );
   const [snapshot, setSnapshot] = useState(activeRuntime.getSnapshot);
+  const stateHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const unsubscribe = activeRuntime.subscribe(() => {
@@ -56,12 +57,18 @@ export function PreAccountRuntime({ runtime }: PreAccountRuntimeProps) {
     return unsubscribe;
   }, [activeRuntime]);
 
+  useEffect(() => {
+    if (snapshot.visible_state !== "ADDRESS_ENTRY") {
+      stateHeadingRef.current?.focus();
+    }
+  }, [snapshot.visible_state]);
+
   const projection = snapshot.projection;
 
   return (
     <section
       className="runtime-shell"
-      aria-label="Pre-account session project runtime"
+      aria-labelledby="contract-state-title"
       data-visible-state={snapshot.visible_state}
     >
       {snapshot.restore_status === "recovered_invalid" ? (
@@ -81,29 +88,15 @@ export function PreAccountRuntime({ runtime }: PreAccountRuntimeProps) {
         </p>
       ) : null}
 
-      {projection?.scene ? (
-        <PersistentSceneShell projection={projection} />
-      ) : (
-        <section
-          className="scene-shell scene-shell-empty"
-          aria-label="Scene pending"
-        >
-          <p>Property scene pending seeded address selection.</p>
-        </section>
-      )}
-
-      <section
-        className="contract-controls"
-        aria-labelledby="contract-state-title"
-      >
+      <section className="contract-controls" aria-label="Current project state">
         <p className="eyebrow">Temporary contract controls</p>
-        <h2 id="contract-state-title">
+        <h1 id="contract-state-title" ref={stateHeadingRef} tabIndex={-1}>
           {snapshot.visible_state === "ADDRESS_ENTRY"
             ? "Address entry runtime"
             : snapshot.visible_state === "PROPERTY_CONFIRMATION"
               ? "Property confirmation runtime"
               : "Live roof assembly runtime"}
-        </h2>
+        </h1>
 
         {snapshot.visible_state === "ADDRESS_ENTRY" ? (
           <>
@@ -186,6 +179,17 @@ export function PreAccountRuntime({ runtime }: PreAccountRuntimeProps) {
           </>
         ) : null}
       </section>
+
+      {projection?.scene ? (
+        <PersistentSceneShell projection={projection} />
+      ) : (
+        <section
+          className="scene-shell scene-shell-empty"
+          aria-label="Scene pending"
+        >
+          <p>Property scene pending seeded address selection.</p>
+        </section>
+      )}
     </section>
   );
 }
