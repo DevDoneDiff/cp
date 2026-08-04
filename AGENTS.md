@@ -36,6 +36,7 @@ Additional ownership:
 - autonomous merge mode merges only after every configured gate passes
 
 The current values live in `.harness/tasks.md`.
+An approved source spec with `Open Questions: none` authorizes its correctly derived tasks; no separate task-set approval is required. In autonomous modes, Codex owns task readiness, selection, implementation, proof, review fixes, delivery, guarded merge, cleanup, and queue advancement within approved authority. User authority remains required for unresolved product or material architecture decisions, new external cost, credential-dependent setup requiring user action, destructive or irreversible operations, inaccessible infrastructure, unsafe overlap with user work, or proof that cannot be established. Autonomy never weakens validation, review, security, CI, protected-head, no-force-push, no-bypass, or tagged-history gates.
 ## Context Routing
 For the selected task:
 

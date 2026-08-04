@@ -1,0 +1,10 @@
+{
+  "nodeVersion": "24.18.0",
+  "nvmVersion": "24.18.0",
+  "pnpmWorkspace": "allowBuilds:\n  unapproved-package: true\n",
+  "lockfile": "lockfileVersion: '9.0'\n  typescript@7.0.0:\n",
+  "workflow": "name: CI\non:\n  push:\npermissions:\n  contents: write\njobs:\n  baseline:\n    name: baseline\n    runs-on: windows-latest\n    steps:\n      - uses: actions/checkout@v7\n      - run: pnpm install\n      - run: echo ${{ secrets.TOKEN }}\n",
+  "envExample": "TOKEN=secret\n",
+  "repositoryPolicy": "unguarded delivery",
+  "repositoryFiles": [".env", "package-lock.json", "private.key"]
+}

@@ -1,6 +1,6 @@
 ---
 name: task-authoring
-description: Explicitly invoke to convert one approved spec into an ordered queue of coherent implementation tasks in .harness/tasks.md. Copy exact reference artifacts, preserve bootstrap rules, and never write code, start implementation, or approve the task set.
+description: Explicitly invoke to convert one approved spec into an ordered queue of coherent implementation tasks in .harness/tasks.md. Copy exact reference artifacts, preserve bootstrap rules, and mark correctly derived tasks ready when authorized; never write code or start implementation.
 ---
 
 # Task Authoring
@@ -9,7 +9,7 @@ description: Explicitly invoke to convert one approved spec into an ordered queu
 
 Convert one approved spec into bounded, ordered, independently verifiable tasks.
 
-It does not write runtime code, create branches, mark tasks working, or self-approve readiness.
+It does not write runtime code, create branches, or mark tasks working. Readiness follows the approved-spec rules below.
 
 ## Use
 
@@ -146,24 +146,25 @@ For each task:
 8. copy exact reference artifacts
 9. assign validation sets
 10. set `Status: queued`
-11. set `Ready: false`
+11. set `Ready: true` when the readiness conditions below pass; otherwise set `Ready: false` and record the blocker
 12. set `Pass: false`
 13. set `Open_questions: none`
 14. set the scratchpad path under `.harness/work/`
 
 Expected surfaces are planning context, not a closed file allowlist.
 
-## Approval and Readiness
+## Readiness
 
-Initial output remains `Ready: false`.
+An approved source spec with `Open Questions: none` authorizes its correctly derived tasks. Task authoring does not require a second user approval.
 
-After explicit user approval of the task set, normal tasks may become `Ready: true` only when:
+Normal tasks may be created with `Ready: true` only when:
 
-- task boundaries and order are approved
+- the source spec remains approved
 - material questions remain `none`
-- source spec remains approved
-- required artifacts exist
+- task boundaries, order, dependencies, scope, and acceptance are correctly derived
+- required artifacts exist and are assigned exactly
 - required validation and delivery configuration exists
+- no material blocker exists
 
 The one bootstrap task may become ready while commands are unset only when all bootstrap conditions in `.harness/tasks.md` and `.harness/validation.md` are satisfied.
 
@@ -190,8 +191,8 @@ Return:
 - exact reference assignments
 - validation assignments
 - unresolved conflicts, or `none`
-- `Readiness: awaiting_approval | ready | blocked`
+- `Readiness: ready | blocked`
 
 ## Final Rule
 
-The spec defines the result and its artifact bundle. This skill creates executable building blocks without writing code or self-approval.
+The approved spec defines and authorizes the result and its artifact bundle. This skill creates correctly derived executable building blocks and may mark them ready without writing code or starting implementation.

@@ -9,14 +9,14 @@ Canonical registry for executable proof, independent review, Git delivery, and C
 The repository-foundation task replaces every required `<unset>` value.
 
 ```text
-BASE_BRANCH: <unset>
+BASE_BRANCH: main
 BRANCH_PATTERN: codex/<TAG>-<slug>
 PUSH_COMMAND: git push -u origin HEAD
-PR_CREATE_OR_UPDATE_COMMAND: <unset>
-PR_STATUS_COMMAND: <unset>
-CI_ENABLED: false
-CI_STATUS_COMMAND: <unset when CI_ENABLED is false>
-MERGE_COMMAND: <unset; required only when MERGE_MODE is autonomous>
+PR_CREATE_OR_UPDATE_COMMAND: Run gh pr view <HEAD_BRANCH> --repo DevDoneDiff/cp, then an all-state exact-head gh pr list; edit the sole matching open PR with gh pr edit, or create with gh pr create only after authenticated zero-result proof
+PR_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --watch --required
+CI_ENABLED: true
+CI_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --json name,bucket,state,link,workflow; require exact CI / baseline and CI / browser-smoke entries with bucket pass, then reread the matching headRefOid with gh pr view
+MERGE_COMMAND: gh pr merge <PR> --repo DevDoneDiff/cp --squash --delete-branch --match-head-commit <EXPECTED_HEAD_SHA> --subject "<TASK_TAG> <TITLE>"
 AGENT_REVIEW_PROCEDURE: dedicated read-only Codex review against BASE_BRANCH
 SECURITY_REVIEW_PROCEDURE: dedicated read-only security review of the task diff
 ```
@@ -59,7 +59,7 @@ Every repository behavior change requires:
 
 Security-sensitive work also requires `security` and `security-review`.
 
-Visible UI work also requires exact-reference browser comparison through `frontend-visual`.
+Visible product UI or exact-reference work also requires browser comparison through `frontend-visual`. The approved non-product foundation smoke shell is explicitly excluded.
 
 Missing required proof blocks the task. It never produces `Pass: true`.
 
@@ -90,11 +90,6 @@ Assign `baseline` and `agent-review` to every code task.
 Add:
 
 - `bootstrap-preflight`: one-time local and remote prerequisite inspection for `[T-0001]`
-- `backend-unit`: isolated backend behavior
-- `backend-integration`: module, adapter, service, or infrastructure interaction
-- `api-contract`: HTTP or public API behavior and compatibility
-- `database`: schema, migration, persistence, or data integrity
-- `frontend-unit`: isolated frontend logic or state
 - `frontend-component`: rendered behavior, interaction, and accessibility
 - `frontend-e2e`: user workflows across boundaries
 - `frontend-visual`: visual or responsive UI behavior in a real browser
@@ -108,20 +103,15 @@ Delete unused normal sets after the stack is established. Do not delete `baselin
 
 | Set | Command or procedure | Proves |
 |---|---|---|
-| `bootstrap-preflight` | Inspect repository state and required local tools without changing external systems; confirm Git, approved package manager, Node runtime, GitHub CLI, authentication status, and explicit remote authority | Bootstrap prerequisites and safe initial state |
-| `baseline` | `<unset>` | format, lint, strict typecheck, required tests, and production build |
+| `bootstrap-preflight` | Inspect Git status/history/origin; verify Node `24.19.0`, pnpm `11.18.0`, and GitHub CLI; run authenticated repository, permission, visibility, exact-head branch/PR, and protection readbacks without external mutation | Bootstrap prerequisites and safe initial state |
+| `baseline` | `pnpm validate` | format, lint, strict typecheck, required tests, and production build |
 | `agent-review` | configured dedicated read-only Codex review | correctness, acceptance, architecture, data, regression, and required reference review |
-| `backend-unit` | `<unset>` | isolated backend behavior |
-| `backend-integration` | `<unset>` | backend interactions and infrastructure seams |
-| `api-contract` | `<unset>` | request, response, error, auth, and compatibility contracts |
-| `database` | `<unset>` | schema, migrations, constraints, queries, and data safety |
-| `frontend-unit` | `<unset>` | isolated frontend logic and state |
-| `frontend-component` | `<unset>` | rendered states, interaction, accessibility, and contracts |
-| `frontend-e2e` | `<unset>` | critical user workflows |
-| `frontend-visual` | `<unset browser procedure>` | responsive layout, hierarchy, states, and exact approved-reference fidelity |
-| `security` | `<unset>` | deterministic security checks and trust-boundary tests |
+| `frontend-component` | `pnpm test:component` | rendered states, interaction, accessibility, and contracts |
+| `frontend-e2e` | For one unchanged working tree, pass `pnpm test:smoke`, then run `pnpm test:e2e`; Playwright starts only the reusable production build | critical user workflows |
+| `frontend-visual` | Dedicated real-browser agent review at task-required viewports and states against every exact artifact assigned by the active spec; missing browser access or required artifact fidelity fails the procedure | responsive layout, hierarchy, states, and exact approved-reference fidelity |
+| `security` | `pnpm validate:security` | deterministic security checks, trust-boundary tests, and a production dependency audit at moderate severity or above |
 | `security-review` | configured read-only security review | change-specific security regressions and attack paths |
-| `smoke` | `<unset>` | startup and critical route or service availability |
+| `smoke` | `pnpm test:smoke` | startup and critical route or service availability |
 
 ## Independent Review Gate
 

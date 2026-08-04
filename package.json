@@ -1,0 +1,55 @@
+{
+  "name": "cp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": "24.19.0",
+    "pnpm": "11.18.0"
+  },
+  "scripts": {
+    "preinstall": "node scripts/enforce-toolchain.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "node scripts/typecheck.mjs",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:component": "vitest run --project component",
+    "test:coverage": "vitest run --coverage",
+    "test:smoke": "node scripts/production-smoke.mjs",
+    "test:e2e": "playwright test",
+    "validate:toolchain": "node scripts/enforce-toolchain.mjs",
+    "validate:annotations": "node scripts/validation/annotation-headers.mjs --candidate",
+    "validate:annotations:working": "node scripts/validation/annotation-headers.mjs --working",
+    "validate:security": "node scripts/validation/repository-security.mjs",
+    "validate": "node scripts/run-validation.mjs"
+  },
+  "dependencies": {
+    "next": "16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "10.8.0",
+    "eslint-config-next": "16.2.12",
+    "jsdom": "29.1.1",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
+}
