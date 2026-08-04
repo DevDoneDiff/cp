@@ -13,6 +13,7 @@ WSL is not required. The exact versions are recorded in `.node-version`, `.nvmrc
 ## Setup and development
 
 ```powershell
+corepack enable pnpm
 corepack install --global pnpm@11.18.0
 pnpm install --frozen-lockfile
 pnpm dev
@@ -28,6 +29,6 @@ pnpm test:smoke
 pnpm test:e2e
 ```
 
-`pnpm validate` checks the exact toolchain, formatting, lint, strict types, candidate-clean annotation headers, repository security policy, meaningful unit/integration/component coverage, and a production build.
+`pnpm validate` checks the exact toolchain, formatting, lint, strict types, candidate-clean annotation headers, repository security policy, the production dependency advisory graph, meaningful unit/integration/component coverage, and a production build.
 
 `pnpm test:smoke` is self-contained: it builds once, starts the production server, waits for `/` with a finite timeout, requires HTTP 200, and shuts the server down on success or failure. It leaves the successful `.next` output in place. Run `pnpm test:e2e` afterward to reuse that build for Chromium proof without rebuilding.

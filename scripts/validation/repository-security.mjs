@@ -1,23 +1,25 @@
 /**
  * MODULE: scripts/validation/repository-security.mjs
- * PURPOSE: Prove exact dependencies, machine pins, workflow hardening, secret hygiene, and documented delivery safeguards.
+ * PURPOSE: Prove exact dependencies, secure resolutions, machine pins, workflow hardening, secret hygiene, and documented delivery safeguards.
  * PUBLIC API / ENTRYPOINTS:
  *   - readSecuritySnapshot: reads the repository surfaces governed by the foundation security contract.
  *   - validateSecuritySnapshot: applies deterministic positive and negative policy checks.
- *   - CLI: validates the current repository and exits nonzero on any finding.
+ *   - CLI: validates repository policy and audits the production graph at moderate severity or above.
  * CONTROL_FLOW:
  *   1. Read the manifest, machine pins, lockfile, workflow, environment example, policy, and non-ignored file list.
  *   2. Compare direct dependencies and tooling with the exact approved allowlist.
  *   3. Enforce workflow immutability, least privilege, deterministic CI, and repository hygiene.
+ *   4. Query the package advisory registry and fail on any moderate, high, or critical production finding.
  * INVARIANTS:
  *   - Every direct package and machine runtime uses one exact approved version.
+ *   - Next.js resolves patched PostCSS and Sharp versions without changing its approved direct pin.
  *   - CI uses immutable actions, frozen installs, no secrets, and only contents read permission.
  * RELATED:
  *   - package.json: owns exact direct dependencies and cross-platform scripts.
  *   - .github/workflows/ci.yml: owns remote foundation proof.
  *   - docs/REPOSITORY_POLICY.md: records remote protection and guarded-delivery requirements.
  * SECURITY:
- *   - Product/provider SDKs, mutable actions, local environment files, and likely secret-bearing files fail closed.
+ *   - Product/provider SDKs, vulnerable production packages, untrusted actions, local environment files, and likely secret-bearing files fail closed.
  */
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -78,6 +80,16 @@ const POLICY_PHRASES = [
   "--delete-branch",
   "task tag",
 ];
+const EXPECTED_ACTION_LINES = new Map([
+  [
+    "uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+    2,
+  ],
+  [
+    "uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+    2,
+  ],
+]);
 
 function normalizePath(filePath) {
   return filePath.replaceAll("\\", "/").replace(/^\.\//, "");
@@ -184,14 +196,20 @@ function validateMachinePins(snapshot, errors) {
   if (snapshot.nodeVersion !== "24.19.0" || snapshot.nvmVersion !== "24.19.0") {
     errors.push(".node-version and .nvmrc must both equal 24.19.0");
   }
-  const expectedBuildPolicy =
-    "allowBuilds:\n  sharp@0.34.5: true\n  unrs-resolver@1.12.2: true";
+  const expectedBuildPolicy = [
+    "overrides:",
+    '  "next@16.2.12>postcss": 8.5.23',
+    '  "next@16.2.12>sharp": 0.35.3',
+    "allowBuilds:",
+    "  sharp@0.35.3: true",
+    "  unrs-resolver@1.12.2: true",
+  ].join("\n");
   if (
     snapshot.pnpmWorkspace.replaceAll("\r\n", "\n").trim() !==
     expectedBuildPolicy
   ) {
     errors.push(
-      "pnpm workspace must allow only the exact approved transitive build scripts",
+      "pnpm workspace must apply the exact security overrides and build-script allowlist",
     );
   }
   if (!/lockfileVersion:\s*['"]?9\.0['"]?/.test(snapshot.lockfile)) {
@@ -199,6 +217,15 @@ function validateMachinePins(snapshot, errors) {
   }
   if (/(?:^|[/\s])typescript@7(?:[.\s:/]|$)/m.test(snapshot.lockfile)) {
     errors.push("TypeScript 7 must not enter pnpm-lock.yaml");
+  }
+  if (
+    !/(?:^|\s)postcss@8\.5\.23:/.test(snapshot.lockfile) ||
+    !/(?:^|\s)sharp@0\.35\.3:/.test(snapshot.lockfile) ||
+    /(?:^|\s)(?:postcss@8\.4\.31|sharp@0\.34\.5):/.test(snapshot.lockfile)
+  ) {
+    errors.push(
+      "pnpm-lock.yaml must resolve patched PostCSS 8.5.23 and Sharp 0.35.3 without vulnerable predecessors",
+    );
   }
   const alternativeLocks = snapshot.repositoryFiles.filter((file) =>
     /(?:^|\/)(?:package-lock\.json|yarn\.lock|bun\.lockb?|npm-shrinkwrap\.json)$/.test(
@@ -292,6 +319,27 @@ function validateWorkflow(snapshot, errors) {
   if (usesLines.length === 0) {
     errors.push("workflow must use pinned checkout and setup actions");
   }
+  const normalizedUsesLines = usesLines.map((line) =>
+    line.trim().replace(/^-\s*/, ""),
+  );
+  const actionMappingIsExact =
+    normalizedUsesLines.length === 4 &&
+    [...EXPECTED_ACTION_LINES].every(
+      ([expectedLine, expectedCount]) =>
+        normalizedUsesLines.filter((line) => line === expectedLine).length ===
+        expectedCount,
+    );
+  if (!actionMappingIsExact) {
+    errors.push(
+      "workflow actions must equal the exact approved identities, commit SHAs, releases, and occurrence counts",
+    );
+  }
+  if (
+    (workflow.match(/^\s+persist-credentials:\s*false\s*$/gm) ?? []).length !==
+    2
+  ) {
+    errors.push("both checkout steps must disable persisted credentials");
+  }
 
   const browserJob = workflow.split(/^  browser-smoke:\s*$/m)[1] ?? "";
   const smokeIndex = browserJob.indexOf("run: pnpm test:smoke");
@@ -368,7 +416,31 @@ async function runCli() {
     process.exitCode = 1;
     return;
   }
-  console.log("Repository security policy passed.");
+  const packageManagerEntrypoint = process.env.npm_execpath;
+  if (!packageManagerEntrypoint) {
+    console.error("Security validation must be started through pnpm.");
+    process.exitCode = 1;
+    return;
+  }
+
+  const audit = spawnSync(
+    process.execPath,
+    [packageManagerEntrypoint, "audit", "--prod", "--audit-level=moderate"],
+    {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: "inherit",
+    },
+  );
+  if (audit.error) {
+    throw audit.error;
+  }
+  if (audit.status !== 0) {
+    process.exitCode = audit.status ?? 1;
+    return;
+  }
+
+  console.log("Repository security policy and production audit passed.");
 }
 
 if (

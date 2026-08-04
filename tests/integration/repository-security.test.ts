@@ -26,7 +26,7 @@ const requiredScripts = {
   build: "next build",
   "format:check": "prettier --check .",
   lint: "eslint . --max-warnings 0",
-  typecheck: "tsc --noEmit",
+  typecheck: "node scripts/typecheck.mjs",
   "test:unit": "vitest run --project unit",
   "test:integration": "vitest run --project integration",
   "test:component": "vitest run --project component",
@@ -81,12 +81,35 @@ describe("repository security validation", () => {
         "packageManager must be pnpm@11.18.0",
         "dependencies must equal the exact approved allowlist",
         "TypeScript 7 must not enter pnpm-lock.yaml",
+        "pnpm-lock.yaml must resolve patched PostCSS 8.5.23 and Sharp 0.35.3 without vulnerable predecessors",
         expect.stringContaining("alternative lockfiles are forbidden"),
         "foundation workflow must not reference secrets",
         "both CI jobs must enable the pnpm shim and install exact pnpm 11.18.0",
+        expect.stringContaining(
+          "workflow actions must equal the exact approved",
+        ),
+        "both checkout steps must disable persisted credentials",
         expect.stringContaining("remote action is not pinned"),
         expect.stringContaining("local environment files are forbidden"),
       ]),
+    );
+  });
+
+  it("rejects an immutable-looking action from an unapproved publisher", async () => {
+    const fixture = await readFixture("positive");
+    const workflow = fixture.workflow.replaceAll(
+      "actions/checkout",
+      "attacker/malicious-action",
+    );
+
+    expect(
+      validateSecuritySnapshot({
+        ...fixture,
+        workflow,
+        manifest: manifest(),
+      }),
+    ).toContain(
+      "workflow actions must equal the exact approved identities, commit SHAs, releases, and occurrence counts",
     );
   });
 

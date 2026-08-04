@@ -109,7 +109,7 @@ Delete unused normal sets after the stack is established. Do not delete `baselin
 | `frontend-component` | `pnpm test:component` | rendered states, interaction, accessibility, and contracts |
 | `frontend-e2e` | For one unchanged working tree, pass `pnpm test:smoke`, then run `pnpm test:e2e`; Playwright starts only the reusable production build | critical user workflows |
 | `frontend-visual` | Dedicated real-browser agent review at task-required viewports and states against every exact artifact assigned by the active spec; missing browser access or required artifact fidelity fails the procedure | responsive layout, hierarchy, states, and exact approved-reference fidelity |
-| `security` | `pnpm validate:security` | deterministic security checks and trust-boundary tests |
+| `security` | `pnpm validate:security` | deterministic security checks, trust-boundary tests, and a production dependency audit at moderate severity or above |
 | `security-review` | configured read-only security review | change-specific security regressions and attack paths |
 | `smoke` | `pnpm test:smoke` | startup and critical route or service availability |
 
