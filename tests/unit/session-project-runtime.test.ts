@@ -1,12 +1,30 @@
 import { describe, expect, it } from "vitest";
 
-import type { ProjectEvent } from "../../src/project/domain/model";
+import type {
+  ProjectEvent,
+  SessionProjectProjection,
+} from "../../src/project/domain/model";
 import {
   advanceProjectToReady,
   confirmProject,
   createRuntimeHarness,
   startProject,
 } from "../helpers/project-runtime";
+
+function retargetEvent(
+  event: ProjectEvent,
+  projection: SessionProjectProjection,
+): ProjectEvent {
+  if (projection.property === null) throw new Error("PROPERTY_MISSING");
+  return {
+    ...event,
+    session_project_id: projection.session_project_id,
+    property_id: projection.property.property_id,
+    cursor: projection.latest_cursor + 1,
+    expected_project_version: projection.project_version,
+    occurred_at: "2026-01-01T00:10:00.000Z",
+  } as ProjectEvent;
+}
 
 describe("pre-account session project runtime", () => {
   it("rejects unsupported input without creating or persisting a project", () => {
@@ -162,16 +180,14 @@ describe("pre-account session project runtime", () => {
     const roofEvent = schedule.nextEvent(confirmed);
     if (roofEvent === null) throw new Error("ROOF_EVENT_MISSING");
 
-    const unchangedVersion = confirmed.project_version;
-    const unchangedCursor = confirmed.latest_cursor;
+    const unchanged = structuredClone(confirmed);
+    const unchangedWrites = storage.writes;
     const rejectAndAssertUnchanged = (event: unknown) => {
       expect(
         runtime.dispatch({ type: "APPLY_WORK_EVENT", event }),
       ).toMatchObject({ ok: false });
-      expect(runtime.getSnapshot().projection).toMatchObject({
-        project_version: unchangedVersion,
-        latest_cursor: unchangedCursor,
-      });
+      expect(runtime.getSnapshot().projection).toEqual(unchanged);
+      expect(storage.writes).toBe(unchangedWrites);
     };
 
     rejectAndAssertUnchanged({
@@ -223,5 +239,86 @@ describe("pre-account session project runtime", () => {
       runtime.dispatch({ type: "APPLY_WORK_EVENT", event: duplicatePanel }),
     ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
     expect(runtime.getSnapshot().projection?.panel_objects).toHaveLength(1);
+  });
+
+  it("rejects modeled work before confirmation and readiness before every prerequisite", () => {
+    const template = createRuntimeHarness();
+    startProject(template.runtime);
+    confirmProject(template.runtime);
+    const readyTemplate = advanceProjectToReady(template.runtime);
+    const roofEvent = readyTemplate.events.find(
+      (event) => event.type === "ROOF_GEOMETRY_READY",
+    );
+    const readinessEvent = readyTemplate.events.find(
+      (event) => event.type === "MINIMUM_USABLE_READY",
+    );
+    if (roofEvent === undefined || readinessEvent === undefined) {
+      throw new Error("WORK_EVENT_TEMPLATE_MISSING");
+    }
+
+    const preConfirmation = createRuntimeHarness();
+    const candidate = startProject(preConfirmation.runtime);
+    const candidateBefore = structuredClone(candidate);
+    const candidateWrites = preConfirmation.storage.writes;
+    expect(
+      preConfirmation.runtime.dispatch({
+        type: "APPLY_WORK_EVENT",
+        event: retargetEvent(roofEvent, candidate),
+      }),
+    ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+    expect(preConfirmation.runtime.getSnapshot().projection).toEqual(
+      candidateBefore,
+    );
+    expect(preConfirmation.storage.writes).toBe(candidateWrites);
+
+    for (const acceptedWorkSteps of [0, 2, 5]) {
+      const harness = createRuntimeHarness();
+      startProject(harness.runtime);
+      confirmProject(harness.runtime);
+      for (let step = 0; step < acceptedWorkSteps; step += 1) {
+        harness.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+      }
+      const incomplete = harness.runtime.getSnapshot().projection;
+      if (incomplete === null) throw new Error("INCOMPLETE_PROJECT_MISSING");
+      const before = structuredClone(incomplete);
+      const writes = harness.storage.writes;
+      expect(
+        harness.runtime.dispatch({
+          type: "APPLY_WORK_EVENT",
+          event: retargetEvent(readinessEvent, incomplete),
+        }),
+      ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+      expect(harness.runtime.getSnapshot().projection).toEqual(before);
+      expect(harness.storage.writes).toBe(writes);
+    }
+  });
+
+  it("uses cursor and project version rather than event timestamps as ordering authority", () => {
+    const { runtime, schedule } = createRuntimeHarness();
+    startProject(runtime);
+    const confirmed = confirmProject(runtime);
+    const roofEvent = schedule.nextEvent(confirmed);
+    if (roofEvent === null) throw new Error("ROOF_EVENT_MISSING");
+
+    expect(
+      runtime.dispatch({
+        type: "APPLY_WORK_EVENT",
+        event: { ...roofEvent, occurred_at: "2099-01-01T00:00:00.000Z" },
+      }),
+    ).toEqual({ ok: true, outcome: "accepted" });
+    const afterFutureEvent = runtime.getSnapshot().projection;
+    if (afterFutureEvent === null) throw new Error("ROOF_NOT_ACCEPTED");
+    const nextEvent = schedule.nextEvent(afterFutureEvent);
+    if (nextEvent === null) throw new Error("NEXT_EVENT_MISSING");
+    expect(nextEvent.occurred_at < afterFutureEvent.updated_at).toBe(true);
+
+    expect(
+      runtime.dispatch({ type: "APPLY_WORK_EVENT", event: nextEvent }),
+    ).toEqual({ ok: true, outcome: "accepted" });
+    expect(runtime.getSnapshot().projection).toMatchObject({
+      project_version: afterFutureEvent.project_version + 1,
+      latest_cursor: afterFutureEvent.latest_cursor + 1,
+      panel_objects: [expect.objectContaining({ placement_rank: 1 })],
+    });
   });
 });

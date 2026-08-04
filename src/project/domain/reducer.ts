@@ -9,7 +9,8 @@
  *   - [EVENT-IDEMPOTENT-REPLAY] An exact accepted-event replay is a no-op; an ID collision or object replay is rejected.
  *   - [INV-READINESS-PRECONDITIONS] Minimum usability requires confirmation, fixture roof geometry, every stable panel object, and modeled energy.
  * BOUNDARIES:
- *   - Inputs must first pass event parsing; persistence and publication order belong to the application runtime.
+ *   - Inputs must first pass event parsing; cursor and project version own ordering while timestamps remain provenance metadata.
+ *   - Persistence and publication order belong to the application runtime.
  * RELATED:
  *   - src/project/domain/work-events.ts: owns untrusted envelope parsing.
  *   - src/project/domain/projection.ts: uses replay to prove restored projection coherence.
@@ -261,10 +262,6 @@ export function applyProjectEvent(
   if (event.expected_project_version !== projection.project_version) {
     return rejected("VERSION_MISMATCH");
   }
-  if (event.occurred_at < projection.updated_at) {
-    return rejected("INVALID_EVENT_ORDER");
-  }
-
   switch (event.type) {
     case "ADDRESS_RESOLVED": {
       const priorPropertyIds = projection.events

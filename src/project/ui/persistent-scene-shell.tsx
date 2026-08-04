@@ -4,7 +4,7 @@
  * PUBLIC API / ENTRYPOINTS:
  *   - PersistentSceneShell: data-bound scene, camera, roof, panel, fact, and readiness semantics.
  * INVARIANTS:
- *   - [INV-SCENE-CONTINUITY] The scene element is keyed by stable scene identity and is not replaced as accepted work changes.
+ *   - [INV-SCENE-CONTINUITY] The scene element remains at one stable component type and JSX position as accepted work changes.
  *   - [INV-FACT-EVENT-GATING] Roof, panel, energy, and readiness content appears only when its canonical projection data exists.
  * BOUNDARIES:
  *   - This is a temporary semantic shell, not the final S2 composition, imagery, outline layer, or renderer.

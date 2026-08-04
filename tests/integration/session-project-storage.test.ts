@@ -8,6 +8,7 @@ import {
   BrowserSessionProjectStore,
   SESSION_PROJECT_STORAGE_KEY,
 } from "../../src/project/adapters/browser-runtime";
+import type { SessionProjectProjection } from "../../src/project/domain/model";
 import {
   advanceProjectToReady,
   confirmProject,
@@ -16,25 +17,85 @@ import {
   startProject,
 } from "../helpers/project-runtime";
 
-describe("browser-session project persistence", () => {
-  it("restores a valid same-session projection with every accepted identity intact", () => {
-    const storage = new MemoryStorage();
-    const first = createRuntimeHarness({ storage });
-    startProject(first.runtime);
-    confirmProject(first.runtime);
-    const ready = advanceProjectToReady(first.runtime);
+const restoreCases: Array<{
+  label: string;
+  prepare: (runtime: SessionProjectRuntime) => SessionProjectProjection;
+  provesNextPanel: boolean;
+}> = [
+  {
+    label: "property confirmation",
+    prepare: (runtime) => startProject(runtime),
+    provesNextPanel: false,
+  },
+  {
+    label: "partial assembly",
+    prepare: (runtime) => {
+      startProject(runtime);
+      confirmProject(runtime);
+      runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+      runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+      const projection = runtime.getSnapshot().projection;
+      if (projection === null) throw new Error("PARTIAL_PROJECT_MISSING");
+      return projection;
+    },
+    provesNextPanel: true,
+  },
+  {
+    label: "minimum usable ready",
+    prepare: (runtime) => {
+      startProject(runtime);
+      confirmProject(runtime);
+      return advanceProjectToReady(runtime);
+    },
+    provesNextPanel: false,
+  },
+];
 
-    const second = createRuntimeHarness({ storage });
-    expect(second.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
-      ok: true,
-      outcome: "restored",
-    });
-    expect(second.runtime.getSnapshot().projection).toEqual(ready);
-    expect(second.runtime.getSnapshot()).toMatchObject({
-      visible_state: "LIVE_ROOF_ASSEMBLY",
-      restore_status: "restored",
-    });
-  });
+describe("browser-session project persistence", () => {
+  it.each(restoreCases)(
+    "restores $label with every accepted identity and cursor intact",
+    ({ prepare, provesNextPanel }) => {
+      const storage = new MemoryStorage();
+      const first = createRuntimeHarness({ storage });
+      const expected = structuredClone(prepare(first.runtime));
+      const writesBeforeRestore = storage.writes;
+
+      const second = createRuntimeHarness({ storage });
+      expect(second.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+        ok: true,
+        outcome: "restored",
+      });
+      expect(second.runtime.getSnapshot().projection).toEqual(expected);
+      expect(storage.writes).toBe(writesBeforeRestore);
+      expect(second.runtime.getSnapshot()).toMatchObject({
+        visible_state: expected.visible_state,
+        restore_status: "restored",
+      });
+
+      if (provesNextPanel) {
+        const existingPanelIds = expected.panel_objects.map(
+          (panel) => panel.panel_id,
+        );
+        const existingEventCount = expected.events.length;
+        expect(
+          second.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" }),
+        ).toEqual({ ok: true, outcome: "accepted" });
+        const advanced = second.runtime.getSnapshot().projection;
+        expect(advanced?.events).toHaveLength(existingEventCount + 1);
+        expect(advanced?.panel_objects).toHaveLength(
+          existingPanelIds.length + 1,
+        );
+        expect(
+          new Set(advanced?.panel_objects.map((panel) => panel.panel_id)).size,
+        ).toBe(existingPanelIds.length + 1);
+        expect(
+          advanced?.panel_objects
+            .slice(0, existingPanelIds.length)
+            .map((panel) => panel.panel_id),
+        ).toEqual(existingPanelIds);
+      }
+    },
+  );
 
   it("starts a fresh S1 state for a new browser-session store", () => {
     const first = createRuntimeHarness();

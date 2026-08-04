@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SESSION_PROJECT_STORAGE_KEY } from "../../src/project/adapters/browser-runtime";
+import {
+  createPropertyConfirmedEvent,
+  createPropertyCorrectionEvent,
+} from "../../src/project/adapters/seeded-demo";
 import type { ProjectEvent } from "../../src/project/domain/model";
 import {
   confirmProject,
@@ -45,12 +49,13 @@ describe("session runtime trust boundaries", () => {
   });
 
   it("rejects malformed, unsafe, foreign, replay-collision, and impossible event input atomically", () => {
-    const { runtime, schedule, adapters } = createRuntimeHarness();
+    const { runtime, schedule, adapters, storage } = createRuntimeHarness();
     startProject(runtime);
     const confirmed = confirmProject(runtime);
     const validRoof = schedule.nextEvent(confirmed);
     if (validRoof === null) throw new Error("ROOF_EVENT_MISSING");
-    const initial = runtime.getSnapshot().projection;
+    const initial = structuredClone(runtime.getSnapshot().projection);
+    const initialWrites = storage.writes;
 
     const invalidEvents: unknown[] = [
       null,
@@ -59,6 +64,13 @@ describe("session runtime trust boundaries", () => {
       { ...validRoof, cursor: -1 },
       { ...validRoof, cursor: 2.5 },
       { ...validRoof, expected_project_version: -1 },
+      {
+        ...validRoof,
+        expected_project_version: validRoof.expected_project_version + 1,
+      },
+      { ...validRoof, cursor: validRoof.cursor - 1 },
+      { ...validRoof, schema_version: 99 },
+      { ...validRoof, fixture_version: "seeded-future-v2" },
       { ...validRoof, session_project_id: "project-foreign" },
       { ...validRoof, property_id: "property-foreign" },
       { ...validRoof, event_id: "x".repeat(161) },
@@ -90,10 +102,12 @@ describe("session runtime trust boundaries", () => {
         runtime.dispatch({ type: "APPLY_WORK_EVENT", event }),
       ).toMatchObject({ ok: false });
       expect(runtime.getSnapshot().projection).toEqual(initial);
+      expect(storage.writes).toBe(initialWrites);
     }
 
     runtime.dispatch({ type: "APPLY_WORK_EVENT", event: validRoof });
-    const accepted = runtime.getSnapshot().projection;
+    const accepted = structuredClone(runtime.getSnapshot().projection);
+    const acceptedWrites = storage.writes;
     expect(
       runtime.dispatch({ type: "APPLY_WORK_EVENT", event: validRoof }),
     ).toEqual({ ok: true, outcome: "idempotent" });
@@ -105,6 +119,108 @@ describe("session runtime trust boundaries", () => {
       runtime.dispatch({ type: "APPLY_WORK_EVENT", event: collision }),
     ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
     expect(runtime.getSnapshot().projection).toEqual(accepted);
+    expect(storage.writes).toBe(acceptedWrites);
+  });
+
+  it("keeps address, correction, and confirmation authority behind dedicated commands", () => {
+    const source = createRuntimeHarness();
+    const sourceConfirmation = startProject(source.runtime);
+    const addressEvent = sourceConfirmation.events[0];
+    if (addressEvent?.type !== "ADDRESS_RESOLVED") {
+      throw new Error("ADDRESS_EVENT_MISSING");
+    }
+
+    const fresh = createRuntimeHarness();
+    expect(
+      fresh.runtime.dispatch({
+        type: "APPLY_WORK_EVENT",
+        event: addressEvent,
+      }),
+    ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+    expect(fresh.runtime.getSnapshot().projection).toBeNull();
+    expect(fresh.storage.writes).toBe(0);
+
+    const target = createRuntimeHarness();
+    const targetConfirmation = startProject(target.runtime);
+    const confirmationEvent = createPropertyConfirmedEvent(
+      targetConfirmation,
+      target.identity,
+      target.clock,
+    );
+    const correctionEvent = createPropertyCorrectionEvent(
+      targetConfirmation,
+      target.identity,
+      target.clock,
+    );
+    if (confirmationEvent === null || correctionEvent === null) {
+      throw new Error("AUTHORITY_EVENT_MISSING");
+    }
+    const before = structuredClone(target.runtime.getSnapshot().projection);
+    const writes = target.storage.writes;
+
+    for (const event of [confirmationEvent, correctionEvent]) {
+      expect(
+        target.runtime.dispatch({ type: "APPLY_WORK_EVENT", event }),
+      ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+      expect(target.runtime.getSnapshot().projection).toEqual(before);
+      expect(target.storage.writes).toBe(writes);
+    }
+  });
+
+  it("bounds malformed address input before normalization, identity, or persistence", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { runtime, identity, storage } = createRuntimeHarness();
+    runtime.dispatch({ type: "RESTORE_SESSION" });
+
+    for (const input of [
+      null,
+      { address: "123 Maple St" },
+      "x".repeat(241),
+      "123\u0000Maple St",
+    ]) {
+      expect(
+        runtime.dispatch({
+          type: "RESOLVE_SEEDED_ADDRESS",
+          input,
+        } as never),
+      ).toEqual({ ok: false, error_code: "ADDRESS_NOT_SUPPORTED" });
+    }
+
+    expect(runtime.getSnapshot().projection).toBeNull();
+    expect(identity.projectCount).toBe(0);
+    expect(storage.writes).toBe(0);
+    expect(log).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("does not expose mutable aliases of canonical runtime state", () => {
+    const { runtime, storage } = createRuntimeHarness();
+    startProject(runtime);
+    const expected = structuredClone(runtime.getSnapshot());
+    const writes = storage.writes;
+    const exposed = runtime.getSnapshot() as unknown as {
+      visible_state: string;
+      projection: {
+        property: { display_address: string };
+        events: unknown[];
+      };
+    };
+
+    expect(Reflect.set(exposed, "visible_state", "LIVE_ROOF_ASSEMBLY")).toBe(
+      false,
+    );
+    expect(
+      Reflect.set(exposed.projection.property, "display_address", "Injected"),
+    ).toBe(false);
+    expect(() => exposed.projection.events.push({ injected: true })).toThrow();
+
+    expect(runtime.getSnapshot()).toEqual(expected);
+    expect(storage.writes).toBe(writes);
   });
 
   it("uses only the injected session store and performs no provider, durable, or browser-global write", () => {

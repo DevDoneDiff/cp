@@ -8,7 +8,9 @@
  * INVARIANTS:
  *   - [DATA-ATOMIC-SESSION-COMMIT] A proposed projection is validated and persisted before it becomes observable runtime state.
  *   - [INV-SINGLE-PROJECT-ROOT] Repeated address selection cannot create a second active session project.
+ *   - [INV-IMMUTABLE-RUNTIME-SNAPSHOT] Published snapshots and every nested projection value are deeply frozen.
  * BOUNDARIES:
+ *   - Untrusted work-event ingress accepts modeled assembly events only; address, correction, and confirmation authority stays behind application commands.
  *   - The controller knows no browser global, transport, timer, server database, provider, or rendering implementation.
  * RELATED:
  *   - src/project/domain/reducer.ts: owns pure transition legality.
@@ -18,6 +20,7 @@
 import {
   type Clock,
   type IdentitySource,
+  type ProjectEventType,
   type SessionProjectProjection,
   type VisibleProjectState,
 } from "../domain/model";
@@ -88,16 +91,33 @@ export interface SessionProjectRuntimeDependencies {
 
 type Listener = () => void;
 
+const MODELED_WORK_EVENT_TYPES = new Set<ProjectEventType>([
+  "ROOF_GEOMETRY_READY",
+  "PANEL_OBJECT_ADDED",
+  "ENERGY_MODEL_READY",
+  "MINIMUM_USABLE_READY",
+]);
+
+function deepFreeze<T>(value: T): T {
+  if (typeof value !== "object" || value === null || Object.isFrozen(value)) {
+    return value;
+  }
+  for (const child of Object.values(value)) {
+    deepFreeze(child);
+  }
+  return Object.freeze(value);
+}
+
 function freshSnapshot(
   restoreStatus: RestoreStatus = "not_checked",
   errorCode: RuntimeErrorCode | null = null,
 ): RuntimeSnapshot {
-  return {
+  return deepFreeze({
     projection: null,
     visible_state: "ADDRESS_ENTRY",
     restore_status: restoreStatus,
     error_code: errorCode,
-  };
+  });
 }
 
 export class SessionProjectRuntime {
@@ -117,7 +137,8 @@ export class SessionProjectRuntime {
   };
 
   private publish(snapshot: RuntimeSnapshot): void {
-    this.snapshot = snapshot;
+    // @ah INV-IMMUTABLE-RUNTIME-SNAPSHOT
+    this.snapshot = deepFreeze(snapshot);
     for (const listener of this.listeners) listener();
   }
 
@@ -172,7 +193,7 @@ export class SessionProjectRuntime {
     }
   }
 
-  private resolveAddress(input: string): RuntimeCommandResult {
+  private resolveAddress(input: unknown): RuntimeCommandResult {
     const current = this.snapshot.projection;
     if (current !== null && current.property !== null) {
       // @ah INV-SINGLE-PROJECT-ROOT
@@ -233,7 +254,7 @@ export class SessionProjectRuntime {
       this.dependencies.clock,
     );
     if (event === null) return this.publishError("DOMAIN_REJECTED");
-    return this.applyParsedEvent(event);
+    return this.applyParsedEvent(event, "application");
   }
 
   private correctProperty(): RuntimeCommandResult {
@@ -245,15 +266,24 @@ export class SessionProjectRuntime {
       this.dependencies.clock,
     );
     if (event === null) return this.publishError("DOMAIN_REJECTED");
-    return this.applyParsedEvent(event);
+    return this.applyParsedEvent(event, "application");
   }
 
-  private applyParsedEvent(event: unknown): RuntimeCommandResult {
+  private applyParsedEvent(
+    event: unknown,
+    authority: "application" | "modeled_work",
+  ): RuntimeCommandResult {
     const parsed = parseProjectEvent(
       event,
       this.dependencies.adapters.fixture.fixture_version,
     );
     if (!parsed.ok) return this.publishError("EVENT_REJECTED");
+    if (
+      authority === "modeled_work" &&
+      !MODELED_WORK_EVENT_TYPES.has(parsed.event.type)
+    ) {
+      return this.publishError("EVENT_REJECTED");
+    }
     const current = this.snapshot.projection;
     const transition = applyProjectEvent(
       current,
@@ -274,7 +304,7 @@ export class SessionProjectRuntime {
     const event = this.dependencies.schedule.nextEvent(current);
     return event === null
       ? this.publishError("NO_NEXT_EVENT")
-      : this.applyParsedEvent(event);
+      : this.applyParsedEvent(event, "modeled_work");
   }
 
   dispatch(command: RuntimeCommand): RuntimeCommandResult {
@@ -293,7 +323,7 @@ export class SessionProjectRuntime {
         case "CORRECT_PROPERTY":
           return this.correctProperty();
         case "APPLY_WORK_EVENT":
-          return this.applyParsedEvent(command.event);
+          return this.applyParsedEvent(command.event, "modeled_work");
         case "ADVANCE_SEEDED_WORK":
           return this.advanceSeededWork();
       }

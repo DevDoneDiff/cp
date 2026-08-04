@@ -145,7 +145,7 @@ export const SEEDED_DEMO_FIXTURE: SeededFixtureContract = {
 
 export interface AddressFixtureAdapter {
   resolve(
-    input: string,
+    input: unknown,
   ): { address_draft: string; normalized_address: NormalizedAddress } | null;
 }
 
@@ -193,7 +193,15 @@ function cloneNormalizedAddress(): NormalizedAddress {
 }
 
 class SeededAddressAdapter implements AddressFixtureAdapter {
-  resolve(input: string) {
+  resolve(input: unknown) {
+    if (
+      typeof input !== "string" ||
+      input.length === 0 ||
+      input.length > 240 ||
+      /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(input)
+    ) {
+      return null;
+    }
     const addressDraft = input.trim();
     const comparison = addressDraft.toLocaleLowerCase("en-US");
     const accepted = SEEDED_DEMO_FIXTURE.accepted_inputs.some(
