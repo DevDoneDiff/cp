@@ -174,6 +174,7 @@ If closeout push or latest CI fails:
 - merge must preserve the task tag in base-branch Git history
 - if autonomous merge fails, restore `Pass: false`, diagnose, and retry without destructive Git
 - queue advancement requires the tag on `BASE_BRANCH`
+- after successful merge and base-branch task-tag proof, execute the exact post-merge cleanup procedure from `.harness/validation.md`
 
 ## Completion
 
