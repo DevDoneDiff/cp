@@ -376,9 +376,9 @@ Bootstrap: false
 Source_spec: docs/specs/A1-harness-execution-hardening.md
 Priority: P1
 Depends_on: [T-0004]
-Status: working
+Status: passed
 Ready: true
-Pass: false
+Pass: true
 Objective:
 - Remove the proven Windows line-ending and post-squash local branch-cleanup ambiguities without changing product behavior.
 Scope:
