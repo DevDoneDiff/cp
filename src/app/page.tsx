@@ -1,27 +1,36 @@
 /**
  * MODULE: src/app/page.tsx
- * PURPOSE: Expose a credential-free root route for startup and browser verification.
+ * PURPOSE: Compose the root pre-account project runtime and its server-rendered availability marker.
  * PUBLIC API / ENTRYPOINTS:
- *   - Home: handles the App Router GET / surface.
+ *   - Home: Next.js root route component for GET /.
  * INVARIANTS:
- *   - [INV-NON-PRODUCT-SHELL] The route remains semantic, server-rendered, and free of product behavior, providers, persistence, and required hydration.
+ *   - [INV-PRODUCT-RUNTIME-MARKER] The initial HTML exposes a stable marker for the available S1-S2 runtime contract.
  * BOUNDARIES:
- *   - This route proves repository operation and establishes no S1-S10 appearance or copy authority.
+ *   - Browser storage is client-owned; final visual compositions, live assembly transport, S3, pricing, and accounts are absent.
  * RELATED:
- *   - src/app/layout.tsx: owns the surrounding document shell.
- *   - tests/component/page.test.tsx: proves semantic route behavior.
- *   - tests/e2e/smoke.spec.ts: proves production browser behavior.
+ *   - src/project/ui/pre-account-runtime.tsx: owns client restore and semantic runtime controls.
+ *   - src/app/layout.tsx: supplies truthful route metadata.
+ *   - scripts/production-smoke.mjs: verifies this route from a production server.
  */
+import { PreAccountRuntime } from "../project/ui/pre-account-runtime";
+
 export default function Home() {
-  // @ah INV-NON-PRODUCT-SHELL
+  // @ah INV-PRODUCT-RUNTIME-MARKER
   return (
-    <main aria-labelledby="foundation-status">
-      <p className="context">System check</p>
-      <h1 id="foundation-status">Repository foundation ready</h1>
-      <p className="status">
-        The application started successfully and rendered this non-product
-        verification route.
-      </p>
+    <main
+      aria-labelledby="runtime-title"
+      data-product-surface="s1-s2-pre-account-runtime"
+      data-runtime-contract-version="1"
+    >
+      <header className="runtime-header">
+        <p className="eyebrow">Runtime contract proof</p>
+        <h1 id="runtime-title">Pre-account project runtime</h1>
+        <p>
+          A semantic implementation surface for the continuous seeded S1-S2
+          project environment.
+        </p>
+      </header>
+      <PreAccountRuntime />
     </main>
   );
 }

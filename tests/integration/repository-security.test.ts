@@ -32,7 +32,7 @@ const requiredScripts = {
   "test:component": "vitest run --project component",
   "test:coverage": "vitest run --coverage",
   "test:smoke": "node scripts/production-smoke.mjs",
-  "test:e2e": "playwright test",
+  "test:e2e": "node scripts/run-e2e.mjs",
   "validate:annotations":
     "node scripts/validation/annotation-headers.mjs --candidate",
   "validate:security": "node scripts/validation/repository-security.mjs",

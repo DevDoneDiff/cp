@@ -1,14 +1,15 @@
 /**
  * MODULE: playwright.config.ts
- * PURPOSE: Run Chromium proof against an existing production build without rebuilding it.
+ * PURPOSE: Configure Chromium workflow proof against the production server owned by the E2E runner.
  * PUBLIC API / ENTRYPOINTS:
- *   - Playwright default configuration: starts the built application and executes tests/e2e.
+ *   - Playwright default configuration: executes tests/e2e against the fixed runner-owned origin.
  * INVARIANTS:
- *   - The web server command starts from reusable .next output and never invokes a production build.
+ *   - Playwright performs no build and starts no second server.
  * BOUNDARIES:
- *   - scripts/production-smoke.mjs owns the single build and initial startup proof.
+ *   - scripts/run-e2e.mjs owns deterministic production-server startup and cleanup.
  * RELATED:
  *   - scripts/production-smoke.mjs: produces and verifies the reusable build.
+ *   - scripts/run-e2e.mjs: starts that build and guarantees cleanup.
  *   - tests/e2e/smoke.spec.ts: proves browser content and error-free rendering.
  */
 import { defineConfig, devices } from "@playwright/test";
@@ -23,15 +24,6 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:3100",
     trace: "retain-on-failure",
-  },
-  webServer: {
-    command:
-      "node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3100",
-    url: "http://127.0.0.1:3100/",
-    reuseExistingServer: false,
-    timeout: 30_000,
-    stdout: "pipe",
-    stderr: "pipe",
   },
   projects: [
     {

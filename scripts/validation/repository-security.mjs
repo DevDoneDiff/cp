@@ -1,6 +1,6 @@
 /**
  * MODULE: scripts/validation/repository-security.mjs
- * PURPOSE: Prove exact dependencies, secure resolutions, machine pins, workflow hardening, secret hygiene, and documented delivery safeguards.
+ * PURPOSE: Prove repository policy, production dependency security, and the pre-account runtime trust boundary.
  * PUBLIC API / ENTRYPOINTS:
  *   - readSecuritySnapshot: reads the repository surfaces governed by the foundation security contract.
  *   - validateSecuritySnapshot: applies deterministic positive and negative policy checks.
@@ -9,7 +9,8 @@
  *   1. Read the manifest, machine pins, lockfile, workflow, environment example, policy, and non-ignored file list.
  *   2. Compare direct dependencies and tooling with the exact approved allowlist.
  *   3. Enforce workflow immutability, least privilege, deterministic CI, and repository hygiene.
- *   4. Query the package advisory registry and fail on any moderate, high, or critical production finding.
+ *   4. Run focused malicious-storage and event-ingestion runtime proof.
+ *   5. Query the package advisory registry and fail on any moderate, high, or critical production finding.
  * INVARIANTS:
  *   - Every direct package and machine runtime uses one exact approved version.
  *   - Next.js resolves patched PostCSS and Sharp versions without changing its approved direct pin.
@@ -20,6 +21,7 @@
  *   - docs/REPOSITORY_POLICY.md: records remote protection and guarded-delivery requirements.
  * SECURITY:
  *   - Product/provider SDKs, vulnerable production packages, untrusted actions, local environment files, and likely secret-bearing files fail closed.
+ *   - Untrusted session and event data must pass the focused runtime security suite before dependency audit success.
  */
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -422,6 +424,31 @@ async function runCli() {
   if (!packageManagerEntrypoint) {
     console.error("Security validation must be started through pnpm.");
     process.exitCode = 1;
+    return;
+  }
+
+  const runtimeSecurity = spawnSync(
+    process.execPath,
+    [
+      packageManagerEntrypoint,
+      "exec",
+      "vitest",
+      "run",
+      "--project",
+      "integration",
+      "tests/integration/runtime-security.test.ts",
+    ],
+    {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: "inherit",
+    },
+  );
+  if (runtimeSecurity.error) {
+    throw runtimeSecurity.error;
+  }
+  if (runtimeSecurity.status !== 0) {
+    process.exitCode = runtimeSecurity.status ?? 1;
     return;
   }
 

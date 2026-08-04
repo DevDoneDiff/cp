@@ -1,10 +1,11 @@
 /**
  * MODULE: vitest.config.ts
- * PURPOSE: Define the foundation unit, integration, and component test projects and shared coverage output.
+ * PURPOSE: Define unit, integration, and component test projects plus meaningful runtime coverage output.
  * PUBLIC API / ENTRYPOINTS:
  *   - Vitest default configuration: routes each proof family to its required environment.
  * INVARIANTS:
- *   - Every foundation test family has an explicit include and empty suites remain failures.
+ *   - Every test family has an explicit include and empty suites remain failures.
+ *   - Executable pre-account domain, application, adapter, UI, and root-route modules remain inside coverage reporting.
  * BOUNDARIES:
  *   - Browser workflow proof remains owned by Playwright rather than jsdom.
  * RELATED:
@@ -44,7 +45,11 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       reportsDirectory: "coverage",
-      include: ["scripts/validation/**/*.mjs", "src/app/page.tsx"],
+      include: [
+        "scripts/validation/**/*.mjs",
+        "src/app/page.tsx",
+        "src/project/**/*.{ts,tsx}",
+      ],
     },
   },
 });
