@@ -8,7 +8,7 @@ Canonical queue for approved active work. Specs define outcomes. Tasks are coher
 
 - `RUN_MODE`: autonomous
 - `MERGE_MODE`: autonomous
-- `NEXT_TASK_TAG`: 0006
+- `NEXT_TASK_TAG`: 0007
 - `NEXT_REFACTOR_TAG`: 0001
 
 Only explicit user instruction may change `RUN_MODE` or `MERGE_MODE`.
@@ -138,6 +138,7 @@ Next exact action:
 Update after material discoveries, failures, changed hypotheses, review findings, push failures, and CI failures. Read prior failed approaches before debugging. Do not repeat one without new evidence. Keep under 80 lines when practical.
 
 Delete only after the task tag exists in configured base-branch history.
+For a passed task, `Scratchpad` records its former lifecycle path. The file is expected to be absent after base-branch history proves the tag and cleanup completes.
 
 ## Task Template
 
@@ -368,6 +369,50 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0004.md
+
+### [T-0006] Harness execution hardening
+Type: maintenance
+Bootstrap: false
+Source_spec: docs/specs/A1-harness-execution-hardening.md
+Priority: P1
+Depends_on: [T-0004]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Remove the proven Windows line-ending and post-squash local branch-cleanup ambiguities without changing product behavior.
+Scope:
+- Add a root `.gitattributes` policy that normalizes repository text to LF and preserves CRLF for Windows command files.
+- Align `AGENTS.md` and `.harness/validation.md` on one exact post-merge local task-branch cleanup exception.
+- Clarify that a passed task's scratchpad path is historical after merged cleanup.
+- Route post-merge completion in `$code-change-verification` to the exact cleanup procedure owned by `.harness/validation.md`.
+Non_goals:
+- Product runtime or UI changes.
+- `[T-0005]` implementation.
+- Node or pnpm configuration.
+- `.harness/LESSONS.md` changes.
+- Validator, fixture, test, annotation-header, dependency, CI-cycle, or task-state redesign.
+Acceptance_criteria:
+- `.gitattributes` contains the approved three-line text policy and controlled renormalization produces no semantic source change.
+- Exact-target local force deletion is permitted only after successful squash merge, synchronized clean base branch, task-tag history proof, merged pull-request proof, remote task-branch absence, and failure of ordinary deletion solely because of squash ancestry.
+- The exception cannot authorize force-push, shared-history rewrite, remote force deletion, base-branch deletion, or deletion of any unrelated branch.
+- Passed-task scratchpad paths are explicitly historical and their files are expected to be absent after merged cleanup.
+- Baseline and independent review pass with no product behavior change.
+Expected_surfaces:
+- Root `.gitattributes`.
+- `AGENTS.md`.
+- `.harness/validation.md`.
+- `.harness/tasks.md`.
+- `.agents/skills/code-change-verification/SKILL.md`.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0006.md
 
 ### [T-0005] S2 live roof assembly
 Type: feature

@@ -146,7 +146,8 @@ MUST NOT:
 - weaken tests, types, lint, security, validation, or error handling to force a pass
 - add or replace production dependencies without resolved authority
 - change approved architecture, public contracts, or schemas outside task scope
-- force-push, rewrite shared history, or perform destructive Git operations
+- force-push or rewrite shared history
+- perform destructive Git operations except the exact post-merge local task-branch cleanup procedure owned by `.harness/validation.md`
 - push directly to the configured base branch outside the one-time bootstrap exception
 ## Review Guidelines
 A dedicated read-only Codex review is required before closeout.
@@ -172,6 +173,7 @@ Correctness, security, data-loss, architecture, acceptance, and required visual-
 - merge must preserve the task tag in base-branch history
 - delete the scratchpad only after the task is merged or base-branch history proves the tag is present
 - do not create a closeout log
+- after merged-history proof, follow the exact post-merge local task-branch cleanup procedure in `.harness/validation.md`; no other destructive Git exception exists
 
 ## Project Learning
 
