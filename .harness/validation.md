@@ -17,7 +17,7 @@ PR_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --watch --required
 CI_ENABLED: true
 CI_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --json name,bucket,state,link,workflow; require exact CI / baseline and CI / browser-smoke entries with bucket pass, then reread the matching headRefOid with gh pr view
 MERGE_COMMAND: gh pr merge <PR> --repo DevDoneDiff/cp --squash --delete-branch --match-head-commit <EXPECTED_HEAD_SHA> --subject "<TASK_TAG> <TITLE>"
-POST_MERGE_CLEANUP_PROCEDURE: After successful guarded merge, fetch and prune; check out and fast-forward BASE_BRANCH; require clean state, task-tag history proof, merged pull-request proof, and remote task-branch absence; attempt ordinary local branch deletion; permit exact-target force deletion only when squash ancestry alone blocks ordinary deletion
+POST_MERGE_CLEANUP_PROCEDURE: After successful guarded merge, fetch and prune; check out and fast-forward BASE_BRANCH; require exact local and remote base SHA equality, clean state, task-tag history proof, merged pull-request proof, and remote task-branch absence; attempt ordinary local branch deletion; permit exact-target force deletion only when squash ancestry alone blocks ordinary deletion
 AGENT_REVIEW_PROCEDURE: dedicated read-only Codex review against BASE_BRANCH
 SECURITY_REVIEW_PROCEDURE: dedicated read-only security review of the task diff
 ```
@@ -164,12 +164,13 @@ After a successful merge:
 1. run `git fetch --prune origin`
 2. check out `BASE_BRANCH`
 3. fast-forward only from `origin/BASE_BRANCH`
-4. require a clean working tree
-5. prove `BASE_BRANCH` history contains `TASK_TAG`
-6. prove the pull request is merged and the remote task branch is absent
-7. attempt `git branch -d <TASK_BRANCH>`
-8. if and only if step 7 fails because squash merge left the original task commit outside `BASE_BRANCH` ancestry, run `git branch -D <TASK_BRANCH>`
-9. verify the exact local task branch is absent
+4. require local `BASE_BRANCH` and `origin/BASE_BRANCH` to resolve to the same exact SHA
+5. require a clean working tree
+6. prove `BASE_BRANCH` history contains `TASK_TAG`
+7. prove the pull request is merged and the remote task branch is absent
+8. attempt `git branch -d <TASK_BRANCH>`
+9. if and only if step 8 fails because squash merge left the original task commit outside `BASE_BRANCH` ancestry, run `git branch -D <TASK_BRANCH>`
+10. verify the exact local task branch is absent
 
 This exception applies only to the exact merged local task branch after every proof above. It never authorizes force-push, shared-history rewrite, remote force deletion, or deletion of any other branch.
 
