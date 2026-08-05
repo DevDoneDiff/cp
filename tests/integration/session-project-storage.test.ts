@@ -77,6 +77,41 @@ const FROZEN_V1_PANEL_GEOMETRY = [
   { x: 0.38, y: 0.3, width: 0.08, height: 0.16, rotation_degrees: 2 },
 ] as const;
 
+function deliveredV1Projection(
+  projection: SessionProjectProjection,
+): Partial<SessionProjectProjection> {
+  const legacy = structuredClone(projection);
+  delete (legacy as Partial<SessionProjectProjection>)
+    .assembly_provenance_contract;
+  return legacy;
+}
+
+class MixedCleanupFailureStorage extends MemoryStorage {
+  constructor(
+    private readonly failure: {
+      operation: "quarantine" | "remove";
+      key: string;
+    },
+  ) {
+    super();
+  }
+
+  override setItem(key: string, value: string): void {
+    if (this.failure.operation === "quarantine" && key === this.failure.key) {
+      throw new Error("SET_DENIED");
+    }
+    super.setItem(key, value);
+  }
+
+  override removeItem(key: string): void {
+    this.removals += 1;
+    if (this.failure.operation === "remove" && key === this.failure.key) {
+      throw new Error("REMOVE_DENIED");
+    }
+    this.values.delete(key);
+  }
+}
+
 describe("browser-session project persistence", () => {
   it.each(restoreCases)(
     "restores $label with every accepted identity and cursor intact",
@@ -305,6 +340,141 @@ describe("browser-session project persistence", () => {
     });
   });
 
+  it("rejects simultaneous valid canonical-v2 and delivered-v1 storage", () => {
+    const source = createRuntimeHarness();
+    const canonical = startProject(source.runtime);
+    const storage = new MemoryStorage();
+    storage.values.set(SESSION_PROJECT_STORAGE_KEY, JSON.stringify(canonical));
+    storage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(deliveredV1Projection(canonical)),
+    );
+
+    const target = createRuntimeHarness({ storage });
+    expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "empty",
+    });
+    expect(target.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "recovered_invalid",
+    });
+    expect(storage.values.has(SESSION_PROJECT_STORAGE_KEY)).toBe(false);
+    expect(storage.values.has(LEGACY_SESSION_PROJECT_STORAGE_KEY)).toBe(false);
+    expect(storage.removals).toBe(2);
+    expect(storage.writes).toBe(1);
+  });
+
+  it.each([
+    {
+      label: "legacy quarantine",
+      operation: "quarantine" as const,
+      key: LEGACY_SESSION_PROJECT_STORAGE_KEY,
+    },
+    {
+      label: "canonical removal",
+      operation: "remove" as const,
+      key: SESSION_PROJECT_STORAGE_KEY,
+    },
+    {
+      label: "legacy removal",
+      operation: "remove" as const,
+      key: LEGACY_SESSION_PROJECT_STORAGE_KEY,
+    },
+  ])("keeps mixed provenance non-restorable when $label fails", (failure) => {
+    const source = createRuntimeHarness();
+    const canonical = startProject(source.runtime);
+    const storage = new MixedCleanupFailureStorage(failure);
+    storage.values.set(SESSION_PROJECT_STORAGE_KEY, JSON.stringify(canonical));
+    storage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(deliveredV1Projection(canonical)),
+    );
+
+    const target = createRuntimeHarness({ storage });
+    expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(target.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "unavailable",
+    });
+
+    const later = createRuntimeHarness({ storage });
+    expect(later.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(later.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "unavailable",
+    });
+  });
+
+  it("rejects opposite-key publication after either provenance contract is active", () => {
+    const canonicalStorage = new MemoryStorage();
+    const canonical = createRuntimeHarness({ storage: canonicalStorage });
+    const canonicalConfirmation = startProject(canonical.runtime);
+    const canonicalSerialized = canonicalStorage.values.get(
+      SESSION_PROJECT_STORAGE_KEY,
+    );
+    canonicalStorage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(deliveredV1Projection(canonicalConfirmation)),
+    );
+    const canonicalWrites = canonicalStorage.writes;
+
+    expect(canonical.runtime.dispatch({ type: "CONFIRM_PROPERTY" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(canonical.runtime.getSnapshot().projection).toEqual(
+      canonicalConfirmation,
+    );
+    expect(canonicalStorage.writes).toBe(canonicalWrites);
+    expect(canonicalStorage.values.get(SESSION_PROJECT_STORAGE_KEY)).toBe(
+      canonicalSerialized,
+    );
+
+    const legacySource = createRuntimeHarness();
+    const legacyConfirmation = startProject(legacySource.runtime);
+    const legacyStorage = new MemoryStorage();
+    const legacySerialized = JSON.stringify(
+      deliveredV1Projection(legacyConfirmation),
+    );
+    legacyStorage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      legacySerialized,
+    );
+    const legacy = createRuntimeHarness({ storage: legacyStorage });
+    expect(legacy.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "restored",
+    });
+    legacyStorage.values.set(
+      SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(legacyConfirmation),
+    );
+    const legacyWrites = legacyStorage.writes;
+
+    expect(legacy.runtime.dispatch({ type: "CONFIRM_PROPERTY" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(legacy.runtime.getSnapshot().projection).toMatchObject({
+      visible_state: "PROPERTY_CONFIRMATION",
+      assembly_provenance_contract: "LEGACY_UNVERIFIED_V1",
+    });
+    expect(legacyStorage.writes).toBe(legacyWrites);
+    expect(legacyStorage.values.get(LEGACY_SESSION_PROJECT_STORAGE_KEY)).toBe(
+      legacySerialized,
+    );
+  });
+
   it("rejects a self-coherent stored projection with an altered work timestamp", () => {
     const source = createRuntimeHarness();
     startProject(source.runtime);
@@ -474,9 +644,15 @@ describe("browser-session project persistence", () => {
     corrupt.values.set(SESSION_PROJECT_STORAGE_KEY, "{");
     corrupt.removeError = true;
     const recovery = createRuntimeHarness({ storage: corrupt });
-    expect(
-      recovery.runtime.dispatch({ type: "RESTORE_SESSION" }),
-    ).toMatchObject({ ok: true, outcome: "empty" });
+    expect(recovery.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(recovery.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "unavailable",
+    });
   });
 
   it("keeps S1 on a failed first write and preserves the last valid projection on later failure", () => {

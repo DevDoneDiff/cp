@@ -7,7 +7,9 @@
  *   - createBrowserSessionProjectRuntime: client-safe composition root for the pre-account runtime.
  * INVARIANTS:
  *   - [SEC-SESSION-STORAGE-ONLY] Unsaved pre-account projection data stays in sessionStorage; canonical and delivered-v1 formats never share a write key.
- *   - [SEC-BOUNDED-STORAGE-RECOVERY] Missing state is fresh; incompatible, corrupt, oversized, or malicious state is rejected with bounded results.
+ *   - [SEC-BOUNDED-STORAGE-RECOVERY] Missing state is fresh; invalid state is removed before recovery, and refused cleanup remains truthfully unavailable.
+ *   - [SEC-MIXED-KEY-RESTORE] Simultaneous canonical and delivered-v1 values quarantine legacy provenance before bounded cleanup; incomplete cleanup remains non-restorable.
+ *   - [SEC-CROSS-KEY-PUBLICATION] An active contract cannot publish while the opposite provenance key exists.
  *   - Delivered v1 storage remains on its isolated key and never writes into the canonical current-format key.
  * BOUNDARIES:
  *   - Browser globals are accessed only inside adapter methods; no localStorage, cookie, network, durable store, or module-load access is allowed.
@@ -38,6 +40,7 @@ import {
 
 export const SESSION_PROJECT_STORAGE_KEY = "cp.pre-account-project.v2";
 export const LEGACY_SESSION_PROJECT_STORAGE_KEY = "cp.pre-account-project.v1";
+const MIXED_PROVENANCE_QUARANTINE = "!MIXED_PROVENANCE_REJECTED!";
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -63,12 +66,43 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
     private readonly storageProvider: StorageProvider = browserSessionStorage,
   ) {}
 
-  private discardInvalid(storage: StorageLike, key: string): void {
+  private discardInvalid(storage: StorageLike, key: string): boolean {
     try {
       storage.removeItem(key);
+      return storage.getItem(key) === null;
     } catch {
-      // Recovery remains fresh even when the browser refuses cleanup.
+      return false;
     }
+  }
+
+  private discardMixedProvenance(storage: StorageLike): boolean {
+    try {
+      storage.setItem(
+        LEGACY_SESSION_PROJECT_STORAGE_KEY,
+        MIXED_PROVENANCE_QUARANTINE,
+      );
+      if (
+        storage.getItem(LEGACY_SESSION_PROJECT_STORAGE_KEY) !==
+        MIXED_PROVENANCE_QUARANTINE
+      ) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+    if (!this.discardInvalid(storage, SESSION_PROJECT_STORAGE_KEY)) {
+      return false;
+    }
+    return this.discardInvalid(storage, LEGACY_SESSION_PROJECT_STORAGE_KEY);
+  }
+
+  private invalidRecoveryResult(
+    storage: StorageLike,
+    key: string,
+  ): StoreLoadResult {
+    return this.discardInvalid(storage, key)
+      ? { kind: "recovered_invalid" }
+      : { kind: "unavailable" };
   }
 
   // @ah SEC-BOUNDED-STORAGE-RECOVERY
@@ -80,11 +114,21 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
     let legacyV1Compatibility = false;
     try {
       storage = this.storageProvider();
-      serialized = storage.getItem(SESSION_PROJECT_STORAGE_KEY);
+      const canonicalSerialized = storage.getItem(SESSION_PROJECT_STORAGE_KEY);
+      const legacySerialized = storage.getItem(
+        LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      );
+      // @ah SEC-MIXED-KEY-RESTORE
+      if (canonicalSerialized !== null && legacySerialized !== null) {
+        return this.discardMixedProvenance(storage)
+          ? { kind: "recovered_invalid" }
+          : { kind: "unavailable" };
+      }
+      serialized = canonicalSerialized;
       if (serialized === null) {
         storageKey = LEGACY_SESSION_PROJECT_STORAGE_KEY;
         legacyV1Compatibility = true;
-        serialized = storage.getItem(LEGACY_SESSION_PROJECT_STORAGE_KEY);
+        serialized = legacySerialized;
       }
     } catch {
       return { kind: "unavailable" };
@@ -96,15 +140,13 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
       serialized.length > MAX_SESSION_PROJECT_BYTES ||
       sessionProjectByteLength(serialized) > MAX_SESSION_PROJECT_BYTES
     ) {
-      this.discardInvalid(storage, storageKey);
-      return { kind: "recovered_invalid" };
+      return this.invalidRecoveryResult(storage, storageKey);
     }
     let unknownProjection: unknown;
     try {
       unknownProjection = JSON.parse(serialized) as unknown;
     } catch {
-      this.discardInvalid(storage, storageKey);
-      return { kind: "recovered_invalid" };
+      return this.invalidRecoveryResult(storage, storageKey);
     }
     const parsed = parseSessionProjectProjection(
       unknownProjection,
@@ -118,8 +160,7 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
       },
     );
     if (!parsed.ok) {
-      this.discardInvalid(storage, storageKey);
-      return { kind: "recovered_invalid" };
+      return this.invalidRecoveryResult(storage, storageKey);
     }
     this.legacySessionActive = legacyV1Compatibility;
     return { kind: "restored", projection: parsed.projection };
@@ -145,6 +186,13 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
     }
     try {
       const storage = this.storageProvider();
+      const oppositeKey = isLegacyProjection
+        ? SESSION_PROJECT_STORAGE_KEY
+        : LEGACY_SESSION_PROJECT_STORAGE_KEY;
+      // @ah SEC-CROSS-KEY-PUBLICATION
+      if (storage.getItem(oppositeKey) !== null) {
+        return { ok: false, reason: "INVALID" };
+      }
       if (isLegacyProjection) {
         const legacyProjection: Record<string, unknown> = {
           ...serialized.projection,

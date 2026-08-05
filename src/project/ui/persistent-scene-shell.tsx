@@ -7,6 +7,7 @@
  *   - [INV-SCENE-CONTINUITY] The scene element remains at one stable component type and JSX position through confirmation.
  *   - [INV-SEPARATE-PROPERTY-OUTLINE] The candidate boundary is fixture-bound SVG geometry and never baked into the raster scene.
  *   - [INV-EVENT-GATED-SCENE-LAYERS] Roof surfaces and keyed panels render only from objects already accepted into the projection.
+ *   - [INV-FALLBACK-COPY-READABLE] Asset-failure copy stays readable without covering accepted scene objects or changing their identities.
  * BOUNDARIES:
  *   - The scene renders accepted projection objects only and applies one fixed camera-display projection without mutating canonical event or projection geometry.
  * RELATED:
@@ -178,13 +179,7 @@ export function PersistentSceneShell({
             className="property-scene-fallback"
             role="img"
             aria-label="Seeded demo property image unavailable. The selected property identity is unchanged."
-          >
-            <span>Scene image unavailable</span>
-            <p>
-              Property identity, accepted model facts, and project status remain
-              available.
-            </p>
-          </div>
+          />
         ) : (
           <Image
             className="property-scene-image"
@@ -305,6 +300,16 @@ export function PersistentSceneShell({
               );
             })}
           </svg>
+        ) : null}
+        {assetFailed ? (
+          // @ah INV-FALLBACK-COPY-READABLE
+          <div className="property-scene-fallback-copy" aria-hidden="true">
+            <span>Scene image unavailable</span>
+            <p>
+              Property identity, accepted model facts, and project status remain
+              available.
+            </p>
+          </div>
         ) : null}
       </div>
     </section>

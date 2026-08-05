@@ -218,7 +218,7 @@ export function PreAccountRuntime({
             {isConfirmation
               ? "Property confirmation"
               : ready
-                ? "Minimum usable ready"
+                ? "Starting model ready"
                 : "Live roof assembly"}
           </p>
           <h1 id="s2-state-title" ref={stateHeadingRef} tabIndex={-1}>
@@ -270,7 +270,7 @@ export function PreAccountRuntime({
               </p>
               <p className="s2-supporting">
                 {ready
-                  ? `Roof facts, ${targetPanelCount} stable panel objects, and modeled energy are recorded at the minimum-usable S2 boundary.`
+                  ? `Roof facts, ${targetPanelCount} stable panel objects, and modeled energy are recorded for this confirmed property.`
                   : "Facts and stable panel objects appear only when their modeled work is accepted."}
               </p>
               {/* @ah INV-NO-S3-SURFACE */}
@@ -370,7 +370,7 @@ export function PreAccountRuntime({
             </div>
           ) : (
             <p className={`s2-model-state${ready ? " is-ready" : ""}`}>
-              {ready ? "Ready in S2" : "Building in place"}
+              {ready ? "Ready in this browser session" : "Building in place"}
             </p>
           )}
           <p className="s2-property-address">
@@ -438,7 +438,7 @@ export function PreAccountRuntime({
             {isConfirmation
               ? "Confirm or correct this match before roof analysis begins."
               : ready
-                ? "The minimum usable demo model is saved in this browser session. It remains inside S2."
+                ? "The starting demo model is saved in this browser session and remains ready here."
                 : assemblySnapshot.phase === "polling"
                   ? "The event stream paused. Bounded polling is continuing from your last accepted update."
                   : "Facts remain pending until their corresponding modeled work event is accepted."}
@@ -534,7 +534,7 @@ export function PreAccountRuntime({
             {isConfirmation
               ? "Confirmation keeps this likely match tied to the same evolving project."
               : ready
-                ? "Minimum usable readiness is recorded. No S3 controls or later content are rendered."
+                ? "Accepted roof facts, stable panels, and modeled energy remain tied to this confirmed property."
                 : "Seeded demo imagery and modeled facts remain source-labeled throughout assembly."}
           </p>
         </section>

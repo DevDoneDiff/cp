@@ -1,6 +1,6 @@
-# CP repository foundation
+# Contractor Platform S1-S2 release slice
 
-This repository currently contains a credential-free, non-product Next.js smoke shell. Product states, provider integrations, persistence, and product visual authority begin only in later approved specifications.
+This repository contains the credential-free S1-S2 Contractor Platform slice: a seeded address entry creates one browser-session project, explicit property confirmation starts event-driven roof assembly, and the journey stops with the same project and scene at the ready boundary. Live providers, accounts, durable persistence, and later product states remain outside this slice.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open `http://localhost:3000/` to view the non-product foundation status route. Foundation runtime behavior consumes no environment variables; `.env.example` is intentionally comment-only.
+Open `http://localhost:3000/` to start the seeded S1 address-entry journey. The default production journey requires no runtime environment values; `.env.example` is intentionally comment-only. The E2E runner injects accelerated assembly delivery internally while preserving canonical event timing.
 
 ## Validation
 

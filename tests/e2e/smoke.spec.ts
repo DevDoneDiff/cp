@@ -1,6 +1,20 @@
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import {
+  expect,
+  type Locator,
+  type Page,
+  type Route,
+  test,
+} from "@playwright/test";
 
-import { SESSION_PROJECT_STORAGE_KEY } from "../../src/project/adapters/browser-runtime";
+import {
+  LEGACY_SESSION_PROJECT_STORAGE_KEY,
+  SESSION_PROJECT_STORAGE_KEY,
+} from "../../src/project/adapters/browser-runtime";
+import {
+  assemblyEventIndexAfter,
+  createSeededAssemblyEvent,
+  parseAssemblyFeedRequest,
+} from "../../src/project/adapters/seeded-assembly-feed";
 
 const APP_ORIGIN = "http://127.0.0.1:3100";
 const SIGN_IN_MESSAGE =
@@ -185,6 +199,507 @@ function panelIdentity(panel: unknown): Record<string, unknown> {
     selection_state: candidate.selection_state,
   };
 }
+
+test("S1-S2 integrated release contract preserves one project through accepted-progress recovery and ready reload", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 1536, height: 1024 },
+  });
+  const page = await context.newPage();
+  const observations = observe(page);
+  const streamRequests: string[] = [];
+  const pollRequests: string[] = [];
+
+  await page.addInitScript(
+    ({ canonicalKey, legacyKey }) => {
+      const target = window as Window & {
+        __cpDocumentToken?: string;
+        __cpStorageWrites?: Array<{ key: string; value: string }>;
+      };
+      Object.defineProperty(target, "__cpDocumentToken", {
+        configurable: false,
+        value: globalThis.crypto.randomUUID(),
+        writable: false,
+      });
+      target.__cpStorageWrites = [];
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function recordProjectWrite(key, value) {
+        if (key === canonicalKey || key === legacyKey) {
+          target.__cpStorageWrites?.push({ key, value });
+        }
+        return original.call(this, key, value);
+      };
+    },
+    {
+      canonicalKey: SESSION_PROJECT_STORAGE_KEY,
+      legacyKey: LEGACY_SESSION_PROJECT_STORAGE_KEY,
+    },
+  );
+  await page.clock.install();
+
+  const readStorageWrites = () =>
+    page.evaluate(
+      () =>
+        (
+          window as Window & {
+            __cpStorageWrites?: Array<{ key: string; value: string }>;
+          }
+        ).__cpStorageWrites ?? [],
+    );
+  const interruptedStream = async (route: Route) => {
+    const requestUrl = route.request().url();
+    streamRequests.push(requestUrl);
+    const parsed = parseAssemblyFeedRequest(new URL(requestUrl));
+    if (!parsed.ok) throw new Error("INTEGRATED_STREAM_CONTEXT_INVALID");
+    const eventIndex = assemblyEventIndexAfter(parsed.cursor);
+    if (eventIndex !== 0) {
+      throw new Error("INTEGRATED_STREAM_DID_NOT_START_AFTER_CONFIRMATION");
+    }
+    const events = [
+      createSeededAssemblyEvent(parsed.cursor, eventIndex),
+      createSeededAssemblyEvent(parsed.cursor, eventIndex + 1),
+    ];
+    const body = [
+      ": integrated accepted-progress stream",
+      "",
+      ...events.flatMap((event) => [
+        `id: ${event.cursor}`,
+        "event: work",
+        `data: ${JSON.stringify(event)}`,
+        "",
+      ]),
+      "",
+    ].join("\n");
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: { "Cache-Control": "no-store, no-transform" },
+      body,
+    });
+  };
+  const emptyPoll = async (route: Route) => {
+    const requestUrl = route.request().url();
+    pollRequests.push(requestUrl);
+    const url = new URL(requestUrl);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "Cache-Control": "no-store" },
+      body: JSON.stringify({
+        schema_version: 1,
+        fixture_version: url.searchParams.get("fixture_version"),
+        after_cursor: Number(url.searchParams.get("after_cursor")),
+        feed_complete: false,
+        events: [],
+      }),
+    });
+  };
+
+  await page.route("**/api/project/assembly/stream?**", interruptedStream);
+  await page.route("**/api/project/assembly/poll?**", emptyPoll);
+
+  try {
+    const response = await page.goto("/");
+    expect(response?.status()).toBe(200);
+    expect(await context.cookies()).toEqual([]);
+    expect(
+      await page.evaluate(
+        ({ canonicalKey, legacyKey }) => ({
+          canonical: sessionStorage.getItem(canonicalKey),
+          legacy: sessionStorage.getItem(legacyKey),
+          localCount: localStorage.length,
+          sessionCount: sessionStorage.length,
+        }),
+        {
+          canonicalKey: SESSION_PROJECT_STORAGE_KEY,
+          legacyKey: LEGACY_SESSION_PROJECT_STORAGE_KEY,
+        },
+      ),
+    ).toEqual({
+      canonical: null,
+      legacy: null,
+      localCount: 0,
+      sessionCount: 0,
+    });
+    const landingDocumentToken = await page.evaluate(
+      () =>
+        (window as Window & { __cpDocumentToken?: string }).__cpDocumentToken,
+    );
+
+    await enterAddressWithKeyboard(page);
+    await expect(
+      page.getByRole("heading", { name: "Is this your property?" }),
+    ).toBeFocused();
+    await expect(page).toHaveURL(`${APP_ORIGIN}/project`);
+    expect(
+      await page.evaluate(
+        () =>
+          (window as Window & { __cpDocumentToken?: string }).__cpDocumentToken,
+      ),
+    ).toBe(landingDocumentToken);
+
+    const confirmation = await readStoredProjection(page);
+    expect(confirmation).toMatchObject({
+      assembly_provenance_contract: "CANONICAL_SCHEDULE_V1",
+      project_version: 1,
+      latest_cursor: 1,
+      visible_state: "PROPERTY_CONFIRMATION",
+      minimum_usable_ready: false,
+    });
+    const projectId = String(confirmation?.session_project_id);
+    const propertyId = String(
+      (confirmation?.property as { property_id?: string }).property_id,
+    );
+    const scene = confirmation?.scene as {
+      scene_id: string;
+      camera_id: string;
+    };
+    expect(projectId).not.toBe("");
+    expect(propertyId).not.toBe("");
+    expect(
+      await page.evaluate(
+        (legacyKey) => sessionStorage.getItem(legacyKey),
+        LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      ),
+    ).toBeNull();
+    await markAssemblyContinuity(page);
+
+    await page
+      .getByRole("button", { name: "Yes, this is my property" })
+      .click();
+    await expect
+      .poll(
+        () =>
+          page
+            .locator('[data-visible-state="LIVE_ROOF_ASSEMBLY"]')
+            .getAttribute("data-assembly-phase"),
+        { timeout: 5_000 },
+      )
+      .toBe("polling");
+    await expect(
+      page.getByText(
+        "The event stream paused. Bounded polling is continuing from your last accepted update.",
+      ),
+    ).toBeVisible();
+    await expect(page.locator("[data-surface-id]")).toHaveCount(2);
+    await expect(page.locator("[data-panel-id]")).toHaveCount(1);
+
+    const partial = await readStoredProjection(page);
+    expect(partial).toMatchObject({
+      session_project_id: projectId,
+      project_version: 4,
+      latest_cursor: 4,
+      visible_state: "LIVE_ROOF_ASSEMBLY",
+      scene,
+      minimum_usable_ready: false,
+    });
+    expect(
+      (partial?.events as Array<{ type: string }>).map((event) => event.type),
+    ).toEqual([
+      "ADDRESS_RESOLVED",
+      "PROPERTY_CONFIRMED",
+      "ROOF_GEOMETRY_READY",
+      "PANEL_OBJECT_ADDED",
+    ]);
+    const acceptedSurfaces = structuredClone(partial?.roof_surfaces);
+    const firstAcceptedPanel = panelIdentity(
+      (partial?.panel_objects as unknown[])[0],
+    );
+    await page
+      .locator("[data-surface-id]")
+      .first()
+      .evaluate((node) => {
+        (
+          node as SVGElement & { __assemblySurfaceToken?: string }
+        ).__assemblySurfaceToken = "same-first-surface";
+      });
+    await expectAssemblyContinuity(page);
+    const writesAtPartial = await readStorageWrites();
+    expect(writesAtPartial.map((write) => write.key)).toEqual(
+      Array(4).fill(SESSION_PROJECT_STORAGE_KEY),
+    );
+    expect(
+      writesAtPartial.map(
+        (write) =>
+          (JSON.parse(write.value) as { project_version: number })
+            .project_version,
+      ),
+    ).toEqual([1, 2, 3, 4]);
+
+    for (let second = 0; second < 38; second += 1) {
+      await page.clock.fastForward(1_000);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Live assembly paused" }),
+    ).toBeVisible();
+    const retryAssembly = page.getByRole("button", {
+      name: "Retry assembly",
+    });
+    await expect(retryAssembly).toBeVisible();
+    await expect(retryAssembly).toBeEnabled();
+    const exhausted = await readStoredProjection(page);
+    expect(exhausted).toEqual(partial);
+    expect(await readStorageWrites()).toEqual(writesAtPartial);
+    expect(streamRequests).toHaveLength(1);
+    expect(pollRequests.length).toBeGreaterThan(0);
+    expect(pollRequests.length).toBeLessThanOrEqual(35);
+    for (const requestUrl of pollRequests) {
+      const url = new URL(requestUrl);
+      expect(url.searchParams.get("session_project_id")).toBe(projectId);
+      expect(url.searchParams.get("property_id")).toBe(propertyId);
+      expect(url.searchParams.get("after_cursor")).toBe("4");
+      expect(url.searchParams.get("project_version")).toBe("4");
+    }
+    await expectAssemblyContinuity(page);
+    expect(
+      await page
+        .locator("[data-surface-id]")
+        .first()
+        .evaluate(
+          (node) =>
+            (node as SVGElement & { __assemblySurfaceToken?: string })
+              .__assemblySurfaceToken,
+        ),
+    ).toBe("same-first-surface");
+
+    await page.unroute("**/api/project/assembly/stream?**", interruptedStream);
+    await page.unroute("**/api/project/assembly/poll?**", emptyPoll);
+    await retryAssembly.focus();
+    await expect(retryAssembly).toBeFocused();
+    await retryAssembly.press("Enter");
+    await expect(
+      page.getByRole("heading", {
+        name: "Your starting demo model is ready.",
+      }),
+    ).toBeFocused({ timeout: 10_000 });
+    await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+    await expectAssemblyContinuity(page);
+    expect(
+      await page
+        .locator("[data-surface-id]")
+        .first()
+        .evaluate(
+          (node) =>
+            (node as SVGElement & { __assemblySurfaceToken?: string })
+              .__assemblySurfaceToken,
+        ),
+    ).toBe("same-first-surface");
+
+    const ready = await readStoredProjection(page);
+    expect(ready).toMatchObject({
+      assembly_provenance_contract: "CANONICAL_SCHEDULE_V1",
+      session_project_id: projectId,
+      project_version: 9,
+      latest_cursor: 9,
+      visible_state: "LIVE_ROOF_ASSEMBLY",
+      scene,
+      minimum_usable_ready: true,
+    });
+    expect(ready?.roof_surfaces).toEqual(acceptedSurfaces);
+    expect(panelIdentity((ready?.panel_objects as unknown[])[0])).toEqual(
+      firstAcceptedPanel,
+    );
+    const readyPanels = (ready?.panel_objects as unknown[]).map(panelIdentity);
+    const readyEvents = ready?.events as Array<{
+      event_id: string;
+      session_project_id: string;
+      property_id: string;
+      cursor: number;
+      expected_project_version: number;
+      type: string;
+    }>;
+    expect(readyEvents.map((event) => event.type)).toEqual([
+      "ADDRESS_RESOLVED",
+      "PROPERTY_CONFIRMED",
+      "ROOF_GEOMETRY_READY",
+      "PANEL_OBJECT_ADDED",
+      "PANEL_OBJECT_ADDED",
+      "PANEL_OBJECT_ADDED",
+      "PANEL_OBJECT_ADDED",
+      "ENERGY_MODEL_READY",
+      "MINIMUM_USABLE_READY",
+    ]);
+    expect(readyEvents.map((event) => event.cursor)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ]);
+    expect(readyEvents.map((event) => event.expected_project_version)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8,
+    ]);
+    expect(new Set(readyEvents.map((event) => event.event_id)).size).toBe(9);
+    expect(
+      readyEvents.every(
+        (event) =>
+          event.session_project_id === projectId &&
+          event.property_id === propertyId,
+      ),
+    ).toBe(true);
+    expect(
+      new Set(
+        (ready?.panel_objects as Array<{ panel_id: string }>).map(
+          (panel) => panel.panel_id,
+        ),
+      ).size,
+    ).toBe(4);
+
+    const allWrites = await readStorageWrites();
+    expect(allWrites.map((write) => write.key)).toEqual(
+      Array(9).fill(SESSION_PROJECT_STORAGE_KEY),
+    );
+    const projectionHistory = allWrites.map(
+      (write) => JSON.parse(write.value) as Record<string, unknown>,
+    );
+    expect(
+      projectionHistory.map((projection) => projection.project_version),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(
+      projectionHistory.map((projection) => projection.latest_cursor),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(
+      new Set(
+        projectionHistory.map((projection) => projection.session_project_id),
+      ).size,
+    ).toBe(1);
+    expect(
+      projectionHistory.every(
+        (projection) =>
+          projection.assembly_provenance_contract === "CANONICAL_SCHEDULE_V1",
+      ),
+    ).toBe(true);
+    expect(
+      new Set(
+        projectionHistory.map(
+          (projection) =>
+            (projection.property as { property_id: string }).property_id,
+        ),
+      ).size,
+    ).toBe(1);
+    expect(
+      new Set(
+        projectionHistory.map(
+          (projection) => (projection.scene as { scene_id: string }).scene_id,
+        ),
+      ).size,
+    ).toBe(1);
+    expect(
+      new Set(
+        projectionHistory.map(
+          (projection) => (projection.scene as { camera_id: string }).camera_id,
+        ),
+      ).size,
+    ).toBe(1);
+    await expect(
+      page.locator('[data-visible-state="LIVE_ROOF_ASSEMBLY"]'),
+    ).toHaveAttribute("data-minimum-usable-ready", "true");
+    await expect(
+      page.getByText(
+        /\bS3\b|Update system|project lenses|pricing|create account/i,
+      ),
+    ).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        ({ canonicalKey, legacyKey }) => ({
+          canonical: sessionStorage.getItem(canonicalKey),
+          legacy: sessionStorage.getItem(legacyKey),
+          localCount: localStorage.length,
+          sessionCount: sessionStorage.length,
+        }),
+        {
+          canonicalKey: SESSION_PROJECT_STORAGE_KEY,
+          legacyKey: LEGACY_SESSION_PROJECT_STORAGE_KEY,
+        },
+      ),
+    ).toMatchObject({
+      canonical: expect.any(String),
+      legacy: null,
+      localCount: 0,
+      sessionCount: 1,
+    });
+
+    const assemblyRequestsBeforeReload = observations.requests.filter((url) =>
+      url.includes("/api/project/assembly/"),
+    );
+    expect(
+      new URL(assemblyRequestsBeforeReload[0] ?? APP_ORIGIN).pathname,
+    ).toBe("/api/project/assembly/stream");
+    expect(
+      assemblyRequestsBeforeReload.some(
+        (url) => new URL(url).pathname === "/api/project/assembly/poll",
+      ),
+    ).toBe(true);
+    for (const requestUrl of assemblyRequestsBeforeReload) {
+      const url = new URL(requestUrl);
+      expect(url.origin).toBe(APP_ORIGIN);
+      expect(url.searchParams.get("session_project_id")).toBe(projectId);
+      expect(url.searchParams.get("property_id")).toBe(propertyId);
+      expect(url.search).not.toContain("address");
+    }
+    const readyDocumentToken = await page.evaluate(
+      () =>
+        (window as Window & { __cpDocumentToken?: string }).__cpDocumentToken,
+    );
+
+    await page.reload();
+    await expect(
+      page.getByText("This project was restored from this browser session."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: "Your starting demo model is ready.",
+      }),
+    ).toBeVisible();
+    const reloadedDocumentToken = await page.evaluate(
+      () =>
+        (window as Window & { __cpDocumentToken?: string }).__cpDocumentToken,
+    );
+    expect(reloadedDocumentToken).not.toBe(readyDocumentToken);
+    expect(await readStoredProjection(page)).toEqual(ready);
+    expect(await readStorageWrites()).toEqual([]);
+    expect(
+      observations.requests.filter((url) =>
+        url.includes("/api/project/assembly/"),
+      ),
+    ).toEqual(assemblyRequestsBeforeReload);
+    const restoredScene = page.locator('[data-scene-shell="persistent"]');
+    await expect(restoredScene).toHaveAttribute(
+      "data-scene-id",
+      scene.scene_id,
+    );
+    await expect(restoredScene).toHaveAttribute(
+      "data-camera-id",
+      scene.camera_id,
+    );
+    await expect(restoredScene).toHaveAttribute("data-property-id", propertyId);
+    expect(
+      await page.locator("[data-panel-id]").evaluateAll((panels) =>
+        panels.map((panel) => ({
+          panel_id: panel.getAttribute("data-panel-id"),
+          surface_id: panel.getAttribute("data-panel-surface-id"),
+          placement_rank: Number(
+            panel.getAttribute("data-panel-placement-rank"),
+          ),
+          geometry: JSON.parse(
+            panel.getAttribute("data-panel-geometry") ?? "null",
+          ) as unknown,
+          render_status: panel.getAttribute("data-panel-render-status"),
+          selection_state: panel.getAttribute("data-panel-selection-state"),
+        })),
+      ),
+    ).toEqual(readyPanels);
+    await expect(
+      page.getByText(
+        /\bS3\b|Update system|project lenses|pricing|create account/i,
+      ),
+    ).toHaveCount(0);
+    expect(await context.cookies()).toEqual([]);
+    expect(observations.browserErrors).toEqual([]);
+    expect(observations.httpErrors).toEqual([]);
+    expect(observations.externalRequests).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
 
 test("keyboard entry completes the real S1 workflow through one client runtime transition", async ({
   page,
@@ -750,6 +1265,7 @@ test("fallback exhaustion preserves restored partial work and retry completes wi
   page,
 }) => {
   const observations = observe(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.clock.install();
   await page.goto("/");
@@ -824,9 +1340,13 @@ test("fallback exhaustion preserves restored partial work and retry completes wi
   await expect(
     page.getByRole("alert").filter({ hasText: "Live assembly paused" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Retry assembly" }),
-  ).toBeVisible();
+  const retryAssembly = page.getByRole("button", { name: "Retry assembly" });
+  await expect(retryAssembly).toBeVisible();
+  const retryBox = await retryAssembly.boundingBox();
+  expect(retryBox).not.toBeNull();
+  expect((retryBox?.y ?? 0) + (retryBox?.height ?? 0)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.scrollHeight),
+  );
   const exhausted = await readStoredProjection(page);
   expect(exhausted?.minimum_usable_ready).toBe(false);
   expect((exhausted?.panel_objects as unknown[]).map(panelIdentity)).toEqual(
@@ -851,7 +1371,7 @@ test("fallback exhaustion preserves restored partial work and retry completes wi
 
   await page.unroute("**/api/project/assembly/stream?**", emptyStream);
   await page.unroute("**/api/project/assembly/poll?**", emptyPoll);
-  await page.getByRole("button", { name: "Retry assembly" }).click();
+  await retryAssembly.click();
   await expect(
     page.getByRole("heading", { name: "Your starting demo model is ready." }),
   ).toBeFocused({ timeout: 10_000 });
@@ -1141,6 +1661,7 @@ test("a scene-asset failure keeps identity and accessible assembly through readi
   page,
 }) => {
   const observations = observe(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto("/");
   await enterAddressWithKeyboard(page);
   await expect(
@@ -1223,6 +1744,28 @@ test("a scene-asset failure keeps identity and accessible assembly through readi
     page.locator(".s2-assembly-badge"),
   );
   expect(
+    await page.locator("[data-panel-id]").evaluateAll((panels) => {
+      const copy = document.querySelector(".property-scene-fallback-copy span");
+      if (!(copy instanceof HTMLElement)) return true;
+      const copyBox = copy.getBoundingClientRect();
+      return panels.some((panel) => {
+        const panelBox = panel.getBoundingClientRect();
+        return !(
+          panelBox.right <= copyBox.left ||
+          panelBox.left >= copyBox.right ||
+          panelBox.bottom <= copyBox.top ||
+          panelBox.top >= copyBox.bottom
+        );
+      });
+    }),
+  ).toBe(false);
+  const fallbackCopy = page.locator(".property-scene-fallback-copy");
+  await expectNoVisualOverlap(fallbackCopy, page.locator(".s2-details"));
+  await expectNoVisualOverlap(
+    fallbackCopy,
+    page.locator(".s2-continuity-note"),
+  );
+  expect(
     await scene.evaluate(
       (node) =>
         (node as HTMLElement & { __assetFailureToken?: string })
@@ -1279,7 +1822,7 @@ test("keyboard focus and reduced motion preserve the same confirmation informati
   await expect(scene).toHaveCount(1);
   await expect(page.locator("[data-panel-id]")).toHaveCount(4);
   await expect(page.locator("[data-roof-surface-layer]")).toHaveCount(1);
-  await expect(page.getByText("Ready in S2")).toBeVisible();
+  await expect(page.getByText("Ready in this browser session")).toBeVisible();
   expect(
     await page.locator("[data-panel-id]").evaluateAll((panels) =>
       panels.every((panel) => {
@@ -1551,7 +2094,7 @@ for (const viewport of [
     ).toBe(true);
     await expect(page.getByText("1,840 sq ft").first()).toBeVisible();
     await expect(page.getByText("9,800 kWh/yr").first()).toBeVisible();
-    await expect(page.getByText("Ready in S2")).toBeVisible();
+    await expect(page.getByText("Ready in this browser session")).toBeVisible();
     await expect(
       page.getByText(
         "The confirmed property now has a usable preliminary demo model assembled from accepted seeded work events.",
