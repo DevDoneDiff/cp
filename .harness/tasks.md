@@ -470,9 +470,9 @@ Bootstrap: false
 Source_spec: docs/specs/B1-s1-s2-integrated-stabilization.md
 Priority: P1
 Depends_on: [T-0005], [T-0006]
-Status: working
+Status: passed
 Ready: true
-Pass: false
+Pass: true
 Objective:
 - Establish the completed S1-S2 slice as a stable integrated release candidate by adding one durable cross-task browser contract, correcting only confirmed defects within approved behavior, and freezing the slice at `MINIMUM_USABLE_READY` for later-screen work.
 Scope:
