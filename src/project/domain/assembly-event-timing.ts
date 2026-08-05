@@ -5,39 +5,20 @@
  *   - assemblyEventOccurredAt: derives one canonical modeled-event timestamp from confirmation and cursor.
  *   - assemblyEventTimestampMatches: binds a modeled event cursor to the exact permitted offset from property confirmation.
  * INVARIANTS:
- *   - [SEC-ASSEMBLY-EVENT-TIMESTAMP] Modeled-work provenance accepts only an exact known schedule slot relative to its active confirmation.
+ *   - [SEC-ASSEMBLY-EVENT-TIMESTAMP] Canonical modeled-work provenance accepts only one exact known schedule slot relative to its active confirmation.
  * BOUNDARIES:
- *   - Delivery acceleration never changes canonical event provenance; legacy-v1 remains restore-compatible for projections created by the delivered inert schedule.
+ *   - Delivery acceleration never changes canonical event provenance; the reducer isolates delivered legacy projections under an explicit unverified contract.
  * RELATED:
  *   - src/project/adapters/seeded-assembly-feed.ts: selects one live schedule and constructs canonical timestamps.
- *   - src/project/adapters/browser-assembly-transport.ts: rejects live payloads outside the live schedule contracts.
- *   - src/project/domain/reducer.ts: applies the same timestamp rule during event acceptance and stored-event replay.
+ *   - src/project/adapters/browser-assembly-transport.ts: rejects live payloads outside the canonical schedule.
+ *   - src/project/domain/reducer.ts: applies this timestamp rule to canonical event acceptance and stored replay.
  * SECURITY:
  *   - Exact schedule matching prevents otherwise valid wire or stored events from poisoning projection provenance with arbitrary timestamps.
  */
 
-const SEEDED_ASSEMBLY_PROVENANCE_OFFSETS = {
-  canonical: [2_500, 5_500, 8_500, 11_500, 14_500, 18_000, 24_000],
-  "legacy-v1": [1_000, 2_000, 3_000, 4_000, 5_000, 6_000, 7_000],
-} as const;
-
-export type SeededAssemblyProvenanceContract =
-  keyof typeof SEEDED_ASSEMBLY_PROVENANCE_OFFSETS;
-
-export const LIVE_ASSEMBLY_PROVENANCE_CONTRACTS = [
-  "canonical",
-] as const satisfies readonly SeededAssemblyProvenanceContract[];
-
-export const RESTORABLE_ASSEMBLY_PROVENANCE_CONTRACTS = [
-  ...LIVE_ASSEMBLY_PROVENANCE_CONTRACTS,
-  "legacy-v1",
-] as const satisfies readonly SeededAssemblyProvenanceContract[];
-
-function seededAssemblyProvenanceOffsetsFor(
-  contract: SeededAssemblyProvenanceContract,
-): readonly number[] {
-  return SEEDED_ASSEMBLY_PROVENANCE_OFFSETS[contract];
-}
+const CANONICAL_ASSEMBLY_PROVENANCE_OFFSETS = [
+  2_500, 5_500, 8_500, 11_500, 14_500, 18_000, 24_000,
+] as const;
 
 export function assemblyEventOccurredAt(
   confirmationOccurredAt: string,
@@ -46,7 +27,7 @@ export function assemblyEventOccurredAt(
 ): string {
   const eventIndex = eventCursor - confirmationCursor - 1;
   const confirmationTime = new Date(confirmationOccurredAt).getTime();
-  const offset = seededAssemblyProvenanceOffsetsFor("canonical")[eventIndex];
+  const offset = CANONICAL_ASSEMBLY_PROVENANCE_OFFSETS[eventIndex];
   if (
     !Number.isSafeInteger(eventIndex) ||
     !Number.isFinite(confirmationTime) ||
@@ -62,7 +43,6 @@ export interface AssemblyEventTimestampContext {
   eventCursor: number;
   confirmationOccurredAt: string;
   confirmationCursor: number;
-  acceptedContracts: readonly SeededAssemblyProvenanceContract[];
 }
 
 // @ah SEC-ASSEMBLY-EVENT-TIMESTAMP
@@ -71,7 +51,6 @@ export function assemblyEventTimestampMatches({
   eventCursor,
   confirmationOccurredAt,
   confirmationCursor,
-  acceptedContracts,
 }: AssemblyEventTimestampContext): boolean {
   const eventIndex = eventCursor - confirmationCursor - 1;
   const confirmationTime = new Date(confirmationOccurredAt).getTime();
@@ -84,8 +63,6 @@ export function assemblyEventTimestampMatches({
   ) {
     return false;
   }
-  return acceptedContracts.some((contract) => {
-    const offset = seededAssemblyProvenanceOffsetsFor(contract)[eventIndex];
-    return offset !== undefined && eventTime === confirmationTime + offset;
-  });
+  const offset = CANONICAL_ASSEMBLY_PROVENANCE_OFFSETS[eventIndex];
+  return offset !== undefined && eventTime === confirmationTime + offset;
 }

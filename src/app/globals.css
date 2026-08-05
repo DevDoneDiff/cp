@@ -1915,6 +1915,10 @@ input:focus-visible,
   box-shadow: 0 14px 34px rgb(0 0 0 / 34%);
 }
 
+.s2-stage.is-assembly.has-notice .s2-assembly-badge {
+  margin-top: 80px;
+}
+
 .s2-assembly-badge strong {
   color: #77b6ff;
   font-size: 12px;
@@ -2075,6 +2079,10 @@ input:focus-visible,
     order: 2;
     align-self: auto;
     margin: 0 0 12px;
+  }
+
+  .s2-stage.is-assembly.has-notice .s2-assembly-badge {
+    margin-top: 0;
   }
 
   .s2-stage.is-assembly .property-scene {

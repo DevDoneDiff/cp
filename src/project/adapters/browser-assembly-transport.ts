@@ -28,10 +28,7 @@ import {
   type AssemblyTransportPort,
 } from "../application/live-roof-assembly";
 import type { SessionProjectRuntime } from "../application/session-project-runtime";
-import {
-  assemblyEventTimestampMatches,
-  LIVE_ASSEMBLY_PROVENANCE_CONTRACTS,
-} from "../domain/assembly-event-timing";
+import { assemblyEventTimestampMatches } from "../domain/assembly-event-timing";
 import type { ProjectEvent } from "../domain/model";
 import { parseProjectEvent } from "../domain/work-events";
 import {
@@ -93,7 +90,6 @@ function eventMatchesCursor(
       eventCursor: event.cursor,
       confirmationOccurredAt: cursor.confirmationOccurredAt,
       confirmationCursor: cursor.confirmationCursor,
-      acceptedContracts: LIVE_ASSEMBLY_PROVENANCE_CONTRACTS,
     })
   );
 }

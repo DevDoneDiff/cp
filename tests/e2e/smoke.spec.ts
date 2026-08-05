@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import { SESSION_PROJECT_STORAGE_KEY } from "../../src/project/adapters/browser-runtime";
 
@@ -55,6 +55,29 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   }));
   expect(overflow.document).toBeLessThanOrEqual(0);
   expect(overflow.body).toBeLessThanOrEqual(0);
+}
+
+async function expectNoVisualOverlap(
+  first: Locator,
+  second: Locator,
+): Promise<void> {
+  const [firstBox, secondBox] = await Promise.all([
+    first.boundingBox(),
+    second.boundingBox(),
+  ]);
+  expect(firstBox).not.toBeNull();
+  expect(secondBox).not.toBeNull();
+  const overlapWidth = Math.max(
+    0,
+    Math.min(firstBox!.x + firstBox!.width, secondBox!.x + secondBox!.width) -
+      Math.max(firstBox!.x, secondBox!.x),
+  );
+  const overlapHeight = Math.max(
+    0,
+    Math.min(firstBox!.y + firstBox!.height, secondBox!.y + secondBox!.height) -
+      Math.max(firstBox!.y, secondBox!.y),
+  );
+  expect(overlapWidth * overlapHeight).toBe(0);
 }
 
 async function readStoredProjection(page: Page) {
@@ -295,6 +318,7 @@ test("keyboard entry completes the real S1 workflow through one client runtime t
   expect(projection).toMatchObject({
     schema_version: 1,
     fixture_version: "seeded-maple-austin-v1",
+    assembly_provenance_contract: "CANONICAL_SCHEDULE_V1",
     project_version: 1,
     visible_state: "PROPERTY_CONFIRMATION",
     source_kind: "SEEDED_DEMO_IMAGERY",
@@ -577,13 +601,18 @@ test("native SSE reveals only accepted roof, panel, energy, and readiness events
   ).toBe(false);
 
   await page.reload();
-  await expect(
-    page.getByText("This project was restored from this browser session."),
-  ).toBeVisible();
+  const restoredNotice = page.getByText(
+    "This project was restored from this browser session.",
+  );
+  await expect(restoredNotice).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Your starting demo model is ready." }),
   ).toBeVisible();
   await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+  await expectNoVisualOverlap(
+    restoredNotice,
+    page.locator(".s2-assembly-badge"),
+  );
   const restored = await readStoredProjection(page);
   expect(restored).toMatchObject({
     minimum_usable_ready: true,
@@ -1178,6 +1207,21 @@ test("a scene-asset failure keeps identity and accessible assembly through readi
   ).toBeFocused();
   await expect(page.locator("[data-panel-id]")).toHaveCount(4);
   await expect(page.getByText("9,800 kWh/yr").first()).toBeVisible();
+  await expect(
+    page.getByText(
+      "The confirmed property now has a usable preliminary demo model assembled from accepted seeded work events.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/is becoming|appear as each accepted event arrives/i),
+  ).toHaveCount(0);
+  await expectNoVisualOverlap(
+    page.getByRole("status").filter({
+      hasText:
+        "Seeded demo property image unavailable. Property identity and details remain unchanged.",
+    }),
+    page.locator(".s2-assembly-badge"),
+  );
   expect(
     await scene.evaluate(
       (node) =>
@@ -1509,8 +1553,28 @@ for (const viewport of [
     await expect(page.getByText("9,800 kWh/yr").first()).toBeVisible();
     await expect(page.getByText("Ready in S2")).toBeVisible();
     await expect(
+      page.getByText(
+        "The confirmed property now has a usable preliminary demo model assembled from accepted seeded work events.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/is becoming|appear as each accepted event arrives/i),
+    ).toHaveCount(0);
+    await expect(
       page.getByText(/Update system|project lenses|pricing|create account/i),
     ).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+
+    await page.reload();
+    const restoredNotice = page.getByText(
+      "This project was restored from this browser session.",
+    );
+    await expect(restoredNotice).toBeVisible();
+    await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+    await expectNoVisualOverlap(
+      restoredNotice,
+      page.locator(".s2-assembly-badge"),
+    );
     await expectNoHorizontalOverflow(page);
   });
 }

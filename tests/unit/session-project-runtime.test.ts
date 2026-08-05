@@ -69,6 +69,7 @@ describe("pre-account session project runtime", () => {
     expect(confirmation).toMatchObject({
       schema_version: 1,
       fixture_version: "seeded-maple-austin-v1",
+      assembly_provenance_contract: "CANONICAL_SCHEDULE_V1",
       source_kind: "SEEDED_DEMO_IMAGERY",
       certainty_kind: "DEMO_PROPERTY_MATCH",
     });

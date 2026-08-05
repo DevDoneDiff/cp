@@ -4,10 +4,16 @@ import type {
   SessionProjectRuntime,
   SessionProjectStore,
 } from "../../src/project/application/session-project-runtime";
+import { assemblyFeedCursorFromProjection } from "../../src/project/application/live-roof-assembly";
 import {
   BrowserSessionProjectStore,
+  LEGACY_SESSION_PROJECT_STORAGE_KEY,
   SESSION_PROJECT_STORAGE_KEY,
 } from "../../src/project/adapters/browser-runtime";
+import {
+  assemblyEventIndexAfter,
+  createSeededAssemblyEvent,
+} from "../../src/project/adapters/seeded-assembly-feed";
 import type { SessionProjectProjection } from "../../src/project/domain/model";
 import {
   advanceProjectToReady,
@@ -161,12 +167,46 @@ describe("browser-session project persistence", () => {
       FROZEN_V1_PANEL_GEOMETRY[0],
     );
     const confirmationTime = new Date(confirmation.occurred_at).getTime();
-    roofEvent.occurred_at = new Date(confirmationTime + 1_000).toISOString();
-    panelEvent.occurred_at = new Date(confirmationTime + 2_000).toISOString();
+    roofEvent.occurred_at = new Date(confirmationTime + 4_321).toISOString();
+    panelEvent.occurred_at = new Date(confirmationTime + 83_777).toISOString();
     historical.updated_at = panelEvent.occurred_at;
+    const legacyHistorical: Partial<SessionProjectProjection> =
+      structuredClone(historical);
+    delete legacyHistorical.assembly_provenance_contract;
+
+    const backwardHistorical = structuredClone(legacyHistorical);
+    const backwardPanel = backwardHistorical.events?.find(
+      (event) => event.type === "PANEL_OBJECT_ADDED",
+    );
+    if (backwardPanel?.type !== "PANEL_OBJECT_ADDED") {
+      throw new Error("BACKWARD_PANEL_EVENT_MISSING");
+    }
+    backwardPanel.occurred_at = new Date(
+      confirmationTime + 3_000,
+    ).toISOString();
+    backwardHistorical.updated_at = backwardPanel.occurred_at;
+    const backwardStorage = new MemoryStorage();
+    backwardStorage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(backwardHistorical),
+    );
+    const backwardTarget = createRuntimeHarness({ storage: backwardStorage });
+    expect(
+      backwardTarget.runtime.dispatch({ type: "RESTORE_SESSION" }),
+    ).toEqual({ ok: true, outcome: "empty" });
+    expect(backwardTarget.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      restore_status: "recovered_invalid",
+    });
+    expect(backwardStorage.values.has(LEGACY_SESSION_PROJECT_STORAGE_KEY)).toBe(
+      false,
+    );
 
     const storage = new MemoryStorage();
-    storage.values.set(SESSION_PROJECT_STORAGE_KEY, JSON.stringify(historical));
+    storage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(legacyHistorical),
+    );
     const target = createRuntimeHarness({ storage });
     expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
       ok: true,
@@ -174,6 +214,7 @@ describe("browser-session project persistence", () => {
     });
     const restored = target.runtime.getSnapshot().projection;
     expect(target.runtime.getSnapshot().restore_status).toBe("restored");
+    expect(restored?.assembly_provenance_contract).toBe("LEGACY_UNVERIFIED_V1");
     expect(restored?.roof_surfaces.map((surface) => surface.polygon)).toEqual(
       Object.values(FROZEN_V1_ROOF_POLYGONS),
     );
@@ -187,7 +228,28 @@ describe("browser-session project persistence", () => {
     const firstPanelId = restored?.panel_objects[0]?.panel_id;
     const eventCount = restored?.events.length;
     const cursor = restored?.latest_cursor;
-    expect(target.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" })).toEqual({
+    if (restored === null) throw new Error("RESTORED_PROJECT_MISSING");
+    const restoredPanelEvent = restored.events.find(
+      (event) => event.type === "PANEL_OBJECT_ADDED",
+    );
+    if (restoredPanelEvent === undefined) {
+      throw new Error("RESTORED_PANEL_EVENT_MISSING");
+    }
+    expect(
+      target.runtime.dispatch({
+        type: "APPLY_WORK_EVENT",
+        event: restoredPanelEvent,
+      }),
+    ).toEqual({ ok: true, outcome: "idempotent" });
+    const feedCursor = assemblyFeedCursorFromProjection(restored);
+    if (feedCursor === null) throw new Error("ASSEMBLY_CURSOR_MISSING");
+    const nextEvent = createSeededAssemblyEvent(
+      feedCursor,
+      assemblyEventIndexAfter(feedCursor),
+    );
+    expect(
+      target.runtime.dispatch({ type: "APPLY_WORK_EVENT", event: nextEvent }),
+    ).toEqual({
       ok: true,
       outcome: "accepted",
     });
@@ -205,8 +267,24 @@ describe("browser-session project persistence", () => {
     expect(continued?.events).toHaveLength((eventCount ?? 0) + 1);
     expect(continued?.latest_cursor).toBe((cursor ?? 0) + 1);
     expect(
+      new Date(continued?.updated_at ?? 0).getTime(),
+    ).toBeGreaterThanOrEqual(new Date(historical.updated_at).getTime());
+    expect(
       new Set(continued?.panel_objects.map((panel) => panel.panel_id)).size,
     ).toBe(2);
+    expect(storage.values.has(SESSION_PROJECT_STORAGE_KEY)).toBe(false);
+    expect(storage.values.has(LEGACY_SESSION_PROJECT_STORAGE_KEY)).toBe(true);
+
+    const reloaded = createRuntimeHarness({ storage });
+    expect(reloaded.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "restored",
+    });
+    expect(reloaded.runtime.getSnapshot().projection).toMatchObject({
+      assembly_provenance_contract: "LEGACY_UNVERIFIED_V1",
+      latest_cursor: continued?.latest_cursor,
+      panel_objects: continued?.panel_objects,
+    });
   });
 
   it("rejects a self-coherent stored projection with an altered work timestamp", () => {
@@ -243,6 +321,79 @@ describe("browser-session project persistence", () => {
     expect(storage.storedProject()).toBeNull();
     expect(storage.removals).toBe(1);
     expect(storage.writes).toBe(0);
+  });
+
+  it("rejects canonical-to-legacy substitution, mixed timing, and current-key downgrade", () => {
+    const source = createRuntimeHarness();
+    startProject(source.runtime);
+    const confirmed = confirmProject(source.runtime);
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const current = source.runtime.getSnapshot().projection;
+    if (current === null) throw new Error("PARTIAL_PROJECT_MISSING");
+
+    const substituted = structuredClone(current);
+    const substitutedRoof = substituted.events.find(
+      (event) => event.type === "ROOF_GEOMETRY_READY",
+    );
+    if (substitutedRoof?.type !== "ROOF_GEOMETRY_READY") {
+      throw new Error("ROOF_EVENT_MISSING");
+    }
+    substitutedRoof.occurred_at = new Date(
+      new Date(confirmed.updated_at).getTime() + 1_000,
+    ).toISOString();
+
+    const mixed = structuredClone(current);
+    const mixedPanel = mixed.events.find(
+      (event) => event.type === "PANEL_OBJECT_ADDED",
+    );
+    if (mixedPanel?.type !== "PANEL_OBJECT_ADDED") {
+      throw new Error("PANEL_EVENT_MISSING");
+    }
+    mixedPanel.occurred_at = new Date(
+      new Date(confirmed.updated_at).getTime() + 83_777,
+    ).toISOString();
+    mixed.updated_at = mixedPanel.occurred_at;
+
+    const downgraded: Partial<SessionProjectProjection> =
+      structuredClone(current);
+    delete downgraded.assembly_provenance_contract;
+    const retagged = structuredClone(current);
+    retagged.assembly_provenance_contract = "LEGACY_UNVERIFIED_V1";
+
+    const invalidCandidates = [
+      { key: SESSION_PROJECT_STORAGE_KEY, candidate: substituted },
+      { key: SESSION_PROJECT_STORAGE_KEY, candidate: mixed },
+      { key: SESSION_PROJECT_STORAGE_KEY, candidate: downgraded },
+      { key: SESSION_PROJECT_STORAGE_KEY, candidate: retagged },
+      { key: LEGACY_SESSION_PROJECT_STORAGE_KEY, candidate: retagged },
+      { key: LEGACY_SESSION_PROJECT_STORAGE_KEY, candidate: current },
+    ];
+    for (const { key, candidate } of invalidCandidates) {
+      const storage = new MemoryStorage();
+      storage.values.set(key, JSON.stringify(candidate));
+      const target = createRuntimeHarness({ storage });
+      expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+        ok: true,
+        outcome: "empty",
+      });
+      expect(target.runtime.getSnapshot()).toMatchObject({
+        projection: null,
+        restore_status: "recovered_invalid",
+      });
+      expect(storage.values.has(key)).toBe(false);
+      expect(storage.removals).toBe(1);
+    }
+
+    const directStore = new BrowserSessionProjectStore(
+      source.adapters,
+      source.identity,
+      () => new MemoryStorage(),
+    );
+    expect(directStore.save(retagged)).toEqual({
+      ok: false,
+      reason: "INVALID",
+    });
   });
 
   it("starts a fresh S1 state for a new browser-session store", () => {

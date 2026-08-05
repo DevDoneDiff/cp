@@ -140,6 +140,10 @@ export function PreAccountRuntime({
   const roofReady = projection.roof_surfaces.length > 0;
   const energyReady = projection.energy_model !== null;
   const ready = minimumUsableReady;
+  const hasNotice =
+    snapshot.error_code !== null ||
+    assetFailed ||
+    snapshot.restore_status === "restored";
   const assemblyStage = !roofReady
     ? "Mapping modeled roof geometry"
     : panelCount < targetPanelCount
@@ -203,7 +207,9 @@ export function PreAccountRuntime({
         ) : null}
       </div>
 
-      <div className={`s2-stage${isConfirmation ? "" : " is-assembly"}`}>
+      <div
+        className={`s2-stage${isConfirmation ? "" : " is-assembly"}${hasNotice ? " has-notice" : ""}`}
+      >
         <section
           className={`s2-decision${isConfirmation ? "" : " is-assembly"}`}
           aria-labelledby="s2-state-title"
@@ -258,12 +264,14 @@ export function PreAccountRuntime({
           ) : (
             <>
               <p className="s2-lead">
-                The confirmed property is becoming a usable preliminary model
-                through accepted seeded work events.
+                {ready
+                  ? "The confirmed property now has a usable preliminary demo model assembled from accepted seeded work events."
+                  : "The confirmed property is becoming a usable preliminary model through accepted seeded work events."}
               </p>
               <p className="s2-supporting">
-                Facts and stable panel objects appear only when their modeled
-                work is accepted.
+                {ready
+                  ? `Roof facts, ${targetPanelCount} stable panel objects, and modeled energy are recorded at the minimum-usable S2 boundary.`
+                  : "Facts and stable panel objects appear only when their modeled work is accepted."}
               </p>
               {/* @ah INV-NO-S3-SURFACE */}
               <section

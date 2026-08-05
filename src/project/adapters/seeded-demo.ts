@@ -474,7 +474,11 @@ export interface ManualProjectSchedule {
 
 function nextModeledEventOccurredAt(
   projection: SessionProjectProjection,
+  clock: Clock,
 ): string | null {
+  if (projection.assembly_provenance_contract === "LEGACY_UNVERIFIED_V1") {
+    return clock.nowIso();
+  }
   const confirmation = projection.events.findLast(
     (event) =>
       event.type === "PROPERTY_CONFIRMED" &&
@@ -496,6 +500,7 @@ export class SeededManualSchedule implements ManualProjectSchedule {
   constructor(
     private readonly adapters: SeededDemoAdapters,
     private readonly identity: IdentitySource,
+    private readonly clock: Clock,
   ) {}
 
   // @ah INV-INERT-SCHEDULE
@@ -507,7 +512,7 @@ export class SeededManualSchedule implements ManualProjectSchedule {
     ) {
       return null;
     }
-    const occurredAt = nextModeledEventOccurredAt(projection);
+    const occurredAt = nextModeledEventOccurredAt(projection, this.clock);
     if (occurredAt === null) return null;
     if (projection.roof_surfaces.length === 0) {
       const common = commonEventFields(

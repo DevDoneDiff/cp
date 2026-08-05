@@ -924,6 +924,10 @@ describe("S1 address-entry experience", () => {
         "This project was restored from this browser session.",
       ),
     ).toBeVisible();
+    expect(partialRender.container.querySelector(".s2-stage")).toHaveClass(
+      "is-assembly",
+      "has-notice",
+    );
     await waitFor(() => expect(partialTransport.opens).toHaveLength(1));
     expect(partialTransport.opens[0]?.afterCursor).toBe(partial.latest_cursor);
     expect(
@@ -957,6 +961,21 @@ describe("S1 address-entry experience", () => {
         name: "Your starting demo model is ready.",
       }),
     ).toBeVisible();
+    expect(
+      screen.getByText(
+        "The confirmed property now has a usable preliminary demo model assembled from accepted seeded work events.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "Roof facts, 4 stable panel objects, and modeled energy are recorded at the minimum-usable S2 boundary.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/confirmed property is becoming/i)).toBeNull();
+    expect(readyRender.container.querySelector(".s2-stage")).toHaveClass(
+      "is-assembly",
+      "has-notice",
+    );
     expect(readyTransport.opens).toHaveLength(0);
     expect(readyController.getSnapshot().phase).toBe("ready");
     expect(
