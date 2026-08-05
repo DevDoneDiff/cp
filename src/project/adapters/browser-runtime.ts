@@ -154,7 +154,7 @@ export function createBrowserSessionProjectRuntime(): SessionProjectRuntime {
   const identity = new BrowserIdentitySource();
   const clock = new SystemClock();
   const store = new BrowserSessionProjectStore(adapters, identity);
-  const schedule = new SeededManualSchedule(adapters, identity, clock);
+  const schedule = new SeededManualSchedule(adapters, identity);
   return new SessionProjectRuntime({
     adapters,
     identity,

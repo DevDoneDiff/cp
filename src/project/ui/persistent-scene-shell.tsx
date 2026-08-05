@@ -8,7 +8,7 @@
  *   - [INV-SEPARATE-PROPERTY-OUTLINE] The candidate boundary is fixture-bound SVG geometry and never baked into the raster scene.
  *   - [INV-EVENT-GATED-SCENE-LAYERS] Roof surfaces and keyed panels render only from objects already accepted into the projection.
  * BOUNDARIES:
- *   - The scene renders accepted projection objects only; it does not create geometry, panels, facts, progress, or readiness.
+ *   - The scene renders accepted projection objects only and applies one fixed camera-display projection without mutating canonical event or projection geometry.
  * RELATED:
  *   - src/project/ui/pre-account-runtime.tsx: keeps this component in one stable JSX position and owns asset-failure view state.
  *   - src/project/domain/model.ts: defines stable candidate, scene, and normalized fixture geometry contracts.
@@ -17,10 +17,63 @@
 import Image from "next/image";
 
 import { SEEDED_DEMO_FIXTURE } from "../adapters/seeded-demo";
-import type { SessionProjectProjection } from "../domain/model";
+import type {
+  PanelGeometry,
+  PanelObject,
+  RoofSurface,
+  SessionProjectProjection,
+} from "../domain/model";
 
 const SCENE_VIEWBOX_WIDTH = 1000;
 const SCENE_VIEWBOX_HEIGHT = 667;
+
+const SEEDED_CAMERA_SURFACE_POLYGONS: Readonly<
+  Record<string, readonly { x: number; y: number }[]>
+> = {
+  "south-main": [
+    { x: 0.27, y: 0.43 },
+    { x: 0.51, y: 0.3 },
+    { x: 0.72, y: 0.43 },
+    { x: 0.54, y: 0.6 },
+  ],
+  "west-wing": [
+    { x: 0.29, y: 0.53 },
+    { x: 0.38, y: 0.47 },
+    { x: 0.43, y: 0.54 },
+    { x: 0.34, y: 0.63 },
+  ],
+};
+
+const SEEDED_CAMERA_PANEL_GEOMETRY: Readonly<Record<string, PanelGeometry>> = {
+  "panel-south-01": {
+    x: 0.38,
+    y: 0.39,
+    width: 0.05,
+    height: 0.1,
+    rotation_degrees: -1,
+  },
+  "panel-south-02": {
+    x: 0.445,
+    y: 0.375,
+    width: 0.05,
+    height: 0.1,
+    rotation_degrees: 2,
+  },
+  "panel-south-03": {
+    x: 0.51,
+    y: 0.365,
+    width: 0.05,
+    height: 0.1,
+    rotation_degrees: 6,
+  },
+  "panel-west-01": {
+    x: 0.335,
+    y: 0.515,
+    width: 0.045,
+    height: 0.085,
+    rotation_degrees: -8,
+  },
+};
 
 export const PROPERTY_SCENE_ASSET = {
   id: "seeded-maple-austin-property-scene-v1",
@@ -58,6 +111,36 @@ function normalizedPoints(points: readonly { x: number; y: number }[]): string {
         `${Math.round(point.x * SCENE_VIEWBOX_WIDTH)},${Math.round(point.y * SCENE_VIEWBOX_HEIGHT)}`,
     )
     .join(" ");
+}
+
+function usesSeededCameraProjection(
+  projection: SessionProjectProjection,
+): boolean {
+  return (
+    projection.scene?.fixture_scene_key ===
+      SEEDED_DEMO_FIXTURE.scene.fixture_scene_key &&
+    projection.scene.fixture_camera_key ===
+      SEEDED_DEMO_FIXTURE.scene.fixture_camera_key
+  );
+}
+
+function sceneSurfacePolygon(
+  projection: SessionProjectProjection,
+  surface: RoofSurface,
+): readonly { x: number; y: number }[] {
+  return usesSeededCameraProjection(projection)
+    ? (SEEDED_CAMERA_SURFACE_POLYGONS[surface.fixture_surface_key] ??
+        surface.polygon)
+    : surface.polygon;
+}
+
+function scenePanelGeometry(
+  projection: SessionProjectProjection,
+  panel: PanelObject,
+): PanelGeometry {
+  return usesSeededCameraProjection(projection)
+    ? (SEEDED_CAMERA_PANEL_GEOMETRY[panel.fixture_panel_key] ?? panel.geometry)
+    : panel.geometry;
 }
 
 export function PersistentSceneShell({
@@ -158,7 +241,9 @@ export function PersistentSceneShell({
             {projection.roof_surfaces.map((surface) => (
               <polygon
                 key={surface.surface_id}
-                points={normalizedPoints(surface.polygon)}
+                points={normalizedPoints(
+                  sceneSurfacePolygon(projection, surface),
+                )}
                 vectorEffect="non-scaling-stroke"
                 data-surface-id={surface.surface_id}
                 data-surface-geometry={JSON.stringify(surface.polygon)}
@@ -181,16 +266,17 @@ export function PersistentSceneShell({
               placed on the accepted roof surfaces.
             </desc>
             {projection.panel_objects.map((panel) => {
-              const x = panel.geometry.x * SCENE_VIEWBOX_WIDTH;
-              const y = panel.geometry.y * SCENE_VIEWBOX_HEIGHT;
-              const width = panel.geometry.width * SCENE_VIEWBOX_WIDTH;
-              const height = panel.geometry.height * SCENE_VIEWBOX_HEIGHT;
+              const displayGeometry = scenePanelGeometry(projection, panel);
+              const x = displayGeometry.x * SCENE_VIEWBOX_WIDTH;
+              const y = displayGeometry.y * SCENE_VIEWBOX_HEIGHT;
+              const width = displayGeometry.width * SCENE_VIEWBOX_WIDTH;
+              const height = displayGeometry.height * SCENE_VIEWBOX_HEIGHT;
               const centerX = x + width / 2;
               const centerY = y + height / 2;
               return (
                 <g
                   key={panel.panel_id}
-                  transform={`rotate(${panel.geometry.rotation_degrees} ${centerX} ${centerY})`}
+                  transform={`rotate(${displayGeometry.rotation_degrees} ${centerX} ${centerY})`}
                   data-panel-id={panel.panel_id}
                   data-panel-surface-id={panel.surface_id}
                   data-panel-placement-rank={panel.placement_rank}

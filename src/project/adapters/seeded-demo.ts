@@ -36,6 +36,7 @@ import {
   type SeededFixtureContract,
   type SessionProjectProjection,
 } from "../domain/model";
+import { assemblyEventOccurredAt } from "../domain/assembly-event-timing";
 import {
   seededAddressResolvedEventId,
   seededCameraId,
@@ -80,10 +81,10 @@ export const SEEDED_DEMO_FIXTURE: SeededFixtureContract = {
       {
         fixture_surface_key: "south-main",
         polygon: [
-          { x: 0.27, y: 0.43 },
-          { x: 0.51, y: 0.3 },
-          { x: 0.72, y: 0.43 },
-          { x: 0.54, y: 0.6 },
+          { x: 0.16, y: 0.2 },
+          { x: 0.68, y: 0.2 },
+          { x: 0.78, y: 0.58 },
+          { x: 0.22, y: 0.58 },
         ],
         pitch_degrees: 22,
         azimuth_degrees: 182,
@@ -91,10 +92,10 @@ export const SEEDED_DEMO_FIXTURE: SeededFixtureContract = {
       {
         fixture_surface_key: "west-wing",
         polygon: [
-          { x: 0.29, y: 0.53 },
-          { x: 0.38, y: 0.47 },
-          { x: 0.43, y: 0.54 },
-          { x: 0.34, y: 0.63 },
+          { x: 0.22, y: 0.58 },
+          { x: 0.78, y: 0.58 },
+          { x: 0.66, y: 0.82 },
+          { x: 0.28, y: 0.82 },
         ],
         pitch_degrees: 18,
         azimuth_degrees: 268,
@@ -111,11 +112,11 @@ export const SEEDED_DEMO_FIXTURE: SeededFixtureContract = {
       fixture_surface_key: "south-main",
       placement_rank: 1,
       geometry: {
-        x: 0.38,
-        y: 0.39,
-        width: 0.05,
-        height: 0.1,
-        rotation_degrees: -1,
+        x: 0.28,
+        y: 0.3,
+        width: 0.08,
+        height: 0.16,
+        rotation_degrees: 2,
       },
     },
     {
@@ -123,10 +124,10 @@ export const SEEDED_DEMO_FIXTURE: SeededFixtureContract = {
       fixture_surface_key: "south-main",
       placement_rank: 2,
       geometry: {
-        x: 0.445,
-        y: 0.375,
-        width: 0.05,
-        height: 0.1,
+        x: 0.38,
+        y: 0.3,
+        width: 0.08,
+        height: 0.16,
         rotation_degrees: 2,
       },
     },
@@ -135,11 +136,11 @@ export const SEEDED_DEMO_FIXTURE: SeededFixtureContract = {
       fixture_surface_key: "south-main",
       placement_rank: 3,
       geometry: {
-        x: 0.51,
-        y: 0.365,
-        width: 0.05,
-        height: 0.1,
-        rotation_degrees: 6,
+        x: 0.48,
+        y: 0.3,
+        width: 0.08,
+        height: 0.16,
+        rotation_degrees: 2,
       },
     },
     {
@@ -147,11 +148,11 @@ export const SEEDED_DEMO_FIXTURE: SeededFixtureContract = {
       fixture_surface_key: "west-wing",
       placement_rank: 4,
       geometry: {
-        x: 0.335,
-        y: 0.515,
-        width: 0.045,
-        height: 0.085,
-        rotation_degrees: -8,
+        x: 0.42,
+        y: 0.64,
+        width: 0.08,
+        height: 0.14,
+        rotation_degrees: -1,
       },
     },
   ],
@@ -356,7 +357,7 @@ export function createSeededDemoAdapters(): SeededDemoAdapters {
 function commonEventFields(
   projection: SessionProjectProjection,
   identity: IdentitySource,
-  clock: Clock,
+  occurredAt: string,
   semanticEventKey: string,
 ) {
   if (projection.property === null) {
@@ -378,7 +379,7 @@ function commonEventFields(
     property_id: projection.property.property_id,
     cursor: projection.latest_cursor + 1,
     expected_project_version: projection.project_version,
-    occurred_at: clock.nowIso(),
+    occurred_at: occurredAt,
   } as const;
 }
 
@@ -432,7 +433,7 @@ export function createPropertyConfirmedEvent(
   const common = commonEventFields(
     projection,
     identity,
-    clock,
+    clock.nowIso(),
     "property-confirmed",
   );
   return common === null
@@ -452,7 +453,7 @@ export function createPropertyCorrectionEvent(
   const common = commonEventFields(
     projection,
     identity,
-    clock,
+    clock.nowIso(),
     "property-correction",
   );
   return common === null
@@ -471,11 +472,30 @@ export interface ManualProjectSchedule {
   nextEvent(projection: SessionProjectProjection): ProjectEvent | null;
 }
 
+function nextModeledEventOccurredAt(
+  projection: SessionProjectProjection,
+): string | null {
+  const confirmation = projection.events.findLast(
+    (event) =>
+      event.type === "PROPERTY_CONFIRMED" &&
+      event.property_id === projection.property?.property_id,
+  );
+  if (confirmation === undefined) return null;
+  try {
+    return assemblyEventOccurredAt(
+      confirmation.occurred_at,
+      confirmation.cursor,
+      projection.latest_cursor + 1,
+    );
+  } catch {
+    return null;
+  }
+}
+
 export class SeededManualSchedule implements ManualProjectSchedule {
   constructor(
     private readonly adapters: SeededDemoAdapters,
     private readonly identity: IdentitySource,
-    private readonly clock: Clock,
   ) {}
 
   // @ah INV-INERT-SCHEDULE
@@ -487,11 +507,13 @@ export class SeededManualSchedule implements ManualProjectSchedule {
     ) {
       return null;
     }
+    const occurredAt = nextModeledEventOccurredAt(projection);
+    if (occurredAt === null) return null;
     if (projection.roof_surfaces.length === 0) {
       const common = commonEventFields(
         projection,
         this.identity,
-        this.clock,
+        occurredAt,
         "roof-geometry-ready",
       );
       if (common === null) return null;
@@ -516,7 +538,7 @@ export class SeededManualSchedule implements ManualProjectSchedule {
       const common = commonEventFields(
         projection,
         this.identity,
-        this.clock,
+        occurredAt,
         `panel-added:${nextPanelRank}`,
       );
       if (panel === null || common === null) return null;
@@ -531,7 +553,7 @@ export class SeededManualSchedule implements ManualProjectSchedule {
       const common = commonEventFields(
         projection,
         this.identity,
-        this.clock,
+        occurredAt,
         "energy-model-ready",
       );
       if (common === null) return null;
@@ -545,7 +567,7 @@ export class SeededManualSchedule implements ManualProjectSchedule {
     const common = commonEventFields(
       projection,
       this.identity,
-      this.clock,
+      occurredAt,
       "minimum-usable-ready",
     );
     if (common === null) return null;

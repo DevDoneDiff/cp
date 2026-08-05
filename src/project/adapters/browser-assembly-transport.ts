@@ -7,7 +7,7 @@
  *   - createBrowserLiveRoofAssemblyController: production composition root for assembly transport.
  * INVARIANTS:
  *   - [SEC-SAME-ORIGIN-ASSEMBLY] Only the two exact same-origin assembly routes may receive bounded correlation fields.
- *   - [SEC-TRANSPORT-PAYLOAD-BOUND] Stream and polling payloads are size-bounded, exact-shape validated, and project/property/cursor bound before publication.
+ *   - [SEC-TRANSPORT-PAYLOAD-BOUND] Stream and polling payloads are size-bounded, exact-shape validated, and project/property/cursor/provenance-schedule bound before publication.
  * BOUNDARIES:
  *   - The adapter cannot mutate project state; it publishes candidates to the application controller and retains no domain projection.
  * RELATED:
@@ -28,6 +28,10 @@ import {
   type AssemblyTransportPort,
 } from "../application/live-roof-assembly";
 import type { SessionProjectRuntime } from "../application/session-project-runtime";
+import {
+  assemblyEventTimestampMatches,
+  LIVE_ASSEMBLY_PROVENANCE_CONTRACTS,
+} from "../domain/assembly-event-timing";
 import type { ProjectEvent } from "../domain/model";
 import { parseProjectEvent } from "../domain/work-events";
 import {
@@ -83,7 +87,14 @@ function eventMatchesCursor(
     event.session_project_id === cursor.sessionProjectId &&
     event.property_id === cursor.propertyId &&
     event.cursor === expectedCursor &&
-    event.expected_project_version === expectedVersion
+    event.expected_project_version === expectedVersion &&
+    assemblyEventTimestampMatches({
+      eventOccurredAt: event.occurred_at,
+      eventCursor: event.cursor,
+      confirmationOccurredAt: cursor.confirmationOccurredAt,
+      confirmationCursor: cursor.confirmationCursor,
+      acceptedContracts: LIVE_ASSEMBLY_PROVENANCE_CONTRACTS,
+    })
   );
 }
 

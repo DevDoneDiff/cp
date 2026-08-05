@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { assemblyFeedCursorFromProjection } from "../../src/project/application/live-roof-assembly";
 import {
@@ -30,6 +30,10 @@ function feedUrl(cursor: AssemblyFeedCursor): URL {
   }).toString();
   return url;
 }
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("seeded assembly feed", () => {
   it("builds the seven deterministic fixture events across the 24 second production schedule", () => {
@@ -134,6 +138,22 @@ describe("seeded assembly feed", () => {
     expect(
       runtime.dispatch({ type: "APPLY_WORK_EVENT", event: roofEvent }),
     ).toEqual({ ok: true, outcome: "accepted" });
+  });
+
+  it("accelerates delivery without changing canonical event provenance", () => {
+    vi.stubEnv("CP_ASSEMBLY_TIMING_MODE", "accelerated");
+    const { runtime } = createRuntimeHarness();
+    startProject(runtime);
+    const confirmed = confirmProject(runtime);
+    const cursor = assemblyFeedCursorFromProjection(confirmed);
+    if (cursor === null) throw new Error("ASSEMBLY_CURSOR_MISSING");
+
+    const confirmationTime = new Date(cursor.confirmationOccurredAt).getTime();
+    expect(assemblyEventDueAtMs(cursor, 0) - confirmationTime).toBe(100);
+    expect(
+      new Date(createSeededAssemblyEvent(cursor, 0).occurred_at).getTime() -
+        confirmationTime,
+    ).toBe(2_500);
   });
 
   it("rejects extra, duplicate, foreign, incompatible, and impossible route correlation", () => {

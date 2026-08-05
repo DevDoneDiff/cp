@@ -4,6 +4,7 @@ import {
   BrowserAssemblyTimer,
   BrowserAssemblyTransport,
 } from "../../src/project/adapters/browser-assembly-transport";
+import { createSeededAssemblyEvent } from "../../src/project/adapters/seeded-assembly-feed";
 import { assemblyFeedCursorFromProjection } from "../../src/project/application/live-roof-assembly";
 import type { ProjectEvent } from "../../src/project/domain/model";
 import {
@@ -55,11 +56,20 @@ function confirmedFeed() {
   startProject(harness.runtime);
   const confirmed = confirmProject(harness.runtime);
   const cursor = assemblyFeedCursorFromProjection(confirmed);
-  const event = harness.schedule.nextEvent(confirmed);
-  if (cursor === null || event === null) {
+  if (cursor === null) {
     throw new Error("CONFIRMED_FEED_MISSING");
   }
+  const event = createSeededAssemblyEvent(cursor, 0);
   return { ...harness, confirmed, cursor, event };
+}
+
+function withAlteredTimestamp(event: ProjectEvent): ProjectEvent {
+  return {
+    ...event,
+    occurred_at: new Date(
+      new Date(event.occurred_at).getTime() + 1,
+    ).toISOString(),
+  };
 }
 
 function pollEnvelope(
@@ -147,6 +157,13 @@ describe("browser assembly transport", () => {
           ...event,
           session_project_id: "project-foreign",
         }),
+        lastEventId: String(event.cursor),
+      }),
+    },
+    {
+      label: "altered provenance timestamp",
+      mutate: (event: ProjectEvent) => ({
+        data: JSON.stringify(withAlteredTimestamp(event)),
         lastEventId: String(event.cursor),
       }),
     },
@@ -271,6 +288,17 @@ describe("browser assembly transport", () => {
             cursor: afterCursor,
             expected_project_version: afterCursor - 1,
           },
+        ]),
+    },
+    {
+      label: "altered provenance timestamp",
+      response: (
+        fixtureVersion: string,
+        afterCursor: number,
+        event: ProjectEvent,
+      ) =>
+        pollEnvelope(fixtureVersion, afterCursor, [
+          withAlteredTimestamp(event),
         ]),
     },
   ])("rejects a polling batch with an $label", async ({ response }) => {

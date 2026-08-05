@@ -4,6 +4,7 @@ import type {
   ProjectEvent,
   SessionProjectProjection,
 } from "../../src/project/domain/model";
+import { assemblyEventOccurredAt } from "../../src/project/domain/assembly-event-timing";
 import {
   advanceProjectToReady,
   confirmProject,
@@ -16,13 +17,23 @@ function retargetEvent(
   projection: SessionProjectProjection,
 ): ProjectEvent {
   if (projection.property === null) throw new Error("PROPERTY_MISSING");
+  const confirmation = projection.events.findLast(
+    (candidate) => candidate.type === "PROPERTY_CONFIRMED",
+  );
   return {
     ...event,
     session_project_id: projection.session_project_id,
     property_id: projection.property.property_id,
     cursor: projection.latest_cursor + 1,
     expected_project_version: projection.project_version,
-    occurred_at: "2026-01-01T00:10:00.000Z",
+    occurred_at:
+      confirmation?.type === "PROPERTY_CONFIRMED"
+        ? assemblyEventOccurredAt(
+            confirmation.occurred_at,
+            confirmation.cursor,
+            projection.latest_cursor + 1,
+          )
+        : event.occurred_at,
   } as ProjectEvent;
 }
 
@@ -328,31 +339,37 @@ describe("pre-account session project runtime", () => {
     }
   });
 
-  it("uses cursor and project version rather than event timestamps as ordering authority", () => {
-    const { runtime, schedule } = createRuntimeHarness();
+  it("rejects altered modeled timestamps while preserving cursor and version progress", () => {
+    const { runtime, schedule, storage } = createRuntimeHarness();
     startProject(runtime);
     const confirmed = confirmProject(runtime);
     const roofEvent = schedule.nextEvent(confirmed);
     if (roofEvent === null) throw new Error("ROOF_EVENT_MISSING");
+    const writesBeforeAlteredEvent = storage.writes;
 
     expect(
       runtime.dispatch({
         type: "APPLY_WORK_EVENT",
         event: { ...roofEvent, occurred_at: "2099-01-01T00:00:00.000Z" },
       }),
+    ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+    expect(runtime.getSnapshot().projection).toEqual(confirmed);
+    expect(storage.writes).toBe(writesBeforeAlteredEvent);
+
+    expect(
+      runtime.dispatch({ type: "APPLY_WORK_EVENT", event: roofEvent }),
     ).toEqual({ ok: true, outcome: "accepted" });
-    const afterFutureEvent = runtime.getSnapshot().projection;
-    if (afterFutureEvent === null) throw new Error("ROOF_NOT_ACCEPTED");
-    const nextEvent = schedule.nextEvent(afterFutureEvent);
+    const afterRoof = runtime.getSnapshot().projection;
+    if (afterRoof === null) throw new Error("ROOF_NOT_ACCEPTED");
+    const nextEvent = schedule.nextEvent(afterRoof);
     if (nextEvent === null) throw new Error("NEXT_EVENT_MISSING");
-    expect(nextEvent.occurred_at < afterFutureEvent.updated_at).toBe(true);
 
     expect(
       runtime.dispatch({ type: "APPLY_WORK_EVENT", event: nextEvent }),
     ).toEqual({ ok: true, outcome: "accepted" });
     expect(runtime.getSnapshot().projection).toMatchObject({
-      project_version: afterFutureEvent.project_version + 1,
-      latest_cursor: afterFutureEvent.latest_cursor + 1,
+      project_version: afterRoof.project_version + 1,
+      latest_cursor: afterRoof.latest_cursor + 1,
       panel_objects: [expect.objectContaining({ placement_rank: 1 })],
     });
   });

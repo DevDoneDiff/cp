@@ -737,6 +737,20 @@ describe("S1 address-entry experience", () => {
     expect(
       rendered.container.querySelectorAll("[data-surface-id]"),
     ).toHaveLength(2);
+    const firstSurface = rendered.container.querySelector("[data-surface-id]");
+    expect(firstSurface).toHaveAttribute(
+      "data-surface-geometry",
+      JSON.stringify([
+        { x: 0.16, y: 0.2 },
+        { x: 0.68, y: 0.2 },
+        { x: 0.78, y: 0.58 },
+        { x: 0.22, y: 0.58 },
+      ]),
+    );
+    expect(firstSurface).toHaveAttribute(
+      "points",
+      "270,287 510,200 720,287 540,400",
+    );
     expect(screen.getAllByText("1,840 sq ft").length).toBeGreaterThan(0);
     expect(rendered.container.querySelectorAll("[data-panel-id]")).toHaveLength(
       0,
@@ -745,6 +759,17 @@ describe("S1 address-entry experience", () => {
     expect(publishNext().type).toBe("PANEL_OBJECT_ADDED");
     const firstPanel = rendered.container.querySelector("[data-panel-id]");
     expect(firstPanel).not.toBeNull();
+    expect(firstPanel).toHaveAttribute(
+      "data-panel-geometry",
+      JSON.stringify({
+        x: 0.28,
+        y: 0.3,
+        width: 0.08,
+        height: 0.16,
+        rotation_degrees: 2,
+      }),
+    );
+    expect(firstPanel?.getAttribute("transform")).toMatch(/^rotate\(-1 /);
     Object.defineProperty(firstPanel, "__continuityToken", {
       configurable: true,
       value: "stable-first-panel",

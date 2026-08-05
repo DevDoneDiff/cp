@@ -81,7 +81,7 @@ export function createRuntimeHarness(
   const store =
     options.store ??
     new BrowserSessionProjectStore(adapters, identity, () => storage);
-  const schedule = new SeededManualSchedule(adapters, identity, clock);
+  const schedule = new SeededManualSchedule(adapters, identity);
   const runtime = new SessionProjectRuntime({
     adapters,
     identity,

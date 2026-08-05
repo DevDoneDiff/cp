@@ -9,7 +9,7 @@
  *   - [EVENT-IDEMPOTENT-REPLAY] An exact accepted-event replay is a no-op; an ID collision or object replay is rejected.
  *   - [INV-READINESS-PRECONDITIONS] Minimum usability requires confirmation, fixture roof geometry, every stable panel object, and modeled energy.
  * BOUNDARIES:
- *   - Inputs must first pass event parsing; cursor and project version own ordering while timestamps remain provenance metadata.
+ *   - Inputs must first pass event parsing; cursor and project version own ordering while modeled timestamps must match the active confirmation schedule.
  *   - Persistence and publication order belong to the application runtime.
  * RELATED:
  *   - src/project/domain/identity.ts: derives the only valid stable slot for each seeded ID.
@@ -26,6 +26,10 @@ import {
   type SeededFixtureContract,
   type SessionProjectProjection,
 } from "./model";
+import {
+  assemblyEventTimestampMatches,
+  RESTORABLE_ASSEMBLY_PROVENANCE_CONTRACTS,
+} from "./assembly-event-timing";
 import {
   expectedSeededEventId,
   seededCameraId,
@@ -44,6 +48,7 @@ export type TransitionRejectReason =
   | "VERSION_MISMATCH"
   | "INVALID_EVENT_ORDER"
   | "FIXTURE_MISMATCH"
+  | "TIMESTAMP_MISMATCH"
   | "OBJECT_ID_COLLISION";
 
 export type TransitionResult =
@@ -272,6 +277,34 @@ function allFixturePanelsExist(
   );
 }
 
+function modeledEventTimestampMatches(
+  projection: SessionProjectProjection,
+  event: ProjectEvent,
+): boolean {
+  if (
+    event.type === "ADDRESS_RESOLVED" ||
+    event.type === "PROJECT_MUTATED" ||
+    event.type === "PROPERTY_CONFIRMED"
+  ) {
+    return true;
+  }
+  const confirmation = projection.events.findLast(
+    (candidate) =>
+      candidate.type === "PROPERTY_CONFIRMED" &&
+      candidate.property_id === event.property_id,
+  );
+  return (
+    confirmation !== undefined &&
+    assemblyEventTimestampMatches({
+      eventOccurredAt: event.occurred_at,
+      eventCursor: event.cursor,
+      confirmationOccurredAt: confirmation.occurred_at,
+      confirmationCursor: confirmation.cursor,
+      acceptedContracts: RESTORABLE_ASSEMBLY_PROVENANCE_CONTRACTS,
+    })
+  );
+}
+
 // @ah EVENT-IDEMPOTENT-REPLAY
 export function applyProjectEvent(
   projection: SessionProjectProjection | null,
@@ -329,6 +362,9 @@ export function applyProjectEvent(
   }
   if (event.expected_project_version !== projection.project_version) {
     return rejected("VERSION_MISMATCH");
+  }
+  if (!modeledEventTimestampMatches(projection, event)) {
+    return rejected("TIMESTAMP_MISMATCH");
   }
   switch (event.type) {
     case "ADDRESS_RESOLVED": {

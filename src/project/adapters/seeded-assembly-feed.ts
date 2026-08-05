@@ -7,7 +7,7 @@
  *   - seededAssemblyScheduleOffsets: selects the production or explicitly injected test schedule.
  * INVARIANTS:
  *   - [SEC-BOUNDED-FEED-CONTEXT] Route correlation is exact, bounded, fixture-consistent, and contains no address or stored projection.
- *   - [INV-DETERMINISTIC-FEED] One confirmation context and schedule slot always produce the same event IDs, object IDs, payload, cursor, version, and timestamp.
+ *   - [INV-DETERMINISTIC-FEED] One confirmation context and schedule slot always produce the same event IDs, object IDs, payload, cursor, version, and canonical provenance timestamp; test acceleration changes delivery only.
  * BOUNDARIES:
  *   - Feed output is untrusted candidate input; only the client runtime reducer may accept it as project state.
  * RELATED:
@@ -40,16 +40,19 @@ import {
   parseIsoTimestamp,
   parseSafeInteger,
 } from "../domain/validation";
+import { assemblyEventOccurredAt } from "../domain/assembly-event-timing";
 import { SEEDED_DEMO_FIXTURE } from "./seeded-demo";
 
 export const SEEDED_ASSEMBLY_EVENT_COUNT =
   SEEDED_DEMO_FIXTURE.panels.length + 3;
 export const SEEDED_ASSEMBLY_VISIBLE_DURATION_MS = 24_000;
 
-const PRODUCTION_OFFSETS_MS = [
+const PRODUCTION_DELIVERY_OFFSETS_MS = [
   2_500, 5_500, 8_500, 11_500, 14_500, 18_000, 24_000,
 ] as const;
-const ACCELERATED_OFFSETS_MS = [100, 200, 300, 400, 500, 600, 700] as const;
+const ACCELERATED_DELIVERY_OFFSETS_MS = [
+  100, 200, 300, 400, 500, 600, 700,
+] as const;
 const MAX_CONFIRMATION_CLOCK_SKEW_MS = 5_000;
 const QUERY_KEYS = [
   "fixture_version",
@@ -160,8 +163,8 @@ export function parseAssemblyFeedRequest(url: URL): AssemblyFeedRequestResult {
 
 export function seededAssemblyScheduleOffsets(): readonly number[] {
   return process.env.CP_ASSEMBLY_TIMING_MODE === "accelerated"
-    ? ACCELERATED_OFFSETS_MS
-    : PRODUCTION_OFFSETS_MS;
+    ? ACCELERATED_DELIVERY_OFFSETS_MS
+    : PRODUCTION_DELIVERY_OFFSETS_MS;
 }
 
 export function assemblyEventIndexAfter(cursor: AssemblyFeedCursor): number {
@@ -195,9 +198,11 @@ function commonEventFields(
     property_id: cursor.propertyId,
     cursor: cursor.confirmationCursor + eventIndex + 1,
     expected_project_version: cursor.confirmationCursor + eventIndex,
-    occurred_at: new Date(
-      assemblyEventDueAtMs(cursor, eventIndex),
-    ).toISOString(),
+    occurred_at: assemblyEventOccurredAt(
+      cursor.confirmationOccurredAt,
+      cursor.confirmationCursor,
+      cursor.confirmationCursor + eventIndex + 1,
+    ),
   } as const;
 }
 

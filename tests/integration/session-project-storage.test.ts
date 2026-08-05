@@ -51,6 +51,26 @@ const restoreCases: Array<{
   },
 ];
 
+const FROZEN_V1_ROOF_POLYGONS = {
+  "south-main": [
+    { x: 0.16, y: 0.2 },
+    { x: 0.68, y: 0.2 },
+    { x: 0.78, y: 0.58 },
+    { x: 0.22, y: 0.58 },
+  ],
+  "west-wing": [
+    { x: 0.22, y: 0.58 },
+    { x: 0.78, y: 0.58 },
+    { x: 0.66, y: 0.82 },
+    { x: 0.28, y: 0.82 },
+  ],
+} as const;
+
+const FROZEN_V1_PANEL_GEOMETRY = [
+  { x: 0.28, y: 0.3, width: 0.08, height: 0.16, rotation_degrees: 2 },
+  { x: 0.38, y: 0.3, width: 0.08, height: 0.16, rotation_degrees: 2 },
+] as const;
+
 describe("browser-session project persistence", () => {
   it.each(restoreCases)(
     "restores $label with every accepted identity and cursor intact",
@@ -96,6 +116,134 @@ describe("browser-session project persistence", () => {
       }
     },
   );
+
+  it("restores and continues a historical v1 partial projection with frozen geometry", () => {
+    const source = createRuntimeHarness();
+    startProject(source.runtime);
+    confirmProject(source.runtime);
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const current = source.runtime.getSnapshot().projection;
+    if (current === null) throw new Error("PARTIAL_PROJECT_MISSING");
+    const historical = structuredClone(current);
+    const confirmation = historical.events.findLast(
+      (event) => event.type === "PROPERTY_CONFIRMED",
+    );
+    const roofEvent = historical.events.find(
+      (event) => event.type === "ROOF_GEOMETRY_READY",
+    );
+    const panelEvent = historical.events.find(
+      (event) => event.type === "PANEL_OBJECT_ADDED",
+    );
+    if (
+      confirmation?.type !== "PROPERTY_CONFIRMED" ||
+      roofEvent?.type !== "ROOF_GEOMETRY_READY" ||
+      panelEvent?.type !== "PANEL_OBJECT_ADDED"
+    ) {
+      throw new Error("HISTORICAL_EVENTS_MISSING");
+    }
+
+    for (const [index, surface] of historical.roof_surfaces.entries()) {
+      const frozen =
+        FROZEN_V1_ROOF_POLYGONS[
+          surface.fixture_surface_key as keyof typeof FROZEN_V1_ROOF_POLYGONS
+        ];
+      if (frozen === undefined) throw new Error("FROZEN_SURFACE_MISSING");
+      surface.polygon = frozen.map((point) => ({ ...point }));
+      const eventSurface = roofEvent.payload.surfaces[index];
+      if (eventSurface === undefined) throw new Error("EVENT_SURFACE_MISSING");
+      eventSurface.polygon = frozen.map((point) => ({ ...point }));
+    }
+    historical.panel_objects[0]!.geometry = structuredClone(
+      FROZEN_V1_PANEL_GEOMETRY[0],
+    );
+    panelEvent.payload.panel.geometry = structuredClone(
+      FROZEN_V1_PANEL_GEOMETRY[0],
+    );
+    const confirmationTime = new Date(confirmation.occurred_at).getTime();
+    roofEvent.occurred_at = new Date(confirmationTime + 1_000).toISOString();
+    panelEvent.occurred_at = new Date(confirmationTime + 2_000).toISOString();
+    historical.updated_at = panelEvent.occurred_at;
+
+    const storage = new MemoryStorage();
+    storage.values.set(SESSION_PROJECT_STORAGE_KEY, JSON.stringify(historical));
+    const target = createRuntimeHarness({ storage });
+    expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "restored",
+    });
+    const restored = target.runtime.getSnapshot().projection;
+    expect(target.runtime.getSnapshot().restore_status).toBe("restored");
+    expect(restored?.roof_surfaces.map((surface) => surface.polygon)).toEqual(
+      Object.values(FROZEN_V1_ROOF_POLYGONS),
+    );
+    expect(restored?.panel_objects[0]?.geometry).toEqual(
+      FROZEN_V1_PANEL_GEOMETRY[0],
+    );
+
+    const surfaceIds = restored?.roof_surfaces.map(
+      (surface) => surface.surface_id,
+    );
+    const firstPanelId = restored?.panel_objects[0]?.panel_id;
+    const eventCount = restored?.events.length;
+    const cursor = restored?.latest_cursor;
+    expect(target.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" })).toEqual({
+      ok: true,
+      outcome: "accepted",
+    });
+    const continued = target.runtime.getSnapshot().projection;
+    expect(
+      continued?.roof_surfaces.map((surface) => surface.surface_id),
+    ).toEqual(surfaceIds);
+    expect(continued?.panel_objects[0]?.panel_id).toBe(firstPanelId);
+    expect(continued?.panel_objects[0]?.geometry).toEqual(
+      FROZEN_V1_PANEL_GEOMETRY[0],
+    );
+    expect(continued?.panel_objects[1]?.geometry).toEqual(
+      FROZEN_V1_PANEL_GEOMETRY[1],
+    );
+    expect(continued?.events).toHaveLength((eventCount ?? 0) + 1);
+    expect(continued?.latest_cursor).toBe((cursor ?? 0) + 1);
+    expect(
+      new Set(continued?.panel_objects.map((panel) => panel.panel_id)).size,
+    ).toBe(2);
+  });
+
+  it("rejects a self-coherent stored projection with an altered work timestamp", () => {
+    const source = createRuntimeHarness();
+    startProject(source.runtime);
+    confirmProject(source.runtime);
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const current = source.runtime.getSnapshot().projection;
+    if (current === null) throw new Error("PARTIAL_PROJECT_MISSING");
+    const forged = structuredClone(current);
+    const roofEvent = forged.events.find(
+      (event) => event.type === "ROOF_GEOMETRY_READY",
+    );
+    if (roofEvent?.type !== "ROOF_GEOMETRY_READY") {
+      throw new Error("ROOF_EVENT_MISSING");
+    }
+    roofEvent.occurred_at = new Date(
+      new Date(roofEvent.occurred_at).getTime() + 1,
+    ).toISOString();
+    forged.updated_at = roofEvent.occurred_at;
+
+    const storage = new MemoryStorage();
+    storage.values.set(SESSION_PROJECT_STORAGE_KEY, JSON.stringify(forged));
+    const target = createRuntimeHarness({ storage });
+    expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "empty",
+    });
+    expect(target.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "recovered_invalid",
+    });
+    expect(storage.storedProject()).toBeNull();
+    expect(storage.removals).toBe(1);
+    expect(storage.writes).toBe(0);
+  });
 
   it("starts a fresh S1 state for a new browser-session store", () => {
     const first = createRuntimeHarness();
