@@ -86,6 +86,32 @@ function deliveredV1Projection(
   return legacy;
 }
 
+class MixedCleanupFailureStorage extends MemoryStorage {
+  constructor(
+    private readonly failure: {
+      operation: "quarantine" | "remove";
+      key: string;
+    },
+  ) {
+    super();
+  }
+
+  override setItem(key: string, value: string): void {
+    if (this.failure.operation === "quarantine" && key === this.failure.key) {
+      throw new Error("SET_DENIED");
+    }
+    super.setItem(key, value);
+  }
+
+  override removeItem(key: string): void {
+    this.removals += 1;
+    if (this.failure.operation === "remove" && key === this.failure.key) {
+      throw new Error("REMOVE_DENIED");
+    }
+    this.values.delete(key);
+  }
+}
+
 describe("browser-session project persistence", () => {
   it.each(restoreCases)(
     "restores $label with every accepted identity and cursor intact",
@@ -337,7 +363,56 @@ describe("browser-session project persistence", () => {
     expect(storage.values.has(SESSION_PROJECT_STORAGE_KEY)).toBe(false);
     expect(storage.values.has(LEGACY_SESSION_PROJECT_STORAGE_KEY)).toBe(false);
     expect(storage.removals).toBe(2);
-    expect(storage.writes).toBe(0);
+    expect(storage.writes).toBe(1);
+  });
+
+  it.each([
+    {
+      label: "legacy quarantine",
+      operation: "quarantine" as const,
+      key: LEGACY_SESSION_PROJECT_STORAGE_KEY,
+    },
+    {
+      label: "canonical removal",
+      operation: "remove" as const,
+      key: SESSION_PROJECT_STORAGE_KEY,
+    },
+    {
+      label: "legacy removal",
+      operation: "remove" as const,
+      key: LEGACY_SESSION_PROJECT_STORAGE_KEY,
+    },
+  ])("keeps mixed provenance non-restorable when $label fails", (failure) => {
+    const source = createRuntimeHarness();
+    const canonical = startProject(source.runtime);
+    const storage = new MixedCleanupFailureStorage(failure);
+    storage.values.set(SESSION_PROJECT_STORAGE_KEY, JSON.stringify(canonical));
+    storage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(deliveredV1Projection(canonical)),
+    );
+
+    const target = createRuntimeHarness({ storage });
+    expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(target.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "unavailable",
+    });
+
+    const later = createRuntimeHarness({ storage });
+    expect(later.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(later.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "unavailable",
+    });
   });
 
   it("rejects opposite-key publication after either provenance contract is active", () => {
@@ -569,9 +644,15 @@ describe("browser-session project persistence", () => {
     corrupt.values.set(SESSION_PROJECT_STORAGE_KEY, "{");
     corrupt.removeError = true;
     const recovery = createRuntimeHarness({ storage: corrupt });
-    expect(
-      recovery.runtime.dispatch({ type: "RESTORE_SESSION" }),
-    ).toMatchObject({ ok: true, outcome: "empty" });
+    expect(recovery.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(recovery.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "unavailable",
+    });
   });
 
   it("keeps S1 on a failed first write and preserves the last valid projection on later failure", () => {
