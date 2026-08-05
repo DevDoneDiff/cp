@@ -8,6 +8,8 @@
  * INVARIANTS:
  *   - [SEC-SESSION-STORAGE-ONLY] Unsaved pre-account projection data stays in sessionStorage; canonical and delivered-v1 formats never share a write key.
  *   - [SEC-BOUNDED-STORAGE-RECOVERY] Missing state is fresh; incompatible, corrupt, oversized, or malicious state is rejected with bounded results.
+ *   - [SEC-MIXED-KEY-RESTORE] Simultaneous canonical and delivered-v1 values are rejected and cleared before either can restore.
+ *   - [SEC-CROSS-KEY-PUBLICATION] An active contract cannot publish while the opposite provenance key exists.
  *   - Delivered v1 storage remains on its isolated key and never writes into the canonical current-format key.
  * BOUNDARIES:
  *   - Browser globals are accessed only inside adapter methods; no localStorage, cookie, network, durable store, or module-load access is allowed.
@@ -80,11 +82,21 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
     let legacyV1Compatibility = false;
     try {
       storage = this.storageProvider();
-      serialized = storage.getItem(SESSION_PROJECT_STORAGE_KEY);
+      const canonicalSerialized = storage.getItem(SESSION_PROJECT_STORAGE_KEY);
+      const legacySerialized = storage.getItem(
+        LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      );
+      // @ah SEC-MIXED-KEY-RESTORE
+      if (canonicalSerialized !== null && legacySerialized !== null) {
+        this.discardInvalid(storage, SESSION_PROJECT_STORAGE_KEY);
+        this.discardInvalid(storage, LEGACY_SESSION_PROJECT_STORAGE_KEY);
+        return { kind: "recovered_invalid" };
+      }
+      serialized = canonicalSerialized;
       if (serialized === null) {
         storageKey = LEGACY_SESSION_PROJECT_STORAGE_KEY;
         legacyV1Compatibility = true;
-        serialized = storage.getItem(LEGACY_SESSION_PROJECT_STORAGE_KEY);
+        serialized = legacySerialized;
       }
     } catch {
       return { kind: "unavailable" };
@@ -145,6 +157,13 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
     }
     try {
       const storage = this.storageProvider();
+      const oppositeKey = isLegacyProjection
+        ? SESSION_PROJECT_STORAGE_KEY
+        : LEGACY_SESSION_PROJECT_STORAGE_KEY;
+      // @ah SEC-CROSS-KEY-PUBLICATION
+      if (storage.getItem(oppositeKey) !== null) {
+        return { ok: false, reason: "INVALID" };
+      }
       if (isLegacyProjection) {
         const legacyProjection: Record<string, unknown> = {
           ...serialized.projection,

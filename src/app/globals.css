@@ -875,35 +875,47 @@ input:focus-visible,
   position: absolute;
   z-index: 1;
   inset: 0;
-  display: grid;
-  place-content: center;
-  gap: 10px;
-  padding: 36px;
   background:
     linear-gradient(135deg, #0d1e2e, #07121d 58%, #0b1823), var(--surface);
-  color: var(--text-secondary);
-  text-align: center;
 }
 
 .property-scene-fallback::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 68px;
   height: 48px;
   border: 1px solid rgb(112 173 255 / 55%);
   border-radius: 12px;
-  margin: 0 auto 8px;
   background: rgb(47 128 255 / 8%);
   content: "";
+  transform: translate(-50%, -50%);
 }
 
-.property-scene-fallback span {
+.property-scene-fallback-copy {
+  position: absolute;
+  z-index: 6;
+  right: 32px;
+  bottom: 112px;
+  width: min(248px, calc(100% - 32px));
+  border: 1px solid #294861;
+  border-radius: 12px;
+  padding: 13px 15px;
+  background: rgb(5 18 29 / 94%);
+  color: var(--text-secondary);
+  text-align: left;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 32%);
+  pointer-events: none;
+}
+
+.property-scene-fallback-copy span {
   color: var(--text-primary);
   font-size: 18px;
   font-weight: 650;
 }
 
-.property-scene-fallback p {
-  max-width: 42ch;
-  margin: 0;
+.property-scene-fallback-copy p {
+  margin: 7px 0 0;
   font-size: 14px;
   line-height: 1.5;
 }
@@ -1997,6 +2009,15 @@ input:focus-visible,
 }
 
 @media (max-width: 1100px) {
+  .property-scene-fallback-copy {
+    right: 36px;
+    width: min(230px, calc(100% - 32px));
+  }
+
+  .s2-frame[data-assembly-phase="exhausted"] .s2-stage.is-assembly {
+    grid-template-rows: max-content auto;
+  }
+
   .s2-decision.is-assembly {
     padding-top: 28px;
   }
@@ -2047,6 +2068,12 @@ input:focus-visible,
 }
 
 @media (max-width: 760px) {
+  .property-scene-fallback-copy {
+    right: 16px;
+    bottom: 16px;
+    width: calc(100% - 32px);
+  }
+
   .s2-stage.is-assembly {
     padding-bottom: 24px;
   }

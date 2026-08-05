@@ -77,6 +77,15 @@ const FROZEN_V1_PANEL_GEOMETRY = [
   { x: 0.38, y: 0.3, width: 0.08, height: 0.16, rotation_degrees: 2 },
 ] as const;
 
+function deliveredV1Projection(
+  projection: SessionProjectProjection,
+): Partial<SessionProjectProjection> {
+  const legacy = structuredClone(projection);
+  delete (legacy as Partial<SessionProjectProjection>)
+    .assembly_provenance_contract;
+  return legacy;
+}
+
 describe("browser-session project persistence", () => {
   it.each(restoreCases)(
     "restores $label with every accepted identity and cursor intact",
@@ -303,6 +312,92 @@ describe("browser-session project persistence", () => {
       latest_cursor: continued?.latest_cursor,
       panel_objects: continued?.panel_objects,
     });
+  });
+
+  it("rejects simultaneous valid canonical-v2 and delivered-v1 storage", () => {
+    const source = createRuntimeHarness();
+    const canonical = startProject(source.runtime);
+    const storage = new MemoryStorage();
+    storage.values.set(SESSION_PROJECT_STORAGE_KEY, JSON.stringify(canonical));
+    storage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(deliveredV1Projection(canonical)),
+    );
+
+    const target = createRuntimeHarness({ storage });
+    expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "empty",
+    });
+    expect(target.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "recovered_invalid",
+    });
+    expect(storage.values.has(SESSION_PROJECT_STORAGE_KEY)).toBe(false);
+    expect(storage.values.has(LEGACY_SESSION_PROJECT_STORAGE_KEY)).toBe(false);
+    expect(storage.removals).toBe(2);
+    expect(storage.writes).toBe(0);
+  });
+
+  it("rejects opposite-key publication after either provenance contract is active", () => {
+    const canonicalStorage = new MemoryStorage();
+    const canonical = createRuntimeHarness({ storage: canonicalStorage });
+    const canonicalConfirmation = startProject(canonical.runtime);
+    const canonicalSerialized = canonicalStorage.values.get(
+      SESSION_PROJECT_STORAGE_KEY,
+    );
+    canonicalStorage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(deliveredV1Projection(canonicalConfirmation)),
+    );
+    const canonicalWrites = canonicalStorage.writes;
+
+    expect(canonical.runtime.dispatch({ type: "CONFIRM_PROPERTY" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(canonical.runtime.getSnapshot().projection).toEqual(
+      canonicalConfirmation,
+    );
+    expect(canonicalStorage.writes).toBe(canonicalWrites);
+    expect(canonicalStorage.values.get(SESSION_PROJECT_STORAGE_KEY)).toBe(
+      canonicalSerialized,
+    );
+
+    const legacySource = createRuntimeHarness();
+    const legacyConfirmation = startProject(legacySource.runtime);
+    const legacyStorage = new MemoryStorage();
+    const legacySerialized = JSON.stringify(
+      deliveredV1Projection(legacyConfirmation),
+    );
+    legacyStorage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      legacySerialized,
+    );
+    const legacy = createRuntimeHarness({ storage: legacyStorage });
+    expect(legacy.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "restored",
+    });
+    legacyStorage.values.set(
+      SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(legacyConfirmation),
+    );
+    const legacyWrites = legacyStorage.writes;
+
+    expect(legacy.runtime.dispatch({ type: "CONFIRM_PROPERTY" })).toEqual({
+      ok: false,
+      error_code: "STORAGE_UNAVAILABLE",
+    });
+    expect(legacy.runtime.getSnapshot().projection).toMatchObject({
+      visible_state: "PROPERTY_CONFIRMATION",
+      assembly_provenance_contract: "LEGACY_UNVERIFIED_V1",
+    });
+    expect(legacyStorage.writes).toBe(legacyWrites);
+    expect(legacyStorage.values.get(LEGACY_SESSION_PROJECT_STORAGE_KEY)).toBe(
+      legacySerialized,
+    );
   });
 
   it("rejects a self-coherent stored projection with an altered work timestamp", () => {

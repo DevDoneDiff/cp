@@ -788,7 +788,7 @@ describe("S1 address-entry experience", () => {
         name: "Your starting demo model is ready.",
       }),
     ).toHaveFocus();
-    expect(screen.getByText("Ready in S2")).toBeVisible();
+    expect(screen.getByText("Ready in this browser session")).toBeVisible();
     expect(screen.getAllByText("9,800 kWh/yr").length).toBeGreaterThan(0);
     expect(
       screen.getByRole("img", {
@@ -812,6 +812,11 @@ describe("S1 address-entry experience", () => {
     expect(scene).toHaveAttribute("data-camera-id", cameraId);
     expect(scene).toHaveAttribute("data-property-id", propertyId);
     expect(runtime.getSnapshot().projection?.minimum_usable_ready).toBe(true);
+    expect(
+      screen.queryByText(
+        /Ready in S2|minimum-usable S2 boundary|remains inside S2|No S3 controls or later content/i,
+      ),
+    ).toBeNull();
     expect(
       screen.queryByText(
         /update system|project lens|customization|pricing|account|contractor/i,
@@ -968,7 +973,7 @@ describe("S1 address-entry experience", () => {
     ).toBeVisible();
     expect(
       screen.getByText(
-        "Roof facts, 4 stable panel objects, and modeled energy are recorded at the minimum-usable S2 boundary.",
+        "Roof facts, 4 stable panel objects, and modeled energy are recorded for this confirmed property.",
       ),
     ).toBeVisible();
     expect(screen.queryByText(/confirmed property is becoming/i)).toBeNull();

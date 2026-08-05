@@ -470,7 +470,7 @@ Bootstrap: false
 Source_spec: docs/specs/B1-s1-s2-integrated-stabilization.md
 Priority: P1
 Depends_on: [T-0005], [T-0006]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
