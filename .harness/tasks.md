@@ -8,7 +8,7 @@ Canonical queue for approved active work. Specs define outcomes. Tasks are coher
 
 - `RUN_MODE`: autonomous
 - `MERGE_MODE`: autonomous
-- `NEXT_TASK_TAG`: 0007
+- `NEXT_TASK_TAG`: 0008
 - `NEXT_REFACTOR_TAG`: 0001
 
 Only explicit user instruction may change `RUN_MODE` or `MERGE_MODE`.
@@ -463,3 +463,65 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0005.md
+
+### [T-0007] S1-S2 integrated stabilization
+Type: maintenance
+Bootstrap: false
+Source_spec: docs/specs/B1-s1-s2-integrated-stabilization.md
+Priority: P1
+Depends_on: [T-0005], [T-0006]
+Status: queued
+Ready: true
+Pass: false
+Objective:
+- Establish the completed S1-S2 slice as a stable integrated release candidate by adding one durable cross-task browser contract, correcting only confirmed defects within approved behavior, and freezing the slice at `MINIMUM_USABLE_READY` for later-screen work.
+Scope:
+- Audit the merged S1-S2 runtime, domain, projection, browser-session persistence, seeded fixtures, same-origin routes, transport, UI, tests, annotations, build, smoke, and validation surfaces as one release candidate.
+- Add one named integrated browser release contract in the existing test infrastructure from a fresh S1 context through seeded address selection, client navigation, explicit property confirmation, event-driven assembly, deterministic transport recovery, `MINIMUM_USABLE_READY`, and ready-state reload.
+- Prove cross-task project, candidate/property, scene, camera, surface, panel, event, cursor, version, no-remount, and restoration continuity without introducing a second state authority or production-only observability.
+- Preserve and prove SSE-primary delivery, bounded cursor polling, accepted-state retention, exhaustion/retry without duplication, the approximately 20 to 30 second production schedule, and accelerated injected test timing.
+- Preserve and prove isolated delivered-v1 restoration and canonical-v2 persistence: current sessions write only `cp.pre-account-project.v2` under `CANONICAL_SCHEDULE_V1`; delivered-v1 sessions continue only through `cp.pre-account-project.v1` under `LEGACY_UNVERIFIED_V1`; downgrade, retagging, provenance mixing, and cross-key publication fail closed.
+- Prove a fresh isolated checkout using the repository-pinned toolchain, frozen dependency installation, production build, startup, and assigned validation without relying on active-worktree caches.
+- Correct only defects demonstrated by executable evidence, reproducible browser observation, inconsistent annotations, or direct contradiction of the source spec; strengthen focused proof and annotations only where a confirmed gap requires it.
+- Review every task-assigned artifact and required canonical/derived browser state at `1536x1024`, `1440x900`, `1024x768`, and `390x844`, including keyboard, focus, responsive, error, fallback, retry, restoration, scene-fallback, and reduced-motion behavior.
+Non_goals:
+- S3 or later screens, prototypes, composition, controls, routes, project lenses, customization, pricing, accounts, authentication, contractors, offers, payments, or automatic S3 navigation.
+- New product behavior, changed visual direction, speculative polish, broad behavior-preserving refactoring, generalized workflow infrastructure, architecture rewrite, performance-budget invention, or coverage-percentage chasing.
+- New or replacement production dependencies, package-manager changes, live providers, provider SDKs, model calls, analytics, Neon/Postgres/Drizzle, Sentry, Clerk, Stripe, durable writes, credentials, hosted configuration, external-system access, or external cost.
+- Research-only output, a closeout log, a new validation-set name, screenshot substitution, weakened proof, or deletion of useful focused tests in favor of only one broad test.
+Acceptance_criteria:
+- One named production-equivalent browser release contract starts in a fresh context at S1 and completes the real seeded UI path through client navigation, explicit confirmation, event-derived assembly, `MINIMUM_USABLE_READY`, and ready reload without test-only mutation of canonical state.
+- The integrated contract proves exactly one project, correct property binding, stable scene/camera/surface/panel identities, ordered event IDs, monotonic cursor/version, accepted-object continuity, no in-session scene remount, and no duplicate or replacement object.
+- After accepted progress, a deterministic SSE recovery boundary resumes bounded polling from the accepted cursor, preserves valid state, and proves exhaustion/retry or equivalent recovery completion without loss, duplication, false progress, or transport-owned readiness.
+- Ready reload mounts a new runtime instance and restores the same accepted project, property, scene, camera, surface, panel, event, cursor, and version identities without replay, regeneration, durable write, external access, or S3 transition.
+- Focused proof remains green for S1 help/loading/error/correction, confirmation gating, invalid storage/events, normal SSE, polling exhaustion/retry, confirmation/partial/ready restoration, scene fallback, keyboard/focus, responsive behavior, and reduced motion; no useful test, type, security check, validation, or error handling is weakened.
+- Production browser observation confirms the existing approximately 20 to 30 second schedule while automated tests use the accelerated injected schedule and stable clock.
+- Executable compatibility proof establishes canonical-v2-only new-session writes, isolated delivered-v1 restoration/continuation, and fail-closed rejection of downgrade, retagging, mixed provenance, or cross-key publication.
+- A fresh isolated checkout completes exact-toolchain frozen installation, production build, startup, and assigned validation without reusing active-worktree dependencies, build output, browser state, or generated cache.
+- Real-browser review at all four viewports covers every assigned visual reference plus canonical and derived states for composition, hierarchy, overflow, focus, keyboard operation, semantic announcements, scene/panel continuity, restoration, reduced motion, and absence of screenshot substitution.
+- Normal, fallback, retry, restoration, and scene-fallback paths have no uncaught application or console error, unexpected same-origin HTTP failure, external application request, secret, false provider claim, duplicate project, false readiness, or later-state content.
+- Every code, test, annotation, or documentation change is tied to reproducible evidence and stays within the approved S1-S2 contract; no production dependency or external system is added, configured, or accessed.
+- Every assigned validation set, independent exact-head review, exact-head CI, tasks-only closeout, latest-head CI, guarded squash merge, hardened cleanup, merged-history proof, synchronized clean `main`, and post-proof scratchpad deletion passes through the live harness procedure.
+Expected_surfaces:
+- Existing integrated E2E and production-smoke infrastructure, browser helpers, focused unit/integration/component/security tests, and validation configuration.
+- Current S1-S2 runtime, domain, projection, storage, seeded adapters, transport routes/adapters, UI, fixtures, and styling only where confirmed evidence requires correction.
+- Relevant annotation headers, task scratchpad, task state, and narrowly required project documentation.
+Reference_artifacts:
+- references/states/s01-address-entry/visual-default.png
+- references/states/s01-address-entry/visual-how-it-works-open.png
+- references/states/s02-property-analysis/visual-property-confirmation.png
+- references/states/s02-property-analysis/visual-live-roof-assembly.png
+- references/states/s02-property-analysis/technical-persistent-project-assembly.png
+Validation_sets:
+- baseline
+- agent-review
+- frontend-component
+- frontend-e2e
+- frontend-visual
+- security
+- security-review
+- smoke
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0007.md
