@@ -253,6 +253,24 @@ describe("browser-session project persistence", () => {
       ok: true,
       outcome: "accepted",
     });
+    const writesAfterContinuation = storage.writes;
+    expect(
+      target.runtime.dispatch({ type: "APPLY_WORK_EVENT", event: nextEvent }),
+    ).toEqual({ ok: true, outcome: "idempotent" });
+    expect(storage.writes).toBe(writesAfterContinuation);
+    const timestampCollision = {
+      ...nextEvent,
+      occurred_at: new Date(
+        new Date(historical.updated_at).getTime() + 1,
+      ).toISOString(),
+    };
+    expect(
+      target.runtime.dispatch({
+        type: "APPLY_WORK_EVENT",
+        event: timestampCollision,
+      }),
+    ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+    expect(storage.writes).toBe(writesAfterContinuation);
     const continued = target.runtime.getSnapshot().projection;
     expect(
       continued?.roof_surfaces.map((surface) => surface.surface_id),

@@ -126,15 +126,23 @@ function normalizeLegacyModeledEvent(
   projection: SessionProjectProjection | null,
   event: ProjectEvent,
 ): ProjectEvent {
+  if (projection?.assembly_provenance_contract !== "LEGACY_UNVERIFIED_V1") {
+    return event;
+  }
+  const acceptedIndex = projection.events.findIndex(
+    (accepted) => accepted.event_id === event.event_id,
+  );
+  const precedingTimestamp =
+    acceptedIndex > 0
+      ? projection.events[acceptedIndex - 1]!.occurred_at
+      : projection.updated_at;
   if (
-    projection?.assembly_provenance_contract !== "LEGACY_UNVERIFIED_V1" ||
-    projection.accepted_event_ids.includes(event.event_id) ||
     new Date(event.occurred_at).getTime() >=
-      new Date(projection.updated_at).getTime()
+    new Date(precedingTimestamp).getTime()
   ) {
     return event;
   }
-  return { ...event, occurred_at: projection.updated_at };
+  return { ...event, occurred_at: precedingTimestamp };
 }
 
 export class SessionProjectRuntime {
