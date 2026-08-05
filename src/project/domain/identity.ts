@@ -14,6 +14,27 @@
  */
 import type { IdentitySource, ProjectEvent } from "./model";
 
+function stableHash(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+export function semanticStableId(
+  sessionProjectId: string,
+  semanticKey: string,
+): string {
+  const safeKey = semanticKey.replace(/[^A-Za-z0-9:_-]/g, "-");
+  const candidate = `${sessionProjectId}:${safeKey}`;
+  if (candidate.length <= 160) return candidate;
+  const suffix = stableHash(safeKey);
+  const available = 160 - sessionProjectId.length - suffix.length - 2;
+  return `${sessionProjectId}:${safeKey.slice(0, Math.max(1, available))}:${suffix}`;
+}
+
 export function seededPropertyId(
   identity: IdentitySource,
   sessionProjectId: string,

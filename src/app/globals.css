@@ -1679,3 +1679,454 @@ input:focus-visible,
     animation: none;
   }
 }
+
+/* Live roof assembly state layers and instruments. */
+
+.roof-surface-layer,
+.panel-object-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.roof-surface-layer {
+  z-index: 4;
+}
+
+.roof-surface-layer polygon {
+  fill: rgb(47 128 255 / 9%);
+  stroke: #62a5ff;
+  stroke-dasharray: 8 7;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.panel-object-layer {
+  z-index: 5;
+  filter: drop-shadow(0 7px 8px rgb(0 0 0 / 48%));
+}
+
+.panel-object-layer [data-panel-id] {
+  animation: panel-object-arrive 240ms ease-out both;
+}
+
+.panel-object-shape {
+  fill: #173b68;
+  stroke: #70adff;
+  stroke-width: 1.5;
+}
+
+.panel-object-detail {
+  stroke: rgb(188 220 255 / 74%);
+  stroke-width: 0.8;
+}
+
+@keyframes panel-object-arrive {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.s2-stage.is-assembly .property-outline-layer {
+  opacity: 0.34;
+}
+
+.s2-decision.is-assembly {
+  width: min(405px, calc(100% - 24px));
+  align-self: stretch;
+  padding-top: 46px;
+  padding-bottom: 26px;
+}
+
+.s2-decision.is-assembly h1 {
+  max-width: 370px;
+  font-size: clamp(48px, 3.7vw, 58px);
+  line-height: 1.01;
+}
+
+.s2-decision.is-assembly .s2-lead {
+  max-width: 31ch;
+  font-size: 17px;
+}
+
+.s2-decision.is-assembly .s2-supporting {
+  max-width: 33ch;
+  font-size: 14px;
+}
+
+.s2-assembly-work {
+  width: min(282px, 100%);
+  border: 1px solid #2c526f;
+  border-radius: 16px;
+  margin-top: 26px;
+  padding: 20px 20px 16px;
+  background: rgb(5 18 29 / 92%);
+  box-shadow: 0 18px 44px rgb(0 0 0 / 32%);
+  text-shadow: none;
+}
+
+.s2-assembly-work h2 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.s2-assembly-work ol {
+  display: grid;
+  gap: 12px;
+  margin: 17px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.s2-assembly-work li {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.s2-assembly-work li > strong {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.s2-work-mark {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #587087;
+  border-radius: 50%;
+}
+
+.s2-assembly-work li[data-stage-ready="true"] {
+  color: var(--text-primary);
+}
+
+.s2-assembly-work li[data-stage-ready="true"] > strong {
+  color: var(--success);
+}
+
+.s2-assembly-work li[data-stage-ready="true"] .s2-work-mark {
+  border-color: var(--success);
+  background: var(--success);
+  box-shadow: inset 0 0 0 2px #17301e;
+}
+
+.s2-assembly-work progress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  margin-top: 18px;
+  background: #20384b;
+  accent-color: var(--accent);
+}
+
+.s2-assembly-work progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: #20384b;
+}
+
+.s2-assembly-work progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.s2-assembly-work progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.s2-assembly-work > p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.s2-assembly-recovery {
+  width: min(310px, 100%);
+  border: 1px solid rgb(227 106 93 / 72%);
+  border-radius: 14px;
+  margin-top: 14px;
+  padding: 16px;
+  background: rgb(45 19 25 / 94%);
+  color: #ffe5df;
+  font-size: 12px;
+  line-height: 1.45;
+  text-shadow: none;
+}
+
+.s2-assembly-recovery strong {
+  font-size: 14px;
+}
+
+.s2-assembly-recovery p {
+  margin: 7px 0 0;
+}
+
+.s2-assembly-recovery button {
+  min-height: 44px;
+  border: 1px solid #f29a8f;
+  border-radius: 10px;
+  margin-top: 12px;
+  padding: 9px 14px;
+  background: #7d3028;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+}
+
+.s2-assembly-recovery button:hover {
+  background: #923a30;
+}
+
+.s2-assembly-badge {
+  position: relative;
+  z-index: 7;
+  display: grid;
+  min-width: 325px;
+  max-width: 430px;
+  min-height: 50px;
+  grid-column: 2;
+  grid-row: 1;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-self: start;
+  justify-self: center;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #315c7e;
+  border-radius: 14px;
+  margin: 28px 0 0;
+  padding: 11px 18px;
+  background: rgb(6 20 31 / 94%);
+  color: var(--text-primary);
+  font-size: 13px;
+  box-shadow: 0 14px 34px rgb(0 0 0 / 34%);
+}
+
+.s2-stage.is-assembly.has-notice .s2-assembly-badge {
+  margin-top: 80px;
+}
+
+.s2-assembly-badge strong {
+  color: #77b6ff;
+  font-size: 12px;
+}
+
+.s2-assembly-badge.is-ready {
+  border-color: rgb(120 214 91 / 56%);
+  background: rgb(10 39 28 / 94%);
+}
+
+.s2-assembly-badge.is-ready strong {
+  color: var(--success);
+}
+
+.s2-assembly-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgb(47 128 255 / 16%);
+}
+
+.s2-assembly-badge.is-ready .s2-assembly-pulse {
+  background: var(--success);
+  box-shadow: 0 0 0 4px rgb(120 214 91 / 14%);
+}
+
+.s2-continuity-note {
+  position: relative;
+  z-index: 7;
+  width: min(465px, calc(100% - 24px));
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  justify-self: center;
+  border: 1px solid #294861;
+  border-radius: 14px;
+  margin: 0 0 26px;
+  padding: 14px 18px;
+  background: rgb(6 19 30 / 92%);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: 0 14px 30px rgb(0 0 0 / 30%);
+}
+
+.s2-details.is-assembly {
+  margin-top: 32px;
+  padding-top: 26px;
+}
+
+.s2-model-state {
+  border-bottom: 1px solid rgb(29 58 82 / 80%);
+  margin: 9px 0 0;
+  padding-bottom: 18px;
+  color: #75b4ff;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.s2-model-state.is-ready {
+  color: var(--success);
+}
+
+.s2-known.is-assembly {
+  padding-top: 20px;
+}
+
+.s2-known.is-assembly ul {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.s2-known.is-assembly li {
+  padding-inline: 13px;
+}
+
+@media (max-width: 1100px) {
+  .s2-decision.is-assembly {
+    padding-top: 28px;
+  }
+
+  .s2-decision.is-assembly h1 {
+    font-size: clamp(43px, 4.8vw, 50px);
+  }
+
+  .s2-assembly-work {
+    width: min(254px, 100%);
+    padding: 17px 16px 14px;
+  }
+
+  .s2-assembly-work ol {
+    gap: 9px;
+    margin-top: 13px;
+  }
+
+  .s2-assembly-badge {
+    min-width: 280px;
+    max-width: calc(100% - 28px);
+    margin-top: 18px;
+  }
+
+  .s2-continuity-note {
+    max-width: 380px;
+    margin-bottom: 18px;
+  }
+
+  .s2-details.is-assembly {
+    margin-top: 14px;
+    padding: 18px;
+  }
+
+  .s2-known.is-assembly ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .s2-known.is-assembly li:nth-child(4) {
+    border-left: 0;
+  }
+
+  .s2-known.is-assembly li:nth-child(n + 4) {
+    border-top: 1px solid rgb(29 58 82 / 82%);
+    margin-top: 10px;
+    padding-top: 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  .s2-stage.is-assembly {
+    padding-bottom: 24px;
+  }
+
+  .s2-decision.is-assembly {
+    order: 1;
+    padding: 30px 0 22px;
+  }
+
+  .s2-decision.is-assembly h1 {
+    max-width: 345px;
+    font-size: clamp(39px, 11.2vw, 44px);
+  }
+
+  .s2-decision.is-assembly .s2-lead,
+  .s2-decision.is-assembly .s2-supporting {
+    max-width: 38ch;
+  }
+
+  .s2-assembly-work,
+  .s2-assembly-recovery {
+    width: 100%;
+  }
+
+  .s2-stage.is-assembly .s2-assembly-badge {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    order: 2;
+    align-self: auto;
+    margin: 0 0 12px;
+  }
+
+  .s2-stage.is-assembly.has-notice .s2-assembly-badge {
+    margin-top: 0;
+  }
+
+  .s2-stage.is-assembly .property-scene {
+    order: 3;
+  }
+
+  .s2-stage.is-assembly .s2-continuity-note {
+    width: 100%;
+    max-width: none;
+    order: 4;
+    align-self: auto;
+    margin: 12px 0 0;
+  }
+
+  .s2-details.is-assembly {
+    order: 5;
+    margin-top: 16px;
+    padding: 20px;
+  }
+
+  .s2-known.is-assembly {
+    order: 6;
+  }
+
+  .s2-known.is-assembly ul {
+    grid-template-columns: 1fr;
+  }
+
+  .s2-known.is-assembly li,
+  .s2-known.is-assembly li:nth-child(4),
+  .s2-known.is-assembly li:nth-child(n + 4) {
+    border-top: 1px solid rgb(29 58 82 / 82%);
+    border-left: 0;
+    margin-top: 0;
+    padding: 13px 0;
+  }
+
+  .s2-known.is-assembly li:first-child {
+    border-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-object-layer [data-panel-id] {
+    animation: none;
+  }
+}

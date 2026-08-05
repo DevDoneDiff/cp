@@ -4,10 +4,16 @@ import type {
   SessionProjectRuntime,
   SessionProjectStore,
 } from "../../src/project/application/session-project-runtime";
+import { assemblyFeedCursorFromProjection } from "../../src/project/application/live-roof-assembly";
 import {
   BrowserSessionProjectStore,
+  LEGACY_SESSION_PROJECT_STORAGE_KEY,
   SESSION_PROJECT_STORAGE_KEY,
 } from "../../src/project/adapters/browser-runtime";
+import {
+  assemblyEventIndexAfter,
+  createSeededAssemblyEvent,
+} from "../../src/project/adapters/seeded-assembly-feed";
 import type { SessionProjectProjection } from "../../src/project/domain/model";
 import {
   advanceProjectToReady,
@@ -50,6 +56,26 @@ const restoreCases: Array<{
     provesNextPanel: false,
   },
 ];
+
+const FROZEN_V1_ROOF_POLYGONS = {
+  "south-main": [
+    { x: 0.16, y: 0.2 },
+    { x: 0.68, y: 0.2 },
+    { x: 0.78, y: 0.58 },
+    { x: 0.22, y: 0.58 },
+  ],
+  "west-wing": [
+    { x: 0.22, y: 0.58 },
+    { x: 0.78, y: 0.58 },
+    { x: 0.66, y: 0.82 },
+    { x: 0.28, y: 0.82 },
+  ],
+} as const;
+
+const FROZEN_V1_PANEL_GEOMETRY = [
+  { x: 0.28, y: 0.3, width: 0.08, height: 0.16, rotation_degrees: 2 },
+  { x: 0.38, y: 0.3, width: 0.08, height: 0.16, rotation_degrees: 2 },
+] as const;
 
 describe("browser-session project persistence", () => {
   it.each(restoreCases)(
@@ -96,6 +122,297 @@ describe("browser-session project persistence", () => {
       }
     },
   );
+
+  it("restores and continues a historical v1 partial projection with frozen geometry", () => {
+    const source = createRuntimeHarness();
+    startProject(source.runtime);
+    confirmProject(source.runtime);
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const current = source.runtime.getSnapshot().projection;
+    if (current === null) throw new Error("PARTIAL_PROJECT_MISSING");
+    const historical = structuredClone(current);
+    const confirmation = historical.events.findLast(
+      (event) => event.type === "PROPERTY_CONFIRMED",
+    );
+    const roofEvent = historical.events.find(
+      (event) => event.type === "ROOF_GEOMETRY_READY",
+    );
+    const panelEvent = historical.events.find(
+      (event) => event.type === "PANEL_OBJECT_ADDED",
+    );
+    if (
+      confirmation?.type !== "PROPERTY_CONFIRMED" ||
+      roofEvent?.type !== "ROOF_GEOMETRY_READY" ||
+      panelEvent?.type !== "PANEL_OBJECT_ADDED"
+    ) {
+      throw new Error("HISTORICAL_EVENTS_MISSING");
+    }
+
+    for (const [index, surface] of historical.roof_surfaces.entries()) {
+      const frozen =
+        FROZEN_V1_ROOF_POLYGONS[
+          surface.fixture_surface_key as keyof typeof FROZEN_V1_ROOF_POLYGONS
+        ];
+      if (frozen === undefined) throw new Error("FROZEN_SURFACE_MISSING");
+      surface.polygon = frozen.map((point) => ({ ...point }));
+      const eventSurface = roofEvent.payload.surfaces[index];
+      if (eventSurface === undefined) throw new Error("EVENT_SURFACE_MISSING");
+      eventSurface.polygon = frozen.map((point) => ({ ...point }));
+    }
+    historical.panel_objects[0]!.geometry = structuredClone(
+      FROZEN_V1_PANEL_GEOMETRY[0],
+    );
+    panelEvent.payload.panel.geometry = structuredClone(
+      FROZEN_V1_PANEL_GEOMETRY[0],
+    );
+    const confirmationTime = new Date(confirmation.occurred_at).getTime();
+    roofEvent.occurred_at = new Date(confirmationTime + 4_321).toISOString();
+    panelEvent.occurred_at = new Date(confirmationTime + 83_777).toISOString();
+    historical.updated_at = panelEvent.occurred_at;
+    const legacyHistorical: Partial<SessionProjectProjection> =
+      structuredClone(historical);
+    delete legacyHistorical.assembly_provenance_contract;
+
+    const backwardHistorical = structuredClone(legacyHistorical);
+    const backwardPanel = backwardHistorical.events?.find(
+      (event) => event.type === "PANEL_OBJECT_ADDED",
+    );
+    if (backwardPanel?.type !== "PANEL_OBJECT_ADDED") {
+      throw new Error("BACKWARD_PANEL_EVENT_MISSING");
+    }
+    backwardPanel.occurred_at = new Date(
+      confirmationTime + 3_000,
+    ).toISOString();
+    backwardHistorical.updated_at = backwardPanel.occurred_at;
+    const backwardStorage = new MemoryStorage();
+    backwardStorage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(backwardHistorical),
+    );
+    const backwardTarget = createRuntimeHarness({ storage: backwardStorage });
+    expect(
+      backwardTarget.runtime.dispatch({ type: "RESTORE_SESSION" }),
+    ).toEqual({ ok: true, outcome: "empty" });
+    expect(backwardTarget.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      restore_status: "recovered_invalid",
+    });
+    expect(backwardStorage.values.has(LEGACY_SESSION_PROJECT_STORAGE_KEY)).toBe(
+      false,
+    );
+
+    const storage = new MemoryStorage();
+    storage.values.set(
+      LEGACY_SESSION_PROJECT_STORAGE_KEY,
+      JSON.stringify(legacyHistorical),
+    );
+    const target = createRuntimeHarness({ storage });
+    expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "restored",
+    });
+    const restored = target.runtime.getSnapshot().projection;
+    expect(target.runtime.getSnapshot().restore_status).toBe("restored");
+    expect(restored?.assembly_provenance_contract).toBe("LEGACY_UNVERIFIED_V1");
+    expect(restored?.roof_surfaces.map((surface) => surface.polygon)).toEqual(
+      Object.values(FROZEN_V1_ROOF_POLYGONS),
+    );
+    expect(restored?.panel_objects[0]?.geometry).toEqual(
+      FROZEN_V1_PANEL_GEOMETRY[0],
+    );
+
+    const surfaceIds = restored?.roof_surfaces.map(
+      (surface) => surface.surface_id,
+    );
+    const firstPanelId = restored?.panel_objects[0]?.panel_id;
+    const eventCount = restored?.events.length;
+    const cursor = restored?.latest_cursor;
+    if (restored === null) throw new Error("RESTORED_PROJECT_MISSING");
+    const restoredPanelEvent = restored.events.find(
+      (event) => event.type === "PANEL_OBJECT_ADDED",
+    );
+    if (restoredPanelEvent === undefined) {
+      throw new Error("RESTORED_PANEL_EVENT_MISSING");
+    }
+    expect(
+      target.runtime.dispatch({
+        type: "APPLY_WORK_EVENT",
+        event: restoredPanelEvent,
+      }),
+    ).toEqual({ ok: true, outcome: "idempotent" });
+    const feedCursor = assemblyFeedCursorFromProjection(restored);
+    if (feedCursor === null) throw new Error("ASSEMBLY_CURSOR_MISSING");
+    const nextEvent = createSeededAssemblyEvent(
+      feedCursor,
+      assemblyEventIndexAfter(feedCursor),
+    );
+    expect(
+      target.runtime.dispatch({ type: "APPLY_WORK_EVENT", event: nextEvent }),
+    ).toEqual({
+      ok: true,
+      outcome: "accepted",
+    });
+    const writesAfterContinuation = storage.writes;
+    expect(
+      target.runtime.dispatch({ type: "APPLY_WORK_EVENT", event: nextEvent }),
+    ).toEqual({ ok: true, outcome: "idempotent" });
+    expect(storage.writes).toBe(writesAfterContinuation);
+    const timestampCollision = {
+      ...nextEvent,
+      occurred_at: new Date(
+        new Date(historical.updated_at).getTime() + 1,
+      ).toISOString(),
+    };
+    expect(
+      target.runtime.dispatch({
+        type: "APPLY_WORK_EVENT",
+        event: timestampCollision,
+      }),
+    ).toEqual({ ok: false, error_code: "EVENT_REJECTED" });
+    expect(storage.writes).toBe(writesAfterContinuation);
+    const continued = target.runtime.getSnapshot().projection;
+    expect(
+      continued?.roof_surfaces.map((surface) => surface.surface_id),
+    ).toEqual(surfaceIds);
+    expect(continued?.panel_objects[0]?.panel_id).toBe(firstPanelId);
+    expect(continued?.panel_objects[0]?.geometry).toEqual(
+      FROZEN_V1_PANEL_GEOMETRY[0],
+    );
+    expect(continued?.panel_objects[1]?.geometry).toEqual(
+      FROZEN_V1_PANEL_GEOMETRY[1],
+    );
+    expect(continued?.events).toHaveLength((eventCount ?? 0) + 1);
+    expect(continued?.latest_cursor).toBe((cursor ?? 0) + 1);
+    expect(
+      new Date(continued?.updated_at ?? 0).getTime(),
+    ).toBeGreaterThanOrEqual(new Date(historical.updated_at).getTime());
+    expect(
+      new Set(continued?.panel_objects.map((panel) => panel.panel_id)).size,
+    ).toBe(2);
+    expect(storage.values.has(SESSION_PROJECT_STORAGE_KEY)).toBe(false);
+    expect(storage.values.has(LEGACY_SESSION_PROJECT_STORAGE_KEY)).toBe(true);
+
+    const reloaded = createRuntimeHarness({ storage });
+    expect(reloaded.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "restored",
+    });
+    expect(reloaded.runtime.getSnapshot().projection).toMatchObject({
+      assembly_provenance_contract: "LEGACY_UNVERIFIED_V1",
+      latest_cursor: continued?.latest_cursor,
+      panel_objects: continued?.panel_objects,
+    });
+  });
+
+  it("rejects a self-coherent stored projection with an altered work timestamp", () => {
+    const source = createRuntimeHarness();
+    startProject(source.runtime);
+    confirmProject(source.runtime);
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const current = source.runtime.getSnapshot().projection;
+    if (current === null) throw new Error("PARTIAL_PROJECT_MISSING");
+    const forged = structuredClone(current);
+    const roofEvent = forged.events.find(
+      (event) => event.type === "ROOF_GEOMETRY_READY",
+    );
+    if (roofEvent?.type !== "ROOF_GEOMETRY_READY") {
+      throw new Error("ROOF_EVENT_MISSING");
+    }
+    roofEvent.occurred_at = new Date(
+      new Date(roofEvent.occurred_at).getTime() + 1,
+    ).toISOString();
+    forged.updated_at = roofEvent.occurred_at;
+
+    const storage = new MemoryStorage();
+    storage.values.set(SESSION_PROJECT_STORAGE_KEY, JSON.stringify(forged));
+    const target = createRuntimeHarness({ storage });
+    expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+      ok: true,
+      outcome: "empty",
+    });
+    expect(target.runtime.getSnapshot()).toMatchObject({
+      projection: null,
+      visible_state: "ADDRESS_ENTRY",
+      restore_status: "recovered_invalid",
+    });
+    expect(storage.storedProject()).toBeNull();
+    expect(storage.removals).toBe(1);
+    expect(storage.writes).toBe(0);
+  });
+
+  it("rejects canonical-to-legacy substitution, mixed timing, and current-key downgrade", () => {
+    const source = createRuntimeHarness();
+    startProject(source.runtime);
+    const confirmed = confirmProject(source.runtime);
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    source.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const current = source.runtime.getSnapshot().projection;
+    if (current === null) throw new Error("PARTIAL_PROJECT_MISSING");
+
+    const substituted = structuredClone(current);
+    const substitutedRoof = substituted.events.find(
+      (event) => event.type === "ROOF_GEOMETRY_READY",
+    );
+    if (substitutedRoof?.type !== "ROOF_GEOMETRY_READY") {
+      throw new Error("ROOF_EVENT_MISSING");
+    }
+    substitutedRoof.occurred_at = new Date(
+      new Date(confirmed.updated_at).getTime() + 1_000,
+    ).toISOString();
+
+    const mixed = structuredClone(current);
+    const mixedPanel = mixed.events.find(
+      (event) => event.type === "PANEL_OBJECT_ADDED",
+    );
+    if (mixedPanel?.type !== "PANEL_OBJECT_ADDED") {
+      throw new Error("PANEL_EVENT_MISSING");
+    }
+    mixedPanel.occurred_at = new Date(
+      new Date(confirmed.updated_at).getTime() + 83_777,
+    ).toISOString();
+    mixed.updated_at = mixedPanel.occurred_at;
+
+    const downgraded: Partial<SessionProjectProjection> =
+      structuredClone(current);
+    delete downgraded.assembly_provenance_contract;
+    const retagged = structuredClone(current);
+    retagged.assembly_provenance_contract = "LEGACY_UNVERIFIED_V1";
+
+    const invalidCandidates = [
+      { key: SESSION_PROJECT_STORAGE_KEY, candidate: substituted },
+      { key: SESSION_PROJECT_STORAGE_KEY, candidate: mixed },
+      { key: SESSION_PROJECT_STORAGE_KEY, candidate: downgraded },
+      { key: SESSION_PROJECT_STORAGE_KEY, candidate: retagged },
+      { key: LEGACY_SESSION_PROJECT_STORAGE_KEY, candidate: retagged },
+      { key: LEGACY_SESSION_PROJECT_STORAGE_KEY, candidate: current },
+    ];
+    for (const { key, candidate } of invalidCandidates) {
+      const storage = new MemoryStorage();
+      storage.values.set(key, JSON.stringify(candidate));
+      const target = createRuntimeHarness({ storage });
+      expect(target.runtime.dispatch({ type: "RESTORE_SESSION" })).toEqual({
+        ok: true,
+        outcome: "empty",
+      });
+      expect(target.runtime.getSnapshot()).toMatchObject({
+        projection: null,
+        restore_status: "recovered_invalid",
+      });
+      expect(storage.values.has(key)).toBe(false);
+      expect(storage.removals).toBe(1);
+    }
+
+    const directStore = new BrowserSessionProjectStore(
+      source.adapters,
+      source.identity,
+      () => new MemoryStorage(),
+    );
+    expect(directStore.save(retagged)).toEqual({
+      ok: false,
+      reason: "INVALID",
+    });
+  });
 
   it("starts a fresh S1 state for a new browser-session store", () => {
     const first = createRuntimeHarness();

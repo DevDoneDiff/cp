@@ -36,6 +36,7 @@ import {
   type SeededFixtureContract,
   type SessionProjectProjection,
 } from "../domain/model";
+import { assemblyEventOccurredAt } from "../domain/assembly-event-timing";
 import {
   seededAddressResolvedEventId,
   seededCameraId,
@@ -356,7 +357,7 @@ export function createSeededDemoAdapters(): SeededDemoAdapters {
 function commonEventFields(
   projection: SessionProjectProjection,
   identity: IdentitySource,
-  clock: Clock,
+  occurredAt: string,
   semanticEventKey: string,
 ) {
   if (projection.property === null) {
@@ -378,7 +379,7 @@ function commonEventFields(
     property_id: projection.property.property_id,
     cursor: projection.latest_cursor + 1,
     expected_project_version: projection.project_version,
-    occurred_at: clock.nowIso(),
+    occurred_at: occurredAt,
   } as const;
 }
 
@@ -432,7 +433,7 @@ export function createPropertyConfirmedEvent(
   const common = commonEventFields(
     projection,
     identity,
-    clock,
+    clock.nowIso(),
     "property-confirmed",
   );
   return common === null
@@ -452,7 +453,7 @@ export function createPropertyCorrectionEvent(
   const common = commonEventFields(
     projection,
     identity,
-    clock,
+    clock.nowIso(),
     "property-correction",
   );
   return common === null
@@ -471,6 +472,30 @@ export interface ManualProjectSchedule {
   nextEvent(projection: SessionProjectProjection): ProjectEvent | null;
 }
 
+function nextModeledEventOccurredAt(
+  projection: SessionProjectProjection,
+  clock: Clock,
+): string | null {
+  if (projection.assembly_provenance_contract === "LEGACY_UNVERIFIED_V1") {
+    return clock.nowIso();
+  }
+  const confirmation = projection.events.findLast(
+    (event) =>
+      event.type === "PROPERTY_CONFIRMED" &&
+      event.property_id === projection.property?.property_id,
+  );
+  if (confirmation === undefined) return null;
+  try {
+    return assemblyEventOccurredAt(
+      confirmation.occurred_at,
+      confirmation.cursor,
+      projection.latest_cursor + 1,
+    );
+  } catch {
+    return null;
+  }
+}
+
 export class SeededManualSchedule implements ManualProjectSchedule {
   constructor(
     private readonly adapters: SeededDemoAdapters,
@@ -487,11 +512,13 @@ export class SeededManualSchedule implements ManualProjectSchedule {
     ) {
       return null;
     }
+    const occurredAt = nextModeledEventOccurredAt(projection, this.clock);
+    if (occurredAt === null) return null;
     if (projection.roof_surfaces.length === 0) {
       const common = commonEventFields(
         projection,
         this.identity,
-        this.clock,
+        occurredAt,
         "roof-geometry-ready",
       );
       if (common === null) return null;
@@ -516,7 +543,7 @@ export class SeededManualSchedule implements ManualProjectSchedule {
       const common = commonEventFields(
         projection,
         this.identity,
-        this.clock,
+        occurredAt,
         `panel-added:${nextPanelRank}`,
       );
       if (panel === null || common === null) return null;
@@ -531,7 +558,7 @@ export class SeededManualSchedule implements ManualProjectSchedule {
       const common = commonEventFields(
         projection,
         this.identity,
-        this.clock,
+        occurredAt,
         "energy-model-ready",
       );
       if (common === null) return null;
@@ -545,7 +572,7 @@ export class SeededManualSchedule implements ManualProjectSchedule {
     const common = commonEventFields(
       projection,
       this.identity,
-      this.clock,
+      occurredAt,
       "minimum-usable-ready",
     );
     if (common === null) return null;

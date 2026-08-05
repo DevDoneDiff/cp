@@ -11,6 +11,7 @@
  *   - [INV-IMMUTABLE-RUNTIME-SNAPSHOT] Published snapshots and every nested projection value are deeply frozen.
  * BOUNDARIES:
  *   - Untrusted work-event ingress accepts modeled assembly events only; address, correction, and confirmation authority stays behind application commands.
+ *   - A delivered-v1 projection may clamp a validated live event to its last accepted timestamp before reducer validation; canonical projections never normalize provenance.
  *   - The controller knows no browser global, transport, timer, server database, provider, or rendering implementation.
  * RELATED:
  *   - src/project/domain/reducer.ts: owns pure transition legality.
@@ -20,6 +21,7 @@
 import {
   type Clock,
   type IdentitySource,
+  type ProjectEvent,
   type ProjectEventType,
   type SessionProjectProjection,
   type VisibleProjectState,
@@ -118,6 +120,29 @@ function freshSnapshot(
     restore_status: restoreStatus,
     error_code: errorCode,
   });
+}
+
+function normalizeLegacyModeledEvent(
+  projection: SessionProjectProjection | null,
+  event: ProjectEvent,
+): ProjectEvent {
+  if (projection?.assembly_provenance_contract !== "LEGACY_UNVERIFIED_V1") {
+    return event;
+  }
+  const acceptedIndex = projection.events.findIndex(
+    (accepted) => accepted.event_id === event.event_id,
+  );
+  const precedingTimestamp =
+    acceptedIndex > 0
+      ? projection.events[acceptedIndex - 1]!.occurred_at
+      : projection.updated_at;
+  if (
+    new Date(event.occurred_at).getTime() >=
+    new Date(precedingTimestamp).getTime()
+  ) {
+    return event;
+  }
+  return { ...event, occurred_at: precedingTimestamp };
 }
 
 export class SessionProjectRuntime {
@@ -287,9 +312,13 @@ export class SessionProjectRuntime {
       return this.publishError("EVENT_REJECTED");
     }
     const current = this.snapshot.projection;
+    const candidate =
+      authority === "modeled_work"
+        ? normalizeLegacyModeledEvent(current, parsed.event)
+        : parsed.event;
     const transition = applyProjectEvent(
       current,
-      parsed.event,
+      candidate,
       this.dependencies.adapters.fixture,
       this.dependencies.identity,
     );

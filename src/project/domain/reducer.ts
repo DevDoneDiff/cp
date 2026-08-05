@@ -9,7 +9,7 @@
  *   - [EVENT-IDEMPOTENT-REPLAY] An exact accepted-event replay is a no-op; an ID collision or object replay is rejected.
  *   - [INV-READINESS-PRECONDITIONS] Minimum usability requires confirmation, fixture roof geometry, every stable panel object, and modeled energy.
  * BOUNDARIES:
- *   - Inputs must first pass event parsing; cursor and project version own ordering while timestamps remain provenance metadata.
+ *   - Inputs must first pass event parsing; cursor and project version own ordering while canonical modeled timestamps match the active confirmation schedule and delivered legacy timestamps remain explicitly unverified.
  *   - Persistence and publication order belong to the application runtime.
  * RELATED:
  *   - src/project/domain/identity.ts: derives the only valid stable slot for each seeded ID.
@@ -18,6 +18,7 @@
  */
 import {
   SESSION_PROJECT_SCHEMA_VERSION,
+  type AssemblyProvenanceContract,
   type AddressResolvedEvent,
   type IdentitySource,
   type PanelObject,
@@ -26,6 +27,7 @@ import {
   type SeededFixtureContract,
   type SessionProjectProjection,
 } from "./model";
+import { assemblyEventTimestampMatches } from "./assembly-event-timing";
 import {
   expectedSeededEventId,
   seededCameraId,
@@ -44,6 +46,7 @@ export type TransitionRejectReason =
   | "VERSION_MISMATCH"
   | "INVALID_EVENT_ORDER"
   | "FIXTURE_MISMATCH"
+  | "TIMESTAMP_MISMATCH"
   | "OBJECT_ID_COLLISION";
 
 export type TransitionResult =
@@ -232,10 +235,12 @@ function withAcceptedEvent(
 
 function createProjection(
   event: AddressResolvedEvent,
+  assemblyProvenanceContract: AssemblyProvenanceContract,
 ): SessionProjectProjection {
   return {
     schema_version: SESSION_PROJECT_SCHEMA_VERSION,
     fixture_version: event.fixture_version,
+    assembly_provenance_contract: assemblyProvenanceContract,
     session_project_id: event.session_project_id,
     project_version: 1,
     visible_state: "PROPERTY_CONFIRMATION",
@@ -272,12 +277,44 @@ function allFixturePanelsExist(
   );
 }
 
+function modeledEventTimestampMatches(
+  projection: SessionProjectProjection,
+  event: ProjectEvent,
+): boolean {
+  if (
+    event.type === "ADDRESS_RESOLVED" ||
+    event.type === "PROJECT_MUTATED" ||
+    event.type === "PROPERTY_CONFIRMED"
+  ) {
+    return true;
+  }
+  const confirmation = projection.events.findLast(
+    (candidate) =>
+      candidate.type === "PROPERTY_CONFIRMED" &&
+      candidate.property_id === event.property_id,
+  );
+  if (confirmation === undefined) return false;
+  if (projection.assembly_provenance_contract === "LEGACY_UNVERIFIED_V1") {
+    const eventTime = new Date(event.occurred_at).getTime();
+    const confirmationTime = new Date(confirmation.occurred_at).getTime();
+    const previousAcceptedTime = new Date(projection.updated_at).getTime();
+    return eventTime >= confirmationTime && eventTime >= previousAcceptedTime;
+  }
+  return assemblyEventTimestampMatches({
+    eventOccurredAt: event.occurred_at,
+    eventCursor: event.cursor,
+    confirmationOccurredAt: confirmation.occurred_at,
+    confirmationCursor: confirmation.cursor,
+  });
+}
+
 // @ah EVENT-IDEMPOTENT-REPLAY
 export function applyProjectEvent(
   projection: SessionProjectProjection | null,
   event: ProjectEvent,
   fixture: SeededFixtureContract,
   identity: IdentitySource,
+  initialAssemblyProvenanceContract: AssemblyProvenanceContract = "CANONICAL_SCHEDULE_V1",
 ): TransitionResult {
   if (projection === null) {
     if (
@@ -289,7 +326,7 @@ export function applyProjectEvent(
     ) {
       return rejected("INVALID_EVENT_ORDER");
     }
-    return accepted(createProjection(event));
+    return accepted(createProjection(event, initialAssemblyProvenanceContract));
   }
 
   const acceptedIndex = projection.accepted_event_ids.indexOf(event.event_id);
@@ -329,6 +366,9 @@ export function applyProjectEvent(
   }
   if (event.expected_project_version !== projection.project_version) {
     return rejected("VERSION_MISMATCH");
+  }
+  if (!modeledEventTimestampMatches(projection, event)) {
+    return rejected("TIMESTAMP_MISMATCH");
   }
   switch (event.type) {
     case "ADDRESS_RESOLVED": {
@@ -511,10 +551,17 @@ export function replayProjectEvents(
   events: readonly ProjectEvent[],
   fixture: SeededFixtureContract,
   identity: IdentitySource,
+  assemblyProvenanceContract: AssemblyProvenanceContract = "CANONICAL_SCHEDULE_V1",
 ): SessionProjectProjection | null {
   let projection: SessionProjectProjection | null = null;
   for (const event of events) {
-    const result = applyProjectEvent(projection, event, fixture, identity);
+    const result = applyProjectEvent(
+      projection,
+      event,
+      fixture,
+      identity,
+      assemblyProvenanceContract,
+    );
     if (result.kind !== "accepted") {
       return null;
     }

@@ -6,7 +6,7 @@
  * INVARIANTS:
  *   - The root shell initializes only the local runtime-lifetime provider, with no credential, durable persistence, or external client.
  * BOUNDARIES:
- *   - Final live-assembly composition and later-state metadata belong to their approved visual tasks.
+ *   - Metadata covers only the seeded S1-S2 slice; accounts, pricing, providers, and later product states remain absent.
  * RELATED:
  *   - src/app/page.tsx: renders the approved seeded address entrypoint.
  *   - src/app/globals.css: supplies the approved S1 native presentation.
@@ -19,9 +19,9 @@ import { SessionProjectRuntimeProvider } from "../project/ui/session-project-run
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Confirm Your Demo Property | Solar Project",
+  title: "Seeded Property Analysis | Solar Project",
   description:
-    "Start an unsaved browser-session solar project and confirm the seeded Maple Street demo property before roof analysis.",
+    "Start an unsaved browser-session solar project, confirm the seeded Maple Street property, and watch its modeled roof assemble.",
 };
 
 export default function RootLayout({

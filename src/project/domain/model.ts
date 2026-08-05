@@ -4,6 +4,7 @@
  * PUBLIC API / ENTRYPOINTS:
  *   - SessionProjectProjection: canonical browser-session project projection.
  *   - ProjectEvent: accepted address, mutation, confirmation, and modeled-work event union.
+ *   - AssemblyProvenanceContract: distinguishes current exact-schedule provenance from isolated delivered-v1 compatibility.
  *   - SeededFixtureContract: replaceable deterministic demo-data contract.
  * INVARIANTS:
  *   - [INV-S1-S2-STATE-BOUNDARY] Visible product state is limited to ADDRESS_ENTRY, PROPERTY_CONFIRMATION, and LIVE_ROOF_ASSEMBLY.
@@ -33,6 +34,14 @@ export const VISIBLE_PROJECT_STATES = [
 export type SourceKind = "SEEDED_DEMO_IMAGERY";
 export type CertaintyKind = "DEMO_PROPERTY_MATCH";
 export type FactSourceKind = "MODELED";
+
+export const ASSEMBLY_PROVENANCE_CONTRACTS = [
+  "CANONICAL_SCHEDULE_V1",
+  "LEGACY_UNVERIFIED_V1",
+] as const;
+
+export type AssemblyProvenanceContract =
+  (typeof ASSEMBLY_PROVENANCE_CONTRACTS)[number];
 
 export interface NormalizedAddress {
   fixture_address_key: string;
@@ -193,6 +202,7 @@ export type ProjectEvent =
 export interface SessionProjectProjection {
   schema_version: typeof SESSION_PROJECT_SCHEMA_VERSION;
   fixture_version: string;
+  assembly_provenance_contract: AssemblyProvenanceContract;
   session_project_id: string;
   project_version: number;
   visible_state: VisibleProjectState;

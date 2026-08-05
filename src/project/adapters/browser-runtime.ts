@@ -2,17 +2,19 @@
  * MODULE: src/project/adapters/browser-runtime.ts
  * PURPOSE: Provide native browser sessionStorage, cryptographic project-ID, system-clock, and runtime composition adapters.
  * PUBLIC API / ENTRYPOINTS:
- *   - BrowserSessionProjectStore: one-key validated sessionStorage adapter.
+ *   - BrowserSessionProjectStore: validated current-key storage plus isolated delivered-v1 compatibility.
  *   - BrowserIdentitySource and SystemClock: production identity and time boundaries.
  *   - createBrowserSessionProjectRuntime: client-safe composition root for the pre-account runtime.
  * INVARIANTS:
- *   - [SEC-SESSION-STORAGE-ONLY] Unsaved pre-account projection data is read and written only through one versioned sessionStorage key.
+ *   - [SEC-SESSION-STORAGE-ONLY] Unsaved pre-account projection data stays in sessionStorage; canonical and delivered-v1 formats never share a write key.
  *   - [SEC-BOUNDED-STORAGE-RECOVERY] Missing state is fresh; incompatible, corrupt, oversized, or malicious state is rejected with bounded results.
+ *   - Delivered v1 storage remains on its isolated key and never writes into the canonical current-format key.
  * BOUNDARIES:
  *   - Browser globals are accessed only inside adapter methods; no localStorage, cookie, network, durable store, or module-load access is allowed.
  * RELATED:
  *   - src/project/domain/projection.ts: validates and serializes the untrusted projection.
  *   - src/project/application/session-project-runtime.ts: owns atomic command orchestration and publication.
+ *   - src/project/domain/identity.ts: supplies shared deterministic semantic IDs for browser and server adapters.
  */
 import {
   SessionProjectRuntime,
@@ -21,6 +23,7 @@ import {
   type StoreSaveResult,
 } from "../application/session-project-runtime";
 import { type Clock, type IdentitySource } from "../domain/model";
+import { semanticStableId } from "../domain/identity";
 import {
   MAX_SESSION_PROJECT_BYTES,
   parseSessionProjectProjection,
@@ -33,7 +36,8 @@ import {
   type SeededDemoAdapters,
 } from "./seeded-demo";
 
-export const SESSION_PROJECT_STORAGE_KEY = "cp.pre-account-project.v1";
+export const SESSION_PROJECT_STORAGE_KEY = "cp.pre-account-project.v2";
+export const LEGACY_SESSION_PROJECT_STORAGE_KEY = "cp.pre-account-project.v1";
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -51,15 +55,17 @@ function browserSessionStorage(): StorageLike {
 }
 
 export class BrowserSessionProjectStore implements SessionProjectStore {
+  private legacySessionActive = false;
+
   constructor(
     private readonly adapters: SeededDemoAdapters,
     private readonly identity: IdentitySource,
     private readonly storageProvider: StorageProvider = browserSessionStorage,
   ) {}
 
-  private discardInvalid(storage: StorageLike): void {
+  private discardInvalid(storage: StorageLike, key: string): void {
     try {
-      storage.removeItem(SESSION_PROJECT_STORAGE_KEY);
+      storage.removeItem(key);
     } catch {
       // Recovery remains fresh even when the browser refuses cleanup.
     }
@@ -67,11 +73,19 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
 
   // @ah SEC-BOUNDED-STORAGE-RECOVERY
   load(): StoreLoadResult {
+    this.legacySessionActive = false;
     let storage: StorageLike;
     let serialized: string | null;
+    let storageKey = SESSION_PROJECT_STORAGE_KEY;
+    let legacyV1Compatibility = false;
     try {
       storage = this.storageProvider();
       serialized = storage.getItem(SESSION_PROJECT_STORAGE_KEY);
+      if (serialized === null) {
+        storageKey = LEGACY_SESSION_PROJECT_STORAGE_KEY;
+        legacyV1Compatibility = true;
+        serialized = storage.getItem(LEGACY_SESSION_PROJECT_STORAGE_KEY);
+      }
     } catch {
       return { kind: "unavailable" };
     }
@@ -82,25 +96,32 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
       serialized.length > MAX_SESSION_PROJECT_BYTES ||
       sessionProjectByteLength(serialized) > MAX_SESSION_PROJECT_BYTES
     ) {
-      this.discardInvalid(storage);
+      this.discardInvalid(storage, storageKey);
       return { kind: "recovered_invalid" };
     }
     let unknownProjection: unknown;
     try {
       unknownProjection = JSON.parse(serialized) as unknown;
     } catch {
-      this.discardInvalid(storage);
+      this.discardInvalid(storage, storageKey);
       return { kind: "recovered_invalid" };
     }
     const parsed = parseSessionProjectProjection(
       unknownProjection,
       this.adapters.fixture,
       this.identity,
+      {
+        legacyV1Compatibility,
+        expectedAssemblyProvenanceContract: legacyV1Compatibility
+          ? "LEGACY_UNVERIFIED_V1"
+          : "CANONICAL_SCHEDULE_V1",
+      },
     );
     if (!parsed.ok) {
-      this.discardInvalid(storage);
+      this.discardInvalid(storage, storageKey);
       return { kind: "recovered_invalid" };
     }
+    this.legacySessionActive = legacyV1Compatibility;
     return { kind: "restored", projection: parsed.projection };
   }
 
@@ -116,25 +137,34 @@ export class BrowserSessionProjectStore implements SessionProjectStore {
     if (!serialized.ok) {
       return { ok: false, reason: "INVALID" };
     }
+    const isLegacyProjection =
+      serialized.projection.assembly_provenance_contract ===
+      "LEGACY_UNVERIFIED_V1";
+    if (isLegacyProjection !== this.legacySessionActive) {
+      return { ok: false, reason: "INVALID" };
+    }
     try {
-      this.storageProvider().setItem(
-        SESSION_PROJECT_STORAGE_KEY,
-        serialized.serialized,
-      );
+      const storage = this.storageProvider();
+      if (isLegacyProjection) {
+        const legacyProjection: Record<string, unknown> = {
+          ...serialized.projection,
+        };
+        delete legacyProjection.assembly_provenance_contract;
+        const legacySerialized = JSON.stringify(legacyProjection);
+        if (
+          sessionProjectByteLength(legacySerialized) > MAX_SESSION_PROJECT_BYTES
+        ) {
+          return { ok: false, reason: "INVALID" };
+        }
+        storage.setItem(LEGACY_SESSION_PROJECT_STORAGE_KEY, legacySerialized);
+      } else {
+        storage.setItem(SESSION_PROJECT_STORAGE_KEY, serialized.serialized);
+      }
       return { ok: true, projection: serialized.projection };
     } catch {
       return { ok: false, reason: "UNAVAILABLE" };
     }
   }
-}
-
-function stableHash(value: string): string {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
 }
 
 export class BrowserIdentitySource implements IdentitySource {
@@ -146,12 +176,7 @@ export class BrowserIdentitySource implements IdentitySource {
   }
 
   stableId(sessionProjectId: string, semanticKey: string): string {
-    const safeKey = semanticKey.replace(/[^A-Za-z0-9:_-]/g, "-");
-    const candidate = `${sessionProjectId}:${safeKey}`;
-    if (candidate.length <= 160) return candidate;
-    const suffix = stableHash(safeKey);
-    const available = 160 - sessionProjectId.length - suffix.length - 2;
-    return `${sessionProjectId}:${safeKey.slice(0, Math.max(1, available))}:${suffix}`;
+    return semanticStableId(sessionProjectId, semanticKey);
   }
 }
 

@@ -1,6 +1,6 @@
 /**
  * MODULE: scripts/run-e2e.mjs
- * PURPOSE: Start the existing production build, run Playwright once, and guarantee server cleanup on every platform.
+ * PURPOSE: Start the existing production build with injected accelerated assembly timing, run Playwright once, and guarantee cleanup.
  * PUBLIC API / ENTRYPOINTS:
  *   - CLI: owns the frontend-e2e production server and Playwright process lifecycle.
  * CONTROL_FLOW:
@@ -10,6 +10,7 @@
  * INVARIANTS:
  *   - [INV-E2E-REUSES-BUILD] The runner never invokes a build and consumes only production output created by the preceding smoke set.
  *   - [INV-E2E-CLEAN-SHUTDOWN] Success, assertion failure, and startup failure clean up the exact spawned server.
+ *   - [INV-E2E-ACCELERATED-ASSEMBLY] Browser proof exercises the production event order through an injected short schedule rather than real waits.
  * BOUNDARIES:
  *   - Production smoke owns compilation; Playwright owns browser assertions; this script owns only deterministic process orchestration.
  * RELATED:
@@ -47,10 +48,14 @@ const port = "3100";
 const rootUrl = `http://${host}:${port}/`;
 const startupTimeoutMs = 30_000;
 
-function spawnNode(argumentsList, stdio = "inherit") {
+function spawnNode(argumentsList, stdio = "inherit", environment = {}) {
   return spawn(process.execPath, argumentsList, {
     cwd: repositoryRoot,
-    env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
+    env: {
+      ...process.env,
+      NEXT_TELEMETRY_DISABLED: "1",
+      ...environment,
+    },
     stdio,
   });
 }
@@ -119,14 +124,14 @@ async function stopServer(server) {
 }
 
 // @ah INV-E2E-REUSES-BUILD
-const server = spawnNode([
-  nextCli,
-  "start",
-  "--hostname",
-  host,
-  "--port",
-  port,
-]);
+const server = spawnNode(
+  [nextCli, "start", "--hostname", host, "--port", port],
+  "inherit",
+  {
+    // @ah INV-E2E-ACCELERATED-ASSEMBLY
+    CP_ASSEMBLY_TIMING_MODE: "accelerated",
+  },
+);
 let testStatus = 1;
 
 try {

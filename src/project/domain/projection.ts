@@ -5,7 +5,7 @@
  *   - parseSessionProjectProjection: strict object validation plus accepted-event replay.
  *   - serializeSessionProjectProjection: canonical validated serialization for atomic storage writes.
  * INVARIANTS:
- *   - [COMPAT-PROJECTION-SCHEMA] Only the current exact projection and fixture versions may restore.
+ *   - [COMPAT-PROJECTION-SCHEMA] Current projections require an explicit provenance contract; only the delivered v1 storage path may hydrate a missing contract as legacy-unverified.
  *   - [SEC-UNTRUSTED-RESTORE] Derived state must equal a legal replay of the bounded accepted event record.
  * BOUNDARIES:
  *   - Raw JSON size and browser API failures are handled by the storage adapter; this module owns domain shape, semantic identity, and replay coherence.
@@ -14,8 +14,10 @@
  *   - src/project/adapters/browser-runtime.ts: owns the sessionStorage access boundary.
  */
 import {
+  ASSEMBLY_PROVENANCE_CONTRACTS,
   SESSION_PROJECT_SCHEMA_VERSION,
   VISIBLE_PROJECT_STATES,
+  type AssemblyProvenanceContract,
   type IdentitySource,
   type ProjectEvent,
   type SeededFixtureContract,
@@ -67,6 +69,7 @@ export type ProjectionSerializeResult =
 const PROJECTION_KEYS = [
   "schema_version",
   "fixture_version",
+  "assembly_provenance_contract",
   "session_project_id",
   "project_version",
   "visible_state",
@@ -87,6 +90,15 @@ const PROJECTION_KEYS = [
   "latest_cursor",
   "events",
 ] as const;
+
+const LEGACY_V1_PROJECTION_KEYS = PROJECTION_KEYS.filter(
+  (key) => key !== "assembly_provenance_contract",
+);
+
+export interface ProjectionParseOptions {
+  legacyV1Compatibility?: boolean;
+  expectedAssemblyProvenanceContract?: AssemblyProvenanceContract;
+}
 
 function parseBoolean(value: unknown): boolean {
   if (typeof value !== "boolean") {
@@ -116,10 +128,37 @@ export function parseSessionProjectProjection(
   value: unknown,
   fixture: SeededFixtureContract,
   identity: IdentitySource,
+  options: ProjectionParseOptions = {},
 ): ProjectionParseResult {
   try {
     const record = expectRecord(value);
-    exactKeys(record, PROJECTION_KEYS);
+    const hasProvenanceContract = Object.prototype.hasOwnProperty.call(
+      record,
+      "assembly_provenance_contract",
+    );
+    let assemblyProvenanceContract: AssemblyProvenanceContract;
+    if (options.legacyV1Compatibility) {
+      if (hasProvenanceContract) {
+        throw new DomainValidationError();
+      }
+      exactKeys(record, LEGACY_V1_PROJECTION_KEYS);
+      assemblyProvenanceContract = "LEGACY_UNVERIFIED_V1";
+    } else {
+      if (!hasProvenanceContract) {
+        throw new DomainValidationError();
+      }
+      exactKeys(record, PROJECTION_KEYS);
+      assemblyProvenanceContract = parseEnum(
+        record.assembly_provenance_contract,
+        ASSEMBLY_PROVENANCE_CONTRACTS,
+      );
+    }
+    if (
+      options.expectedAssemblyProvenanceContract !== undefined &&
+      assemblyProvenanceContract !== options.expectedAssemblyProvenanceContract
+    ) {
+      throw new DomainValidationError();
+    }
     if (record.schema_version !== SESSION_PROJECT_SCHEMA_VERSION) {
       throw new DomainValidationError();
     }
@@ -131,6 +170,7 @@ export function parseSessionProjectProjection(
     const parsed: SessionProjectProjection = {
       schema_version: SESSION_PROJECT_SCHEMA_VERSION,
       fixture_version: fixtureVersion,
+      assembly_provenance_contract: assemblyProvenanceContract,
       session_project_id: parseId(record.session_project_id),
       project_version: parseSafeInteger(record.project_version, {
         min: 1,
@@ -160,7 +200,12 @@ export function parseSessionProjectProjection(
       }),
       events: parseAcceptedEvents(record.events, fixtureVersion),
     };
-    const replayed = replayProjectEvents(parsed.events, fixture, identity);
+    const replayed = replayProjectEvents(
+      parsed.events,
+      fixture,
+      identity,
+      assemblyProvenanceContract,
+    );
     if (replayed === null || !sameValue(parsed, replayed)) {
       throw new DomainValidationError();
     }

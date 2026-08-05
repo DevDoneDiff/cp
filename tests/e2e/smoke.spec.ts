@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import { SESSION_PROJECT_STORAGE_KEY } from "../../src/project/adapters/browser-runtime";
 
@@ -57,6 +57,29 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   expect(overflow.body).toBeLessThanOrEqual(0);
 }
 
+async function expectNoVisualOverlap(
+  first: Locator,
+  second: Locator,
+): Promise<void> {
+  const [firstBox, secondBox] = await Promise.all([
+    first.boundingBox(),
+    second.boundingBox(),
+  ]);
+  expect(firstBox).not.toBeNull();
+  expect(secondBox).not.toBeNull();
+  const overlapWidth = Math.max(
+    0,
+    Math.min(firstBox!.x + firstBox!.width, secondBox!.x + secondBox!.width) -
+      Math.max(firstBox!.x, secondBox!.x),
+  );
+  const overlapHeight = Math.max(
+    0,
+    Math.min(firstBox!.y + firstBox!.height, secondBox!.y + secondBox!.height) -
+      Math.max(firstBox!.y, secondBox!.y),
+  );
+  expect(overlapWidth * overlapHeight).toBe(0);
+}
+
 async function readStoredProjection(page: Page) {
   return page.evaluate((key) => {
     const serialized = window.sessionStorage.getItem(key);
@@ -72,6 +95,95 @@ async function enterAddressWithKeyboard(page: Page): Promise<void> {
   await expect(page.getByRole("option")).toBeVisible();
   await input.press("ArrowDown");
   await input.press("Enter");
+}
+
+async function beginProjectionHistory(page: Page): Promise<void> {
+  await page.evaluate((key) => {
+    const target = window as Window & {
+      __cpProjectionHistory?: Array<Record<string, unknown>>;
+    };
+    target.__cpProjectionHistory = [];
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function recordProjection(storageKey, value) {
+      if (storageKey === key) {
+        target.__cpProjectionHistory?.push(
+          JSON.parse(value) as Record<string, unknown>,
+        );
+      }
+      return original.call(this, storageKey, value);
+    };
+  }, SESSION_PROJECT_STORAGE_KEY);
+}
+
+async function readProjectionHistory(
+  page: Page,
+): Promise<Array<Record<string, unknown>>> {
+  return page.evaluate(
+    () =>
+      (
+        window as Window & {
+          __cpProjectionHistory?: Array<Record<string, unknown>>;
+        }
+      ).__cpProjectionHistory ?? [],
+  );
+}
+
+async function markAssemblyContinuity(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const scene = document.querySelector('[data-scene-shell="persistent"]');
+    if (!(scene instanceof HTMLElement)) {
+      throw new Error("PERSISTENT_SCENE_MISSING");
+    }
+    (
+      scene as HTMLElement & { __assemblyContinuityToken?: string }
+    ).__assemblyContinuityToken = "same-assembly-scene";
+    const observer = new MutationObserver(() => {
+      const firstPanel = document.querySelector("[data-panel-id]");
+      if (
+        firstPanel instanceof SVGElement &&
+        !("__assemblyPanelToken" in firstPanel)
+      ) {
+        (
+          firstPanel as SVGElement & { __assemblyPanelToken?: string }
+        ).__assemblyPanelToken = "same-first-panel";
+      }
+    });
+    observer.observe(scene, { childList: true, subtree: true });
+  });
+}
+
+async function expectAssemblyContinuity(page: Page): Promise<void> {
+  expect(
+    await page
+      .locator('[data-scene-shell="persistent"]')
+      .evaluate(
+        (node) =>
+          (node as HTMLElement & { __assemblyContinuityToken?: string })
+            .__assemblyContinuityToken,
+      ),
+  ).toBe("same-assembly-scene");
+  expect(
+    await page
+      .locator("[data-panel-id]")
+      .first()
+      .evaluate(
+        (node) =>
+          (node as SVGElement & { __assemblyPanelToken?: string })
+            .__assemblyPanelToken,
+      ),
+  ).toBe("same-first-panel");
+}
+
+function panelIdentity(panel: unknown): Record<string, unknown> {
+  const candidate = panel as Record<string, unknown>;
+  return {
+    panel_id: candidate.panel_id,
+    surface_id: candidate.surface_id,
+    placement_rank: candidate.placement_rank,
+    geometry: candidate.geometry,
+    render_status: candidate.render_status,
+    selection_state: candidate.selection_state,
+  };
 }
 
 test("keyboard entry completes the real S1 workflow through one client runtime transition", async ({
@@ -206,6 +318,7 @@ test("keyboard entry completes the real S1 workflow through one client runtime t
   expect(projection).toMatchObject({
     schema_version: 1,
     fixture_version: "seeded-maple-austin-v1",
+    assembly_provenance_contract: "CANONICAL_SCHEDULE_V1",
     project_version: 1,
     visible_state: "PROPERTY_CONFIRMATION",
     source_kind: "SEEDED_DEMO_IMAGERY",
@@ -248,10 +361,33 @@ test("keyboard entry completes the real S1 workflow through one client runtime t
   expect(observations.externalRequests).toEqual([]);
 });
 
-test("explicit confirmation preserves the document, scene, asset, outline, and identities without starting work", async ({
+test("explicit confirmation preserves the document, scene, asset, outline, and identities before the first accepted work event", async ({
   page,
 }) => {
   const observations = observe(page);
+  await page.route("**/api/project/assembly/stream?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: { "Cache-Control": "no-store, no-transform" },
+      body: ": test stream closed before work\n\n",
+    });
+  });
+  await page.route("**/api/project/assembly/poll?**", async (route) => {
+    const url = new URL(route.request().url());
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "Cache-Control": "no-store" },
+      body: JSON.stringify({
+        schema_version: 1,
+        fixture_version: url.searchParams.get("fixture_version"),
+        after_cursor: Number(url.searchParams.get("after_cursor")),
+        feed_complete: false,
+        events: [],
+      }),
+    });
+  });
   await page.goto("/");
   const input = page.getByRole("combobox", { name: "Home address" });
   await expect(input).toBeEnabled();
@@ -282,7 +418,7 @@ test("explicit confirmation preserves the document, scene, asset, outline, and i
 
   await page.getByRole("button", { name: "Yes, this is my property" }).click();
   await expect(
-    page.getByRole("heading", { name: "Property confirmed." }),
+    page.getByRole("heading", { name: "Building your solar model..." }),
   ).toBeFocused();
   expect(
     await scene.evaluate(
@@ -312,7 +448,31 @@ test("explicit confirmation preserves the document, scene, asset, outline, and i
     "data-outline-points",
     outlinePoints ?? "",
   );
-  expect(observations.requests).toHaveLength(requestCountBeforeConfirmation);
+  await expect
+    .poll(
+      () =>
+        observations.requests.filter((url) =>
+          url.includes("/api/project/assembly/"),
+        ).length,
+    )
+    .toBeGreaterThan(0);
+  const assemblyRequests = observations.requests.slice(
+    requestCountBeforeConfirmation,
+  );
+  expect(assemblyRequests.length).toBeGreaterThan(0);
+  expect(
+    assemblyRequests.every((requestUrl) => {
+      const url = new URL(requestUrl);
+      return (
+        url.origin === APP_ORIGIN &&
+        ["/api/project/assembly/stream", "/api/project/assembly/poll"].includes(
+          url.pathname,
+        ) &&
+        !url.search.includes("123+Maple") &&
+        !url.search.includes("address")
+      );
+    }),
+  ).toBe(true);
 
   const confirmed = await readStoredProjection(page);
   expect(confirmed).toMatchObject({
@@ -329,12 +489,388 @@ test("explicit confirmation preserves the document, scene, asset, outline, and i
     (confirmed?.events as Array<{ type: string }>).map((event) => event.type),
   ).toEqual(["ADDRESS_RESOLVED", "PROPERTY_CONFIRMED"]);
   await expect(page.locator("[data-panel-id]")).toHaveCount(0);
+  await expect(page.locator("[data-roof-surface-layer]")).toHaveCount(0);
   await expect(
-    page.getByText(/apply next modeled work|roof progress|energy model ready/i),
+    page.getByText(/apply next modeled work|update system|project lenses/i),
   ).toHaveCount(0);
   await expect(
     page.getByText(/pricing|update system|project lenses/i),
   ).toHaveCount(0);
+  expect(observations.browserErrors).toEqual([]);
+  expect(observations.httpErrors).toEqual([]);
+  expect(observations.externalRequests).toEqual([]);
+});
+
+test("native SSE reveals only accepted roof, panel, energy, and readiness events and restores the ready projection without replay", async ({
+  page,
+}) => {
+  const observations = observe(page);
+  await page.setViewportSize({ width: 1536, height: 1024 });
+  await page.goto("/");
+  await enterAddressWithKeyboard(page);
+  await expect(
+    page.getByRole("heading", { name: "Is this your property?" }),
+  ).toBeVisible();
+  await beginProjectionHistory(page);
+  await markAssemblyContinuity(page);
+
+  const sceneBefore = await page
+    .locator('[data-scene-shell="persistent"]')
+    .evaluate((node) => ({
+      asset: node.getAttribute("data-scene-asset-id"),
+      camera: node.getAttribute("data-camera-id"),
+      property: node.getAttribute("data-property-id"),
+      scene: node.getAttribute("data-scene-id"),
+    }));
+  await page.getByRole("button", { name: "Yes, this is my property" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your starting demo model is ready." }),
+  ).toBeFocused();
+  await expect(page.locator("[data-roof-surface-layer] polygon")).toHaveCount(
+    2,
+  );
+  await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+  await expect(page.getByText("1,840 sq ft").first()).toBeVisible();
+  await expect(page.getByText("9,800 kWh/yr").first()).toBeVisible();
+  await expectAssemblyContinuity(page);
+
+  const history = await readProjectionHistory(page);
+  expect(history).toHaveLength(8);
+  expect(
+    history.map(
+      (projection) =>
+        (projection.events as Array<{ type: string }>).at(-1)?.type,
+    ),
+  ).toEqual([
+    "PROPERTY_CONFIRMED",
+    "ROOF_GEOMETRY_READY",
+    "PANEL_OBJECT_ADDED",
+    "PANEL_OBJECT_ADDED",
+    "PANEL_OBJECT_ADDED",
+    "PANEL_OBJECT_ADDED",
+    "ENERGY_MODEL_READY",
+    "MINIMUM_USABLE_READY",
+  ]);
+  expect(
+    history.map((projection) => ({
+      energy: projection.energy_model !== null,
+      panels: (projection.panel_objects as unknown[]).length,
+      ready: projection.minimum_usable_ready,
+      roof: (projection.roof_surfaces as unknown[]).length,
+    })),
+  ).toEqual([
+    { energy: false, panels: 0, ready: false, roof: 0 },
+    { energy: false, panels: 0, ready: false, roof: 2 },
+    { energy: false, panels: 1, ready: false, roof: 2 },
+    { energy: false, panels: 2, ready: false, roof: 2 },
+    { energy: false, panels: 3, ready: false, roof: 2 },
+    { energy: false, panels: 4, ready: false, roof: 2 },
+    { energy: true, panels: 4, ready: false, roof: 2 },
+    { energy: true, panels: 4, ready: true, roof: 2 },
+  ]);
+  const firstAcceptedPanel = panelIdentity(
+    (history[2]?.panel_objects as unknown[])[0],
+  );
+  for (const projection of history.slice(2)) {
+    expect(panelIdentity((projection.panel_objects as unknown[])[0])).toEqual(
+      firstAcceptedPanel,
+    );
+  }
+
+  const readyProjection = await readStoredProjection(page);
+  const readyPanelIdentities = (
+    readyProjection?.panel_objects as unknown[]
+  ).map(panelIdentity);
+  const readyEventIds = (
+    readyProjection?.events as Array<{ event_id: string }>
+  ).map((event) => event.event_id);
+  expect(new Set(readyEventIds).size).toBe(readyEventIds.length);
+  const assemblyRequestsBeforeReload = observations.requests.filter((url) =>
+    url.includes("/api/project/assembly/"),
+  );
+  expect(assemblyRequestsBeforeReload.length).toBeGreaterThan(0);
+  expect(
+    assemblyRequestsBeforeReload.some(
+      (url) => new URL(url).pathname === "/api/project/assembly/stream",
+    ),
+  ).toBe(true);
+  expect(
+    assemblyRequestsBeforeReload.some(
+      (url) => new URL(url).pathname === "/api/project/assembly/poll",
+    ),
+  ).toBe(false);
+
+  await page.reload();
+  const restoredNotice = page.getByText(
+    "This project was restored from this browser session.",
+  );
+  await expect(restoredNotice).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Your starting demo model is ready." }),
+  ).toBeVisible();
+  await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+  await expectNoVisualOverlap(
+    restoredNotice,
+    page.locator(".s2-assembly-badge"),
+  );
+  const restored = await readStoredProjection(page);
+  expect(restored).toMatchObject({
+    minimum_usable_ready: true,
+    latest_cursor: readyProjection?.latest_cursor,
+    project_version: readyProjection?.project_version,
+    scene: readyProjection?.scene,
+  });
+  expect((restored?.panel_objects as unknown[]).map(panelIdentity)).toEqual(
+    readyPanelIdentities,
+  );
+  expect(
+    (restored?.events as Array<{ event_id: string }>).map(
+      (event) => event.event_id,
+    ),
+  ).toEqual(readyEventIds);
+  const restoredScene = page.locator('[data-scene-shell="persistent"]');
+  await expect(restoredScene).toHaveAttribute(
+    "data-scene-id",
+    sceneBefore.scene ?? "",
+  );
+  await expect(restoredScene).toHaveAttribute(
+    "data-camera-id",
+    sceneBefore.camera ?? "",
+  );
+  await expect(restoredScene).toHaveAttribute(
+    "data-property-id",
+    sceneBefore.property ?? "",
+  );
+  await expect(restoredScene).toHaveAttribute(
+    "data-scene-asset-id",
+    sceneBefore.asset ?? "",
+  );
+  expect(
+    observations.requests.filter((url) =>
+      url.includes("/api/project/assembly/"),
+    ),
+  ).toEqual(assemblyRequestsBeforeReload);
+  await expect(
+    page.getByText(/Update system|project lenses|pricing|create account/i),
+  ).toHaveCount(0);
+  expect(observations.browserErrors).toEqual([]);
+  expect(observations.httpErrors).toEqual([]);
+  expect(observations.externalRequests).toEqual([]);
+});
+
+test("an SSE close resumes bounded polling from the accepted cursor without replacing the scene or panels", async ({
+  page,
+}) => {
+  const observations = observe(page);
+  await page.route("**/api/project/assembly/stream?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: { "Cache-Control": "no-store, no-transform" },
+      body: ": injected deterministic stream close\n\n",
+    });
+  });
+  await page.goto("/");
+  await enterAddressWithKeyboard(page);
+  await expect(
+    page.getByRole("heading", { name: "Is this your property?" }),
+  ).toBeVisible();
+  await markAssemblyContinuity(page);
+  await page.getByRole("button", { name: "Yes, this is my property" }).click();
+  await expect
+    .poll(
+      () =>
+        page
+          .locator('[data-visible-state="LIVE_ROOF_ASSEMBLY"]')
+          .getAttribute("data-assembly-phase"),
+      { timeout: 5_000 },
+    )
+    .toBe("polling");
+  await expect(
+    page.getByText(
+      "The event stream paused. Bounded polling is continuing from your last accepted update.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Your starting demo model is ready." }),
+  ).toBeFocused({ timeout: 15_000 });
+  await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+  await expectAssemblyContinuity(page);
+
+  const projection = await readStoredProjection(page);
+  expect(projection).toMatchObject({
+    minimum_usable_ready: true,
+    latest_cursor: 9,
+    project_version: 9,
+  });
+  const panelIdentities = (projection?.panel_objects as unknown[]).map(
+    panelIdentity,
+  );
+  expect(new Set(panelIdentities.map((panel) => panel.panel_id)).size).toBe(4);
+  const eventIds = (
+    projection?.events as Array<{ event_id: string; type: string }>
+  ).map((event) => event.event_id);
+  expect(new Set(eventIds).size).toBe(eventIds.length);
+  expect(
+    (projection?.events as Array<{ type: string }>).map((event) => event.type),
+  ).toEqual([
+    "ADDRESS_RESOLVED",
+    "PROPERTY_CONFIRMED",
+    "ROOF_GEOMETRY_READY",
+    "PANEL_OBJECT_ADDED",
+    "PANEL_OBJECT_ADDED",
+    "PANEL_OBJECT_ADDED",
+    "PANEL_OBJECT_ADDED",
+    "ENERGY_MODEL_READY",
+    "MINIMUM_USABLE_READY",
+  ]);
+  const assemblyRequests = observations.requests.filter((url) =>
+    url.includes("/api/project/assembly/"),
+  );
+  expect(new URL(assemblyRequests[0] ?? APP_ORIGIN).pathname).toBe(
+    "/api/project/assembly/stream",
+  );
+  const pollCursors = assemblyRequests
+    .filter((url) => new URL(url).pathname === "/api/project/assembly/poll")
+    .map((url) => Number(new URL(url).searchParams.get("after_cursor")));
+  expect(pollCursors.length).toBeGreaterThanOrEqual(7);
+  expect(pollCursors[0]).toBe(2);
+  expect(pollCursors.at(-1)).toBe(8);
+  expect(
+    pollCursors.every(
+      (cursor, index) => index === 0 || cursor >= pollCursors[index - 1]!,
+    ),
+  ).toBe(true);
+  expect(observations.browserErrors).toEqual([]);
+  expect(observations.httpErrors).toEqual([]);
+  expect(observations.externalRequests).toEqual([]);
+});
+
+test("fallback exhaustion preserves restored partial work and retry completes without duplication", async ({
+  page,
+}) => {
+  const observations = observe(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.clock.install();
+  await page.goto("/");
+  await enterAddressWithKeyboard(page);
+  await page.getByRole("button", { name: "Yes, this is my property" }).click();
+  await page.waitForFunction((key) => {
+    const serialized = sessionStorage.getItem(key);
+    if (serialized === null) return false;
+    const projection = JSON.parse(serialized) as {
+      minimum_usable_ready: boolean;
+      panel_objects: unknown[];
+    };
+    return (
+      !projection.minimum_usable_ready &&
+      projection.panel_objects.length >= 1 &&
+      projection.panel_objects.length < 4
+    );
+  }, SESSION_PROJECT_STORAGE_KEY);
+  const partial = await readStoredProjection(page);
+  const partialPanels = (partial?.panel_objects as unknown[]).map(
+    panelIdentity,
+  );
+  expect(partialPanels.length).toBeGreaterThanOrEqual(1);
+  expect(partialPanels.length).toBeLessThan(4);
+
+  const emptyStream = async (
+    route: Parameters<Parameters<Page["route"]>[1]>[0],
+  ) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: { "Cache-Control": "no-store, no-transform" },
+      body: ": injected exhausted stream\n\n",
+    });
+  };
+  const emptyPoll = async (
+    route: Parameters<Parameters<Page["route"]>[1]>[0],
+  ) => {
+    const url = new URL(route.request().url());
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "Cache-Control": "no-store" },
+      body: JSON.stringify({
+        schema_version: 1,
+        fixture_version: url.searchParams.get("fixture_version"),
+        after_cursor: Number(url.searchParams.get("after_cursor")),
+        feed_complete: false,
+        events: [],
+      }),
+    });
+  };
+  await page.route("**/api/project/assembly/stream?**", emptyStream);
+  await page.route("**/api/project/assembly/poll?**", emptyPoll);
+  await page.reload();
+  await expect(
+    page.getByText("This project was restored from this browser session."),
+  ).toBeVisible();
+  await expect
+    .poll(
+      () =>
+        page
+          .locator('[data-visible-state="LIVE_ROOF_ASSEMBLY"]')
+          .getAttribute("data-assembly-phase"),
+      { timeout: 5_000 },
+    )
+    .toBe("polling");
+  for (let second = 0; second < 38; second += 1) {
+    await page.clock.fastForward(1_000);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Live assembly paused" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Retry assembly" }),
+  ).toBeVisible();
+  const exhausted = await readStoredProjection(page);
+  expect(exhausted?.minimum_usable_ready).toBe(false);
+  expect((exhausted?.panel_objects as unknown[]).map(panelIdentity)).toEqual(
+    partialPanels,
+  );
+  await expect(page.locator("[data-panel-id]")).toHaveCount(
+    partialPanels.length,
+  );
+  expect(
+    await page.locator("[data-panel-id]").evaluateAll((panels) =>
+      panels.every((panel) => {
+        const style = getComputedStyle(panel);
+        const shape = panel.querySelector(".panel-object-shape");
+        return (
+          style.animationName === "none" &&
+          shape !== null &&
+          getComputedStyle(shape).transform === "none"
+        );
+      }),
+    ),
+  ).toBe(true);
+
+  await page.unroute("**/api/project/assembly/stream?**", emptyStream);
+  await page.unroute("**/api/project/assembly/poll?**", emptyPoll);
+  await page.getByRole("button", { name: "Retry assembly" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your starting demo model is ready." }),
+  ).toBeFocused({ timeout: 10_000 });
+  await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+  const ready = await readStoredProjection(page);
+  expect(ready?.minimum_usable_ready).toBe(true);
+  expect(
+    (ready?.panel_objects as unknown[])
+      .slice(0, partialPanels.length)
+      .map(panelIdentity),
+  ).toEqual(partialPanels);
+  const readyPanelIds = (
+    ready?.panel_objects as Array<{ panel_id: string }>
+  ).map((panel) => panel.panel_id);
+  const readyEventIds = (ready?.events as Array<{ event_id: string }>).map(
+    (event) => event.event_id,
+  );
+  expect(new Set(readyPanelIds).size).toBe(4);
+  expect(new Set(readyEventIds).size).toBe(readyEventIds.length);
   expect(observations.browserErrors).toEqual([]);
   expect(observations.httpErrors).toEqual([]);
   expect(observations.externalRequests).toEqual([]);
@@ -601,7 +1137,7 @@ test("an unavailable first session write stays in S1 and succeeds atomically on 
   expect(projection?.project_version).toBe(1);
 });
 
-test("a scene-asset failure keeps the same candidate, outline, source labels, confirmation, and correction", async ({
+test("a scene-asset failure keeps identity and accessible assembly through readiness", async ({
   page,
 }) => {
   const observations = observe(page);
@@ -665,8 +1201,27 @@ test("a scene-asset failure keeps the same candidate, outline, source labels, co
 
   await page.getByRole("button", { name: "Yes, this is my property" }).click();
   await expect(
-    page.getByRole("heading", { name: "Property confirmed." }),
+    page.getByRole("heading", {
+      name: "Your starting demo model is ready.",
+    }),
   ).toBeFocused();
+  await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+  await expect(page.getByText("9,800 kWh/yr").first()).toBeVisible();
+  await expect(
+    page.getByText(
+      "The confirmed property now has a usable preliminary demo model assembled from accepted seeded work events.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/is becoming|appear as each accepted event arrives/i),
+  ).toHaveCount(0);
+  await expectNoVisualOverlap(
+    page.getByRole("status").filter({
+      hasText:
+        "Seeded demo property image unavailable. Property identity and details remain unchanged.",
+    }),
+    page.locator(".s2-assembly-badge"),
+  );
   expect(
     await scene.evaluate(
       (node) =>
@@ -717,13 +1272,27 @@ test("keyboard focus and reduced motion preserve the same confirmation informati
   await page.keyboard.press("Shift+Tab");
   await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("heading", { name: "Property confirmed." }),
+    page.getByRole("heading", {
+      name: "Your starting demo model is ready.",
+    }),
   ).toBeFocused();
   await expect(scene).toHaveCount(1);
-  await expect(
-    page.getByText("Roof analysis is pending and has not started yet."),
-  ).toBeVisible();
-  await expect(page.locator("[data-panel-id]")).toHaveCount(0);
+  await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+  await expect(page.locator("[data-roof-surface-layer]")).toHaveCount(1);
+  await expect(page.getByText("Ready in S2")).toBeVisible();
+  expect(
+    await page.locator("[data-panel-id]").evaluateAll((panels) =>
+      panels.every((panel) => {
+        const style = getComputedStyle(panel);
+        const shape = panel.querySelector(".panel-object-shape");
+        return (
+          style.animationName === "none" &&
+          shape !== null &&
+          getComputedStyle(shape).transform === "none"
+        );
+      }),
+    ),
+  ).toBe(true);
 });
 
 test("forged stored state and direct route entry cannot bypass confirmation", async ({
@@ -887,6 +1456,125 @@ for (const viewport of [
         /Nearmap|Google|May 2025|address verified|high confidence/i,
       ),
     ).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+  });
+}
+
+for (const viewport of [
+  { width: 1536, height: 1024 },
+  { width: 1440, height: 900 },
+  { width: 1024, height: 768 },
+  { width: 390, height: 844 },
+]) {
+  test(`live assembly remains semantic, stable, and unclipped through readiness at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await enterAddressWithKeyboard(page);
+    await expect(
+      page.getByRole("heading", { name: "Is this your property?" }),
+    ).toBeVisible();
+    await markAssemblyContinuity(page);
+    const scene = page.locator('[data-scene-shell="persistent"]');
+    const sceneIdentity = await scene.evaluate((node) => ({
+      camera: node.getAttribute("data-camera-id"),
+      property: node.getAttribute("data-property-id"),
+      scene: node.getAttribute("data-scene-id"),
+    }));
+    await page
+      .getByRole("button", { name: "Yes, this is my property" })
+      .click();
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Your starting demo model is ready.",
+      }),
+    ).toBeFocused();
+    await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+    await expect(page.locator("[data-roof-surface-layer] polygon")).toHaveCount(
+      2,
+    );
+    await expectAssemblyContinuity(page);
+    await expect(scene).toHaveAttribute(
+      "data-scene-id",
+      sceneIdentity.scene ?? "",
+    );
+    await expect(scene).toHaveAttribute(
+      "data-camera-id",
+      sceneIdentity.camera ?? "",
+    );
+    await expect(scene).toHaveAttribute(
+      "data-property-id",
+      sceneIdentity.property ?? "",
+    );
+
+    const regions = [
+      page.locator(".s2-decision.is-assembly"),
+      scene,
+      page.locator(".s2-details.is-assembly"),
+      page.locator(".s2-known.is-assembly"),
+    ];
+    for (const region of regions) {
+      await expect(region).toBeVisible();
+      const box = await region.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
+        viewport.width,
+      );
+    }
+    const renderedPanels = await page
+      .locator("[data-panel-id]")
+      .evaluateAll((panels) =>
+        panels.map((panel) => ({
+          geometry: panel.getAttribute("data-panel-geometry"),
+          id: panel.getAttribute("data-panel-id"),
+          rank: panel.getAttribute("data-panel-placement-rank"),
+          renderStatus: panel.getAttribute("data-panel-render-status"),
+          selectionState: panel.getAttribute("data-panel-selection-state"),
+          surfaceId: panel.getAttribute("data-panel-surface-id"),
+        })),
+      );
+    expect(renderedPanels).toHaveLength(4);
+    expect(new Set(renderedPanels.map((panel) => panel.id)).size).toBe(4);
+    expect(
+      renderedPanels.every(
+        (panel) =>
+          panel.geometry !== null &&
+          panel.rank !== null &&
+          panel.renderStatus === "rendered" &&
+          panel.selectionState === "unselected" &&
+          panel.surfaceId !== null,
+      ),
+    ).toBe(true);
+    await expect(page.getByText("1,840 sq ft").first()).toBeVisible();
+    await expect(page.getByText("9,800 kWh/yr").first()).toBeVisible();
+    await expect(page.getByText("Ready in S2")).toBeVisible();
+    await expect(
+      page.getByText(
+        "The confirmed property now has a usable preliminary demo model assembled from accepted seeded work events.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/is becoming|appear as each accepted event arrives/i),
+    ).toHaveCount(0);
+    await expect(
+      page.getByText(/Update system|project lenses|pricing|create account/i),
+    ).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+
+    await page.reload();
+    const restoredNotice = page.getByText(
+      "This project was restored from this browser session.",
+    );
+    await expect(restoredNotice).toBeVisible();
+    await expect(page.locator("[data-panel-id]")).toHaveCount(4);
+    await expectNoVisualOverlap(
+      restoredNotice,
+      page.locator(".s2-assembly-badge"),
+    );
     await expectNoHorizontalOverflow(page);
   });
 }
