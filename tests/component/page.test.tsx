@@ -23,7 +23,22 @@ import type {
   SeededAddressLookupResult,
 } from "../../src/project/adapters/seeded-address-lookup";
 import { AddressEntryExperience } from "../../src/project/ui/address-entry-experience";
-import { createRuntimeHarness, startProject } from "../helpers/project-runtime";
+import {
+  LiveRoofAssemblyController,
+  type AssemblyFeedCursor,
+  type AssemblyPollBatch,
+  type AssemblyPollingPolicy,
+  type AssemblyStreamObserver,
+  type AssemblyTimerPort,
+  type AssemblyTransportPort,
+} from "../../src/project/application/live-roof-assembly";
+import type { SessionProjectRuntime } from "../../src/project/application/session-project-runtime";
+import {
+  advanceProjectToReady,
+  confirmProject,
+  createRuntimeHarness,
+  startProject,
+} from "../helpers/project-runtime";
 
 class ImmediateLookup implements SeededAddressLookup {
   calls: string[] = [];
@@ -59,6 +74,74 @@ class SequenceLookup implements SeededAddressLookup {
     this.calls.push(input);
     return this.results.shift() ?? { kind: "recoverable_failure" };
   }
+}
+
+class ComponentAssemblyTimer implements AssemblyTimerPort {
+  nowMs(): number {
+    return Date.now();
+  }
+
+  setAlarm(callback: () => void, delayMs: number): () => void {
+    const handle = window.setTimeout(callback, delayMs);
+    return () => window.clearTimeout(handle);
+  }
+
+  delay(delayMs: number, signal: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const handle = window.setTimeout(resolve, delayMs);
+      signal.addEventListener(
+        "abort",
+        () => {
+          window.clearTimeout(handle);
+          reject(new DOMException("Aborted", "AbortError"));
+        },
+        { once: true },
+      );
+    });
+  }
+}
+
+class ManualAssemblyTransport implements AssemblyTransportPort {
+  observer: AssemblyStreamObserver | null = null;
+  opens: AssemblyFeedCursor[] = [];
+  polls: AssemblyFeedCursor[] = [];
+  pollResult: AssemblyPollBatch = { events: [], feedComplete: false };
+
+  openStream(cursor: AssemblyFeedCursor, observer: AssemblyStreamObserver) {
+    this.opens.push(cursor);
+    this.observer = observer;
+    return () => undefined;
+  }
+
+  async poll(
+    cursor: AssemblyFeedCursor,
+    signal: AbortSignal,
+  ): Promise<AssemblyPollBatch> {
+    void signal;
+    this.polls.push(cursor);
+    return this.pollResult;
+  }
+}
+
+const componentAssemblyPolicy: AssemblyPollingPolicy = {
+  stallTimeoutMs: 60_000,
+  pollIntervalMs: 5,
+  pollRequestTimeoutMs: 1_000,
+  maxPollRequests: 10,
+  maxPollDurationMs: 5_000,
+};
+
+function componentAssemblyController(
+  runtime: SessionProjectRuntime,
+  transport: ManualAssemblyTransport,
+  policy: AssemblyPollingPolicy = componentAssemblyPolicy,
+) {
+  return new LiveRoofAssemblyController(
+    runtime,
+    transport,
+    new ComponentAssemblyTimer(),
+    policy,
+  );
 }
 
 async function readyAddressInput(): Promise<HTMLInputElement> {
@@ -454,10 +537,16 @@ describe("S1 address-entry experience", () => {
   it("renders the truthful confirmation composition and preserves the scene through the sole confirmation authority", async () => {
     const user = userEvent.setup();
     const { runtime, storage } = createRuntimeHarness();
+    const assemblyTransport = new ManualAssemblyTransport();
+    const assemblyController = componentAssemblyController(
+      runtime,
+      assemblyTransport,
+    );
     const rendered = render(
       <AddressEntryExperience
         runtime={runtime}
         lookup={new ImmediateLookup()}
+        assemblyController={assemblyController}
         onNavigate={vi.fn()}
       />,
     );
@@ -538,7 +627,7 @@ describe("S1 address-entry experience", () => {
     );
     const confirmedHeading = await screen.findByRole("heading", {
       level: 1,
-      name: "Property confirmed.",
+      name: "Building your solar model...",
     });
     await waitFor(() => expect(confirmedHeading).toHaveFocus());
     expect(
@@ -568,13 +657,291 @@ describe("S1 address-entry experience", () => {
     expect(confirmed?.energy_model).toBeNull();
     expect(confirmed?.minimum_usable_ready).toBe(false);
     expect(
-      screen.getByText("Roof analysis is pending and has not started yet."),
+      screen.getByText(
+        /confirmed property is becoming a usable preliminary model/i,
+      ),
     ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Live assembly" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("progressbar", {
+        name: "0 of 4 stable panel objects placed",
+      }),
+    ).toHaveValue(0);
+    expect(screen.getAllByText("Pending").length).toBeGreaterThan(0);
+    expect(assemblyTransport.opens).toHaveLength(1);
+    expect(assemblyTransport.opens[0]).toMatchObject({
+      afterCursor: 2,
+      projectVersion: 2,
+      propertyId,
+    });
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.queryByText(/apply next|progress|energy model/i)).toBeNull();
     expect(
       screen.queryByText(/pricing|update system|project lenses/i),
     ).toBeNull();
+  });
+
+  it("reveals roof facts, stable panels, energy facts, and readiness only after accepted events", async () => {
+    const user = userEvent.setup();
+    const { runtime, schedule } = createRuntimeHarness();
+    const assemblyTransport = new ManualAssemblyTransport();
+    const assemblyController = componentAssemblyController(
+      runtime,
+      assemblyTransport,
+    );
+    const rendered = render(
+      <AddressEntryExperience
+        runtime={runtime}
+        lookup={new ImmediateLookup()}
+        assemblyController={assemblyController}
+        onNavigate={vi.fn()}
+      />,
+    );
+    const input = await readyAddressInput();
+    await user.type(input, "123 Maple St");
+    await user.click(screen.getByRole("option"));
+    const scene = rendered.container.querySelector(
+      '[data-scene-shell="persistent"]',
+    );
+    const sceneId = scene?.getAttribute("data-scene-id");
+    const cameraId = scene?.getAttribute("data-camera-id");
+    const propertyId = scene?.getAttribute("data-property-id");
+    await user.click(
+      screen.getByRole("button", { name: "Yes, this is my property" }),
+    );
+    await screen.findByRole("heading", {
+      name: "Building your solar model...",
+    });
+    await waitFor(() => expect(assemblyTransport.observer).not.toBeNull());
+
+    expect(
+      rendered.container.querySelector("[data-roof-surface-layer]"),
+    ).toBeNull();
+    expect(rendered.container.querySelectorAll("[data-panel-id]")).toHaveLength(
+      0,
+    );
+    expect(screen.queryByText("1,840 sq ft")).toBeNull();
+    expect(screen.queryByText("9,800 kWh/yr")).toBeNull();
+
+    const publishNext = () => {
+      const projection = runtime.getSnapshot().projection;
+      if (projection === null) throw new Error("PROJECTION_MISSING");
+      const event = schedule.nextEvent(projection);
+      if (event === null) throw new Error("WORK_EVENT_MISSING");
+      act(() => assemblyTransport.observer?.onEvent(event));
+      return event;
+    };
+
+    expect(publishNext().type).toBe("ROOF_GEOMETRY_READY");
+    expect(
+      rendered.container.querySelectorAll("[data-surface-id]"),
+    ).toHaveLength(2);
+    expect(screen.getAllByText("1,840 sq ft").length).toBeGreaterThan(0);
+    expect(rendered.container.querySelectorAll("[data-panel-id]")).toHaveLength(
+      0,
+    );
+
+    expect(publishNext().type).toBe("PANEL_OBJECT_ADDED");
+    const firstPanel = rendered.container.querySelector("[data-panel-id]");
+    expect(firstPanel).not.toBeNull();
+    Object.defineProperty(firstPanel, "__continuityToken", {
+      configurable: true,
+      value: "stable-first-panel",
+    });
+    expect(
+      screen.getByRole("progressbar", {
+        name: "1 of 4 stable panel objects placed",
+      }),
+    ).toHaveValue(1);
+
+    for (let step = 0; step < 5; step += 1) publishNext();
+
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Your starting demo model is ready.",
+      }),
+    ).toHaveFocus();
+    expect(screen.getByText("Ready in S2")).toBeVisible();
+    expect(screen.getAllByText("9,800 kWh/yr").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("img", {
+        name: /confirmed demo property boundary.*retains the confirmed demo property context/i,
+      }),
+    ).toBeVisible();
+    expect(rendered.container.querySelectorAll("[data-panel-id]")).toHaveLength(
+      4,
+    );
+    expect(rendered.container.querySelector("[data-panel-id]")).toBe(
+      firstPanel,
+    );
+    expect(
+      (firstPanel as Element & { __continuityToken?: string })
+        .__continuityToken,
+    ).toBe("stable-first-panel");
+    expect(
+      rendered.container.querySelector('[data-scene-shell="persistent"]'),
+    ).toBe(scene);
+    expect(scene).toHaveAttribute("data-scene-id", sceneId);
+    expect(scene).toHaveAttribute("data-camera-id", cameraId);
+    expect(scene).toHaveAttribute("data-property-id", propertyId);
+    expect(runtime.getSnapshot().projection?.minimum_usable_ready).toBe(true);
+    expect(
+      screen.queryByText(
+        /update system|project lens|customization|pricing|account|contractor/i,
+      ),
+    ).toBeNull();
+  });
+
+  it("shows bounded exhaustion, preserves partial objects, and retries from the accepted cursor", async () => {
+    const user = userEvent.setup();
+    const { runtime, schedule } = createRuntimeHarness();
+    startProject(runtime);
+    confirmProject(runtime);
+    runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const partial = runtime.getSnapshot().projection;
+    if (partial === null) throw new Error("PARTIAL_PROJECT_MISSING");
+    const assemblyTransport = new ManualAssemblyTransport();
+    const assemblyController = componentAssemblyController(
+      runtime,
+      assemblyTransport,
+      { ...componentAssemblyPolicy, maxPollRequests: 1 },
+    );
+    const rendered = render(
+      <AddressEntryExperience
+        runtime={runtime}
+        lookup={new ImmediateLookup()}
+        assemblyController={assemblyController}
+        onNavigate={vi.fn()}
+      />,
+    );
+    await screen.findByRole("heading", {
+      name: "Building your solar model...",
+    });
+    await waitFor(() => expect(assemblyTransport.observer).not.toBeNull());
+    const scene = rendered.container.querySelector(
+      '[data-scene-shell="persistent"]',
+    );
+    const firstPanel = rendered.container.querySelector("[data-panel-id]");
+    expect(firstPanel).not.toBeNull();
+    Object.defineProperty(firstPanel, "__retryToken", {
+      configurable: true,
+      value: "accepted-before-fallback",
+    });
+
+    act(() => assemblyTransport.observer?.onFailure("connection_failed"));
+    const recovery = await screen.findByRole("alert");
+    expect(recovery).toHaveTextContent("Live assembly paused");
+    expect(recovery).toHaveTextContent(
+      "confirmed property and 1 accepted panel is still safe",
+    );
+    expect(runtime.getSnapshot().projection).toEqual(partial);
+    expect(assemblyTransport.polls).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "Retry assembly" }));
+    await waitFor(() => expect(assemblyTransport.opens).toHaveLength(2));
+    expect(assemblyTransport.opens[1]?.afterCursor).toBe(partial.latest_cursor);
+    for (let step = 0; step < 5; step += 1) {
+      const event = schedule.nextEvent(runtime.getSnapshot().projection!);
+      if (event === null) throw new Error("RETRY_EVENT_MISSING");
+      act(() => assemblyTransport.observer?.onEvent(event));
+    }
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your starting demo model is ready.",
+      }),
+    ).toHaveFocus();
+    expect(rendered.container.querySelector("[data-panel-id]")).toBe(
+      firstPanel,
+    );
+    expect(
+      (firstPanel as Element & { __retryToken?: string }).__retryToken,
+    ).toBe("accepted-before-fallback");
+    expect(
+      rendered.container.querySelector('[data-scene-shell="persistent"]'),
+    ).toBe(scene);
+    expect(rendered.container.querySelectorAll("[data-panel-id]")).toHaveLength(
+      4,
+    );
+  });
+
+  it("restores partial and ready assembly identities without replay or a second ready transport", async () => {
+    const partialHarness = createRuntimeHarness();
+    startProject(partialHarness.runtime);
+    confirmProject(partialHarness.runtime);
+    partialHarness.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    partialHarness.runtime.dispatch({ type: "ADVANCE_SEEDED_WORK" });
+    const partial = partialHarness.runtime.getSnapshot().projection;
+    if (partial === null) throw new Error("PARTIAL_PROJECT_MISSING");
+
+    const restoredPartialHarness = createRuntimeHarness({
+      storage: partialHarness.storage,
+    });
+    const partialTransport = new ManualAssemblyTransport();
+    const partialController = componentAssemblyController(
+      restoredPartialHarness.runtime,
+      partialTransport,
+    );
+    const partialRender = render(
+      <AddressEntryExperience
+        runtime={restoredPartialHarness.runtime}
+        lookup={new ImmediateLookup()}
+        assemblyController={partialController}
+        onNavigate={vi.fn()}
+        directProjectEntry
+      />,
+    );
+    expect(
+      await screen.findByText(
+        "This project was restored from this browser session.",
+      ),
+    ).toBeVisible();
+    await waitFor(() => expect(partialTransport.opens).toHaveLength(1));
+    expect(partialTransport.opens[0]?.afterCursor).toBe(partial.latest_cursor);
+    expect(
+      partialRender.container.querySelector("[data-panel-id]"),
+    ).toHaveAttribute("data-panel-id", partial.panel_objects[0]?.panel_id);
+    expect(
+      partialRender.container.querySelector('[data-scene-shell="persistent"]'),
+    ).toHaveAttribute("data-scene-id", partial.scene?.scene_id);
+    partialRender.unmount();
+
+    const ready = advanceProjectToReady(partialHarness.runtime);
+    const restoredReadyHarness = createRuntimeHarness({
+      storage: partialHarness.storage,
+    });
+    const readyTransport = new ManualAssemblyTransport();
+    const readyController = componentAssemblyController(
+      restoredReadyHarness.runtime,
+      readyTransport,
+    );
+    const readyRender = render(
+      <AddressEntryExperience
+        runtime={restoredReadyHarness.runtime}
+        lookup={new ImmediateLookup()}
+        assemblyController={readyController}
+        onNavigate={vi.fn()}
+        directProjectEntry
+      />,
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your starting demo model is ready.",
+      }),
+    ).toBeVisible();
+    expect(readyTransport.opens).toHaveLength(0);
+    expect(readyController.getSnapshot().phase).toBe("ready");
+    expect(
+      [...readyRender.container.querySelectorAll("[data-panel-id]")].map(
+        (panel) => panel.getAttribute("data-panel-id"),
+      ),
+    ).toEqual(ready.panel_objects.map((panel) => panel.panel_id));
+    expect(
+      readyRender.container.querySelector('[data-scene-shell="persistent"]'),
+    ).toHaveAttribute("data-scene-id", ready.scene?.scene_id);
   });
 
   it("restores a valid direct confirmation entry with identical candidate identities and no rewrite", async () => {

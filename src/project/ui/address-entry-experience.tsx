@@ -44,6 +44,7 @@ import {
   suggestSeededAddress,
 } from "../adapters/seeded-address-lookup";
 import { SessionProjectRuntime } from "../application/session-project-runtime";
+import type { LiveRoofAssemblyController } from "../application/live-roof-assembly";
 import { PreAccountRuntime } from "./pre-account-runtime";
 import { useSharedSessionProjectRuntime } from "./session-project-runtime-provider";
 
@@ -79,6 +80,7 @@ export interface AddressEntryExperienceProps {
   lookup?: SeededAddressLookup;
   onNavigate: (href: string) => void;
   directProjectEntry?: boolean;
+  assemblyController?: LiveRoofAssemblyController;
 }
 
 function SolarMark() {
@@ -112,6 +114,7 @@ export function AddressEntryExperience({
   lookup,
   onNavigate,
   directProjectEntry = false,
+  assemblyController,
 }: AddressEntryExperienceProps) {
   const [activeRuntime] = useState(
     () => runtime ?? createBrowserSessionProjectRuntime(),
@@ -312,7 +315,11 @@ export function AddressEntryExperience({
         data-product-surface="s1-s2-pre-account-runtime"
         data-runtime-contract-version="1"
       >
-        <PreAccountRuntime runtime={activeRuntime} onNavigate={onNavigate} />
+        <PreAccountRuntime
+          runtime={activeRuntime}
+          assemblyController={assemblyController}
+          onNavigate={onNavigate}
+        />
       </main>
     );
   }

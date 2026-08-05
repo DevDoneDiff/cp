@@ -1,17 +1,20 @@
 /**
  * MODULE: src/project/ui/pre-account-runtime.tsx
- * PURPOSE: Hydrate the browser-session runtime and render the approved S2 property-confirmation composition plus its minimal semantic assembly handoff.
+ * PURPOSE: Hydrate and render the continuous S2 confirmation and event-driven live roof assembly inside one scene shell.
  * PUBLIC API / ENTRYPOINTS:
- *   - PreAccountRuntime: client subscription, restore, focus, confirmation/correction commands, fallback, and state semantics.
+ *   - PreAccountRuntime: restore, focus, confirmation/correction, transport lifecycle, retry, and S2 projection semantics.
  * INVARIANTS:
  *   - [INV-ONE-RUNTIME-SHELL] One application-runtime instance owns projection state for the mounted pre-account environment.
- *   - [INV-NO-S3-SURFACE] The shell renders no assembly progression, S3 controls, pricing, account, or later state.
+ *   - [INV-NO-S3-SURFACE] Minimum usability remains inside S2 and renders no S3 controls, pricing, account, or later state.
+ *   - [INV-ONE-ASSEMBLY-CONTROLLER] One controller follows the runtime from accepted confirmation through ready or bounded exhaustion.
  * BOUNDARIES:
- *   - Confirmation and correction dispatch existing canonical commands; this UI never owns state, persistence, work events, transport, or modeled facts.
+ *   - UI and transport status project accepted runtime state; neither can create facts, panels, progress, or readiness.
  * RELATED:
  *   - src/project/application/session-project-runtime.ts: owns commands and canonical state publication.
- *   - src/project/ui/persistent-scene-shell.tsx: remains mounted through confirmation and the semantic assembly handoff.
+ *   - src/project/ui/persistent-scene-shell.tsx: remains mounted through every accepted assembly event and readiness.
  *   - src/project/ui/address-entry-experience.tsx: owns client navigation into and out of this persistent shell.
+ * EVENTS:
+ *   - Announces accepted assembly milestones, object-count progress, transport fallback/exhaustion, restoration, and readiness.
  */
 "use client";
 
@@ -21,7 +24,10 @@ import {
   type RuntimeErrorCode,
   SessionProjectRuntime,
 } from "../application/session-project-runtime";
+import type { LiveRoofAssemblyController } from "../application/live-roof-assembly";
+import { createBrowserLiveRoofAssemblyController } from "../adapters/browser-assembly-transport";
 import { createBrowserSessionProjectRuntime } from "../adapters/browser-runtime";
+import { SEEDED_DEMO_FIXTURE } from "../adapters/seeded-demo";
 import {
   PersistentSceneShell,
   PROPERTY_SCENE_ASSET,
@@ -44,6 +50,7 @@ const ERROR_COPY: Record<RuntimeErrorCode, string> = {
 
 export interface PreAccountRuntimeProps {
   runtime?: SessionProjectRuntime;
+  assemblyController?: LiveRoofAssemblyController;
   onNavigate?: (href: string) => void;
 }
 
@@ -61,6 +68,7 @@ function SolarWordmark() {
 
 export function PreAccountRuntime({
   runtime,
+  assemblyController,
   onNavigate = () => undefined,
 }: PreAccountRuntimeProps) {
   // @ah INV-ONE-RUNTIME-SHELL
@@ -68,8 +76,19 @@ export function PreAccountRuntime({
     () => runtime ?? createBrowserSessionProjectRuntime(),
   );
   const [snapshot, setSnapshot] = useState(activeRuntime.getSnapshot);
+  // @ah INV-ONE-ASSEMBLY-CONTROLLER
+  const [activeAssemblyController] = useState(
+    () =>
+      assemblyController ??
+      createBrowserLiveRoofAssemblyController(activeRuntime),
+  );
+  const [assemblySnapshot, setAssemblySnapshot] = useState(
+    activeAssemblyController.getSnapshot,
+  );
   const [assetFailed, setAssetFailed] = useState(false);
   const stateHeadingRef = useRef<HTMLHeadingElement>(null);
+  const focusReadyAfterRetryRef = useRef(false);
+  const minimumUsableReady = snapshot.projection?.minimum_usable_ready ?? false;
 
   useEffect(() => {
     const unsubscribe = activeRuntime.subscribe(() => {
@@ -82,10 +101,33 @@ export function PreAccountRuntime({
   }, [activeRuntime]);
 
   useEffect(() => {
+    const unsubscribe = activeAssemblyController.subscribe(() => {
+      setAssemblySnapshot(activeAssemblyController.getSnapshot());
+    });
+    return () => {
+      unsubscribe();
+      activeAssemblyController.stop();
+    };
+  }, [activeAssemblyController]);
+
+  useEffect(() => {
+    if (snapshot.visible_state === "LIVE_ROOF_ASSEMBLY") {
+      activeAssemblyController.start();
+    }
+  }, [activeAssemblyController, snapshot.visible_state]);
+
+  useEffect(() => {
     if (snapshot.visible_state !== "ADDRESS_ENTRY") {
       stateHeadingRef.current?.focus();
     }
   }, [snapshot.visible_state]);
+
+  useEffect(() => {
+    if (focusReadyAfterRetryRef.current && minimumUsableReady) {
+      focusReadyAfterRetryRef.current = false;
+      stateHeadingRef.current?.focus();
+    }
+  }, [minimumUsableReady]);
 
   const projection = snapshot.projection;
   if (projection?.property === null || projection?.scene === null) return null;
@@ -93,6 +135,20 @@ export function PreAccountRuntime({
 
   const normalizedAddress = projection.normalized_address;
   const isConfirmation = snapshot.visible_state === "PROPERTY_CONFIRMATION";
+  const targetPanelCount = SEEDED_DEMO_FIXTURE.panels.length;
+  const panelCount = projection.panel_objects.length;
+  const roofReady = projection.roof_surfaces.length > 0;
+  const energyReady = projection.energy_model !== null;
+  const ready = minimumUsableReady;
+  const assemblyStage = !roofReady
+    ? "Mapping modeled roof geometry"
+    : panelCount < targetPanelCount
+      ? `Placing panel ${panelCount + 1} of ${targetPanelCount}`
+      : !energyReady
+        ? "Preparing the modeled energy facts"
+        : !ready
+          ? "Checking the minimum usable model"
+          : "Your starting demo model is ready";
 
   const confirmProperty = () => {
     activeRuntime.dispatch({ type: "CONFIRM_PROPERTY" });
@@ -103,11 +159,19 @@ export function PreAccountRuntime({
     if (result.ok) onNavigate("/");
   };
 
+  const retryAssembly = () => {
+    focusReadyAfterRetryRef.current = true;
+    activeAssemblyController.retry();
+  };
+
   return (
     <section
       className="s2-frame"
       aria-labelledby="s2-state-title"
       data-visible-state={snapshot.visible_state}
+      data-assembly-phase={assemblySnapshot.phase}
+      data-panel-count={panelCount}
+      data-minimum-usable-ready={ready}
     >
       <header className="s2-header">
         <SolarWordmark />
@@ -139,13 +203,24 @@ export function PreAccountRuntime({
         ) : null}
       </div>
 
-      <div className="s2-stage">
-        <section className="s2-decision" aria-labelledby="s2-state-title">
+      <div className={`s2-stage${isConfirmation ? "" : " is-assembly"}`}>
+        <section
+          className={`s2-decision${isConfirmation ? "" : " is-assembly"}`}
+          aria-labelledby="s2-state-title"
+        >
           <p className="s2-eyebrow">
-            {isConfirmation ? "Property confirmation" : "Confirmation recorded"}
+            {isConfirmation
+              ? "Property confirmation"
+              : ready
+                ? "Minimum usable ready"
+                : "Live roof assembly"}
           </p>
           <h1 id="s2-state-title" ref={stateHeadingRef} tabIndex={-1}>
-            {isConfirmation ? "Is this your property?" : "Property confirmed."}
+            {isConfirmation
+              ? "Is this your property?"
+              : ready
+                ? "Your starting demo model is ready."
+                : "Building your solar model..."}
           </h1>
           {isConfirmation ? (
             <>
@@ -183,16 +258,65 @@ export function PreAccountRuntime({
           ) : (
             <>
               <p className="s2-lead">
-                This demo property is now tied to the same browser-session
-                project.
+                The confirmed property is becoming a usable preliminary model
+                through accepted seeded work events.
               </p>
               <p className="s2-supporting">
-                Roof analysis is pending and has not started yet.
+                Facts and stable panel objects appear only when their modeled
+                work is accepted.
               </p>
               {/* @ah INV-NO-S3-SURFACE */}
-              <p className="s2-confirmed-status" role="status">
-                Confirmation recorded
-              </p>
+              <section
+                className="s2-assembly-work"
+                aria-labelledby="live-assembly-title"
+              >
+                <h2 id="live-assembly-title">Live assembly</h2>
+                <ol>
+                  <li data-stage-ready="true">
+                    <span className="s2-work-mark" aria-hidden="true" />
+                    <span>Property confirmed</span>
+                    <strong>Ready</strong>
+                  </li>
+                  <li data-stage-ready={roofReady}>
+                    <span className="s2-work-mark" aria-hidden="true" />
+                    <span>Roof geometry</span>
+                    <strong>{roofReady ? "Ready" : "Pending"}</strong>
+                  </li>
+                  <li data-stage-ready={panelCount === targetPanelCount}>
+                    <span className="s2-work-mark" aria-hidden="true" />
+                    <span>Panels placed</span>
+                    <strong>
+                      {panelCount} / {targetPanelCount}
+                    </strong>
+                  </li>
+                  <li data-stage-ready={energyReady}>
+                    <span className="s2-work-mark" aria-hidden="true" />
+                    <span>Energy model</span>
+                    <strong>{energyReady ? "Ready" : "Waiting"}</strong>
+                  </li>
+                </ol>
+                <progress
+                  max={targetPanelCount}
+                  value={panelCount}
+                  aria-label={`${panelCount} of ${targetPanelCount} stable panel objects placed`}
+                />
+                <p>Progress is based on accepted panel objects.</p>
+              </section>
+
+              {assemblySnapshot.phase === "exhausted" ? (
+                <div className="s2-assembly-recovery" role="alert">
+                  <strong>Live assembly paused</strong>
+                  <p>
+                    Updates could not continue within the bounded retry window.
+                    Your confirmed property and {panelCount} accepted panel
+                    {panelCount === 1 ? " is" : "s are"} still safe in this
+                    browser session.
+                  </p>
+                  <button type="button" onClick={retryAssembly}>
+                    Retry assembly
+                  </button>
+                </div>
+              ) : null}
             </>
           )}
         </section>
@@ -203,15 +327,44 @@ export function PreAccountRuntime({
           onAssetError={() => setAssetFailed(true)}
         />
 
-        <aside className="s2-details" aria-labelledby="property-details-title">
-          <h2 id="property-details-title">Property details</h2>
-          <div
-            className={`s2-details-thumbnail${assetFailed ? " is-unavailable" : ""}`}
-            aria-hidden="true"
-            data-scene-asset-id={PROPERTY_SCENE_ASSET.id}
-          >
-            {assetFailed ? <span>Preview unavailable</span> : null}
-          </div>
+        {!isConfirmation ? (
+          <>
+            <p className={`s2-assembly-badge${ready ? " is-ready" : ""}`}>
+              <span className="s2-assembly-pulse" aria-hidden="true" />
+              <span>{assemblyStage}</span>
+              {panelCount > 0 && !ready ? (
+                <strong>
+                  {panelCount} / {targetPanelCount}
+                </strong>
+              ) : null}
+            </p>
+            <p className="s2-continuity-note">
+              Panels appear only as stable objects. The property scene and
+              camera stay in place.
+            </p>
+          </>
+        ) : null}
+
+        <aside
+          className={`s2-details${isConfirmation ? "" : " is-assembly"}`}
+          aria-labelledby="property-details-title"
+        >
+          <h2 id="property-details-title">
+            {isConfirmation ? "Property details" : "Your starting demo model"}
+          </h2>
+          {isConfirmation ? (
+            <div
+              className={`s2-details-thumbnail${assetFailed ? " is-unavailable" : ""}`}
+              aria-hidden="true"
+              data-scene-asset-id={PROPERTY_SCENE_ASSET.id}
+            >
+              {assetFailed ? <span>Preview unavailable</span> : null}
+            </div>
+          ) : (
+            <p className={`s2-model-state${ready ? " is-ready" : ""}`}>
+              {ready ? "Ready in S2" : "Building in place"}
+            </p>
+          )}
           <p className="s2-property-address">
             <strong>
               {normalizedAddress?.street_line ??
@@ -225,29 +378,91 @@ export function PreAccountRuntime({
             ) : null}
           </p>
           <dl className="s2-source-list">
-            <div>
-              <dt>Imagery source</dt>
-              <dd>Seeded demo imagery</dd>
-            </div>
-            <div>
-              <dt>Match certainty</dt>
-              <dd>Demo property match</dd>
-            </div>
-            <div>
-              <dt>Candidate boundary</dt>
-              <dd>Modeled</dd>
-            </div>
+            {isConfirmation ? (
+              <>
+                <div>
+                  <dt>Imagery source</dt>
+                  <dd>Seeded demo imagery</dd>
+                </div>
+                <div>
+                  <dt>Match certainty</dt>
+                  <dd>Demo property match</dd>
+                </div>
+                <div>
+                  <dt>Candidate boundary</dt>
+                  <dd>Modeled</dd>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <dt>Roof surfaces</dt>
+                  <dd>
+                    {roofReady ? projection.roof_surfaces.length : "Pending"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Modeled roof area</dt>
+                  <dd>
+                    {projection.roof_facts
+                      ? `${projection.roof_facts.modeled_roof_area_sq_ft.toLocaleString("en-US")} sq ft`
+                      : "Pending"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Panel objects</dt>
+                  <dd>
+                    {panelCount} / {targetPanelCount}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Modeled production</dt>
+                  <dd>
+                    {projection.energy_model
+                      ? `${projection.energy_model.modeled_annual_kwh.toLocaleString("en-US")} kWh/yr`
+                      : "Pending"}
+                  </dd>
+                </div>
+              </>
+            )}
           </dl>
           <p className="s2-details-note">
             {isConfirmation
               ? "Confirm or correct this match before roof analysis begins."
-              : "Confirmation is saved. Roof analysis remains pending."}
+              : ready
+                ? "The minimum usable demo model is saved in this browser session. It remains inside S2."
+                : assemblySnapshot.phase === "polling"
+                  ? "The event stream paused. Bounded polling is continuing from your last accepted update."
+                  : "Facts remain pending until their corresponding modeled work event is accepted."}
           </p>
         </aside>
 
-        <section className="s2-known" aria-labelledby="known-state-title">
-          <h2 id="known-state-title">What we know so far</h2>
+        <section
+          className={`s2-known${isConfirmation ? "" : " is-assembly"}`}
+          aria-labelledby="known-state-title"
+        >
+          <h2 id="known-state-title">
+            {isConfirmation
+              ? "What we know so far"
+              : "Facts appear as the model becomes ready"}
+          </h2>
           <ul>
+            {!isConfirmation ? (
+              <li>
+                <span
+                  className={`s2-status-mark${roofReady ? " is-known" : " is-pending"}`}
+                  aria-hidden="true"
+                />
+                <span>
+                  <strong>Roof surfaces</strong>
+                  <small>
+                    {roofReady
+                      ? `${projection.roof_surfaces.length} modeled surfaces`
+                      : "Pending roof event"}
+                  </small>
+                </span>
+              </li>
+            ) : null}
             <li>
               <span className="s2-status-mark is-known" aria-hidden="true" />
               <span>
@@ -269,7 +484,7 @@ export function PreAccountRuntime({
             <li>
               <span className="s2-status-mark is-known" aria-hidden="true" />
               <span>
-                <strong>Scene</strong>
+                <strong>{isConfirmation ? "Scene" : "Imagery source"}</strong>
                 <small>
                   {assetFailed
                     ? "Image unavailable; details retained"
@@ -280,17 +495,39 @@ export function PreAccountRuntime({
             <li>
               <span className="s2-status-mark is-pending" aria-hidden="true" />
               <span>
-                <strong>Roof analysis</strong>
+                <strong>
+                  {isConfirmation ? "Roof analysis" : "Panel objects"}
+                </strong>
                 <small>
-                  {isConfirmation ? "Pending confirmation" : "Pending"}
+                  {isConfirmation
+                    ? "Pending confirmation"
+                    : `${panelCount} of ${targetPanelCount} accepted`}
                 </small>
               </span>
             </li>
+            {!isConfirmation ? (
+              <li>
+                <span
+                  className={`s2-status-mark${energyReady ? " is-known" : " is-pending"}`}
+                  aria-hidden="true"
+                />
+                <span>
+                  <strong>Modeled production</strong>
+                  <small>
+                    {projection.energy_model
+                      ? `${projection.energy_model.modeled_annual_kwh.toLocaleString("en-US")} kWh/yr`
+                      : "Pending energy event"}
+                  </small>
+                </span>
+              </li>
+            ) : null}
           </ul>
           <p className="s2-known-note">
             {isConfirmation
               ? "Confirmation keeps this likely match tied to the same evolving project."
-              : "The same property scene and project context will remain in place when analysis begins."}
+              : ready
+                ? "Minimum usable readiness is recorded. No S3 controls or later content are rendered."
+                : "Seeded demo imagery and modeled facts remain source-labeled throughout assembly."}
           </p>
         </section>
       </div>
@@ -298,7 +535,7 @@ export function PreAccountRuntime({
       <p className="visually-hidden" role="status" aria-live="polite">
         {isConfirmation
           ? "Likely property candidate ready for confirmation. Roof analysis is pending."
-          : "Property confirmed. Roof analysis is pending."}
+          : `${assemblyStage}. ${panelCount} of ${targetPanelCount} stable panel objects accepted.${assemblySnapshot.phase === "polling" ? " The event stream paused and bounded polling is active." : ""}${assemblySnapshot.phase === "exhausted" ? " Assembly is paused and can be retried from saved progress." : ""}`}
       </p>
     </section>
   );
