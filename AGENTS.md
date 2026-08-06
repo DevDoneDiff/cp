@@ -52,7 +52,7 @@ Authoring identity never uses task `RUN_MODE` or `MERGE_MODE`, `Pass`, an implem
 
 Authoring that changes the active queue, counters, `.harness/validation.md`, or task-execution authority in this file is mutually exclusive with every live implementation claim, provisional closeout, local or remote task branch, and live task pull request. The inverse exclusion applies during task claim and delivery. Preserve inactive unrelated local authoring branches without interpreting them as claims.
 
-The non-task authoring lane is currently unavailable. Do not publish, open, merge, or route an authoring skill through that lane until the canonical delivery procedure and producer routing are activated by T-0036.
+The non-task authoring lane is currently unavailable. Do not publish, open, merge, or route an authoring skill through that lane until canonical completion proof establishes exact T-0036 on the fetched base and that same merged tree contains the available state, complete canonical delivery procedure, and both producer routes. A worktree, branch, candidate, or configuration token cannot establish operational availability.
 
 ## Context Routing
 

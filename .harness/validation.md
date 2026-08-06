@@ -41,7 +41,7 @@ Each delivery and its autonomous-merge authority require explicit user instructi
 
 Before authoring work that changes `.harness/tasks.md`, its counters, this registry, or task-execution authority in `AGENTS.md`, prove there is no active `working` task, provisional closeout, local or remote task branch, or live task pull request. Before task claim or delivery, apply the inverse check to the current non-task branch and every live non-task pull request. Preserve unrelated inactive local authoring branches, but never reinterpret a live conflicting identity as harmless.
 
-`AUTHORING_LANE_STATE` remains `unavailable` until T-0036 activates the canonical proof and delivery procedure and routes the authoring skills to it. While unavailable, do not push an authoring branch, create or update an authoring pull request, merge authoring work, or route an authoring skill through this lane.
+`AUTHORING_LANE_STATE` remains `unavailable` until canonical completion proof establishes exact T-0036 on the fetched `BASE_BRANCH` and that same merged tree contains the available state, complete canonical proof and delivery procedure, and both producer-skill routes. A worktree, branch, candidate, or configuration token is never availability proof. Until the complete merged predicate passes, do not push an authoring branch, create or update an authoring pull request, merge authoring work, or route an authoring skill through this lane.
 
 ## Task Claim and Same-Task Resumption
 
