@@ -1401,3 +1401,41 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0032.md
+
+### [T-0033] Move lesson disposition before closeout
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/precloseout-lesson-disposition
+Traceability: F25f
+Priority: P1
+Depends_on: [T-0030]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Ensure reusable implementation evidence is promoted or explicitly dismissed before closeout forbids ordinary source changes.
+Scope:
+- Add the exact pre-closeout lesson-disposition checkpoint and scratchpad evidence location to the canonical validation procedure.
+Non_goals:
+- Change lesson qualification rules, create completed-task summaries, or retain scratchpads after cleanup.
+Acceptance_criteria:
+- Before provisional closeout, the primary task agent evaluates `.harness/LESSONS.md` promotion criteria.
+- Qualifying evidence is promoted while ordinary task changes are still permitted.
+- When nothing qualifies, the task scratchpad records `none` for lesson disposition.
+- Closeout cannot begin until one of those two outcomes is recorded.
+- Post-merge scratchpad deletion cannot be the first or only lesson-disposition step.
+Indivisibility_rationale:
+- none; the canonical timing checkpoint and scratchpad evidence location are one narrow procedure change.
+Expected_surfaces:
+- `.harness/validation.md` pre-closeout sequence.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0033.md
