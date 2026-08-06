@@ -166,7 +166,7 @@ Brick_id: harness/H1/task-sizing-determinism
 Traceability: F21
 Priority: P1
 Depends_on: [T-0015], [T-0024]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
