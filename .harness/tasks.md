@@ -157,45 +157,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0027] Guard durable authority and implementation latitude
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/spec-authoring-authority-boundary
-Traceability: F16, F22
-Priority: P1
-Depends_on: [T-0012], [T-0014], [T-0026]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Prevent `$spec-authoring` from duplicating durable truth or manufacturing implementation authority from its own acceptance text.
-Scope:
-- Add the durable-authority update stop, independent mechanism-lock basis, circular-authority rejection, and routine implementation-latitude rules.
-Non_goals:
-- Change owner routing, add approval recording, decompose tasks, or define delivery mechanics.
-Acceptance_criteria:
-- A resolved durable product, architecture, design, state, security, schema, or compatibility decision is recorded in its owner before dependent drafting resumes.
-- Missing authority-update permission or an unresolved durable decision blocks drafting rather than being inferred into the spec.
-- A mechanism is locked only by independent durable, safety, security, data, compatibility, public-contract, or unavoidable observable authority.
-- Acceptance text authored in the same spec cannot bootstrap its preferred mechanism into authority.
-- Routine algorithms, data structures, rendering, module boundaries, framework techniques, recovery, and sequencing remain with Codex unless independently constrained.
-- Task decomposition and approval recording remain outside this brick.
-Indivisibility_rationale:
-- none; durable-authority updates and mechanism self-authorization form one independently reviewable trust boundary in spec drafting.
-Expected_surfaces:
-- `.agents/skills/spec-authoring/SKILL.md` decision-boundary, authority-update, acceptance, and implementation-latitude sections.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0027.md
-
 ### [T-0028] Make large-file review responsibility-based
 Type: maintenance
 Bootstrap: false
