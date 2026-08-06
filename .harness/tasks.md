@@ -166,7 +166,7 @@ Brick_id: harness/H1/spec-authoring-authority-boundary
 Traceability: F16, F22
 Priority: P1
 Depends_on: [T-0012], [T-0014], [T-0026]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
