@@ -25,13 +25,14 @@ If visual direction, artifact role, or required UI state is missing, contradicto
 
 - Build: create a new interface or flow.
 - Restyle: change presentation while preserving unrequested behavior and data flow.
-- Review: inspect a running interface, identify visual or interaction defects, correct them, and re-verify.
+- Review: read-only inspection of a running interface and immutable candidate evidence; report observations and blocking findings without modifying the worktree, branch, task state, pull request, or external evidence.
+- Repair: the authorized primary task agent applies accepted corrections, reruns focused proof, and requests a fresh independent Review. A reviewer never enters Repair.
 
 Visual review is part of completion for frontend visual work, not a prose-only critique.
 
 ## Design Intent
 
-Before editing, establish in `.harness/work/<TAG>.md`:
+Before Build, Restyle, or Repair editing, establish in `.harness/work/<TAG>.md`:
 
 - state or flow purpose
 - primary user action
@@ -83,7 +84,7 @@ MUST NOT:
 
 ## Browser Review
 
-Use available browser tooling against the running application.
+When `frontend-visual` is assigned, use available browser tooling against the running application.
 
 Inspect:
 
@@ -97,31 +98,31 @@ Inspect:
 - fidelity to each assigned visual reference
 - compliance with shared design rules
 
-For each defect:
-
-1. identify the visible cause
-2. make the smallest coherent correction
-3. run the narrowest applicable frontend test
-4. refresh and inspect again
+For each defect, the read-only reviewer identifies the visible cause, records exact evidence, and reports whether it blocks acceptance. The reviewer does not correct it. The authorized primary task agent then enters Repair, makes the smallest coherent correction, runs the narrowest assigned frontend proof, reruns every affected assigned set, and requests a fresh read-only Review of the new exact candidate SHA. Prior review does not carry forward across a content change.
 
 If browser tooling or the runnable environment is unavailable, `frontend-visual` cannot pass.
+
+Browser access is required only when `frontend-visual` is assigned to the active task. Documentation-only changes to this skill do not require a product browser run.
 
 ## Validation
 
 The active task and `.harness/validation.md` own required proof. Frontend work commonly requires:
 
-- `frontend-unit`
 - `frontend-component`
 - `frontend-e2e`
 - `frontend-visual`
 - `baseline`
 - `agent-review`
 
+Use only validation-set names registered in `.harness/validation.md`; add `security`, `security-review`, or `smoke` only when task assignment and the registry require them. The canonical independent-review gate owns reviewer identity, read-only independence, exact candidate SHA, durable evidence, blocking-finding disposition, repair invalidation, and fresh-review requirements. This skill adds frontend-specific observations and does not define a second review contract.
+
 Use `$code-change-verification` for final proof, Git delivery, review, and CI.
 
 ## Completion Output
 
-Record in the scratchpad and final task result:
+Read-only Review reports the reviewer identity, exact candidate SHA, routes or components inspected, exact references, viewports, states, observed evidence, and blocking findings or `none`. It makes no repair claim.
+
+The authorized primary task agent records in the scratchpad and final task result:
 
 - routes or components reviewed
 - exact references inspected
@@ -129,6 +130,7 @@ Record in the scratchpad and final task result:
 - states exercised
 - tests run
 - visual defects corrected
+- fresh review result after each repair
 - unresolved visual or accessibility blockers
 
 Do not create a separate design-review report unless the active spec requires one.
