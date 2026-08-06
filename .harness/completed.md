@@ -1272,3 +1272,49 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0029.md
+
+### [T-0030] Canonicalize provisional closeout and completion
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/provisional-closeout-completion
+Traceability: F3, F5, F9, F25d
+Priority: P0
+Depends_on: [T-0011], [T-0016], [T-0017], [T-0029]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Establish one atomic active-to-archive closeout and one canonical durable completion and dependency proof.
+Scope:
+- Align candidate state, two-store provisional transfer, manual waiting and withdrawal, reversal, post-migration completion, dependency satisfaction, and historical seed compatibility across their exact owners.
+Non_goals:
+- Implement stale-base refresh, ambiguous remote recovery, post-merge cleanup, or the non-task authoring lane.
+Acceptance_criteria:
+- Candidate delivery keeps the active task `Status: working` and `Pass: false`.
+- Closeout changes only `.harness/tasks.md` and `.harness/completed.md`, appends the final passed block verbatim, and removes the same active block atomically.
+- Unmerged `Status: passed` and `Pass: true` are explicitly provisional and never advance the queue.
+- Manual mode preserves the claim while awaiting guarded merge; durable PR evidence records read-only cases for explicit pre-merge withdrawal, exact reversal, and failed closeout.
+- Post-H1 completion and dependency satisfaction require the same tagged merged PR, exact merge SHA, archive introduction, active absence, and remote-branch proof.
+- T-0001 through T-0007 use only the documented seed exception and are not represented as having executed the new procedure.
+- Reversal restores only the affected task with `Pass: false`, removes only its provisional archive entry, and preserves every other block byte-for-byte.
+Indivisibility_rationale:
+- Active removal, archive addition, provisional semantics, reversal, and completion/dependency meaning are one atomic state model; splitting them would make the two stores or dependency predicate disagree.
+Expected_surfaces:
+- `AGENTS.md` high-level completion semantics.
+- `.harness/tasks.md` candidate, completion, and dependency rules.
+- `.harness/completed.md` header only.
+- `.harness/validation.md` closeout, manual-mode, proof, and reversal procedure.
+- `scripts/validation/harness-h1-batch-transition.mjs` and its task-transition integration for the exact T-0030 store-header authority update.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+- security
+- security-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0030.md
