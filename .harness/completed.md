@@ -407,3 +407,46 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0008.md
+
+### [T-0009] Define forward contract identity and routing
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/forward-contract-routing
+Traceability: F14, F15, F17, F25b, F25c
+Priority: P0
+Depends_on: none
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Establish one deterministic forward schema for spec identity, ownership, lineage, filenames, artifacts, and terminal-state routing.
+Scope:
+- Define owner-scoped stable spec IDs, `Owning authority`, state/harness/repository inclusion tests, bounded lineage, exact repository-relative paths, owner-local filenames, canonical terminal-state routing, and the active `visual | technical | none` vocabulary.
+Non_goals:
+- Record legacy path mappings, change authoring workflow, migrate physical artifacts, or edit historical approved specs.
+Acceptance_criteria:
+- State outcomes route to the exact `sNN-state.md`, harness outcomes to `AGENTS.md`, and repository outcomes to `docs/REPOSITORY_POLICY.md` through the H1 inclusion test.
+- The spec template exposes stable spec ID, `Owning authority`, `Amends`, `Supersedes`, and exact affected-state and dependency paths.
+- Contract and state templates use exact repository-relative artifact paths and only `visual`, `technical`, or `none`.
+- One owner-local filename rule maps deterministically to stable identity without making physical path the identity.
+- `docs/contracts/README.md` is the sole full owner of terminal-state routing; other contract documents point to it without restating an independent rule.
+- A concrete `sNN-state.md` is either an approved state contract or absent; unresolved template placeholders at an authority path are forbidden and block dependent work.
+- Templates retain structure only and do not acquire authoring, approval, decomposition, or queue workflow.
+Indivisibility_rationale:
+- The routing index and its templates form one published schema; landing only one side would make valid authoring output contradict its canonical structure.
+Expected_surfaces:
+- `docs/contracts/README.md`.
+- `docs/contracts/SPEC_TEMPLATE.md`.
+- `docs/contracts/states/README.md`.
+- `docs/contracts/states/STATE_TEMPLATE.md`.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0009.md
