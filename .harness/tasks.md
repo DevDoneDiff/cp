@@ -166,7 +166,7 @@ Brick_id: harness/H1/baseline-harness-integrity
 Traceability: F4, F25h
 Priority: P0
 Depends_on: [T-0017], [T-0018], [T-0019], [T-0020], [T-0021], [T-0022]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
