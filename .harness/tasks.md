@@ -166,7 +166,7 @@ Brick_id: harness/H1/ambiguous-remote-recovery
 Traceability: F6
 Priority: P0
 Depends_on: [T-0031]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
