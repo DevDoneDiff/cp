@@ -156,3 +156,45 @@ Scratchpad: .harness/work/T-0001.md
 For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state the preserved behavioral contract in `Acceptance_criteria`.
 
 ## Active Queue
+
+### [T-0039] Align frontend artifact authority
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/frontend-artifact-authority
+Traceability: F18
+Priority: P1
+Depends_on: [T-0014]
+Status: working
+Ready: true
+Pass: false
+Objective:
+- Make the frontend skill consume the canonical non-overlapping state, visual, technical, and implementation-spec authority model.
+Scope:
+- Align exact visual authority, state-specific behavior and accessibility, shared product and design truth, adopted technical depictions, and explicit compatible appearance departures.
+Non_goals:
+- Change product UI, alter any artifact, perform visual review, or define new contract-routing rules.
+Acceptance_criteria:
+- Exact `visual-*.png` artifacts own approved appearance and do not independently own behavior, accessibility, truthful content, or product authority.
+- `docs/PRODUCT.md` owns shared product meaning and truth, and `docs/DESIGN.md` owns shared experience and accessibility rules.
+- The exact `sNN-state.md` owns durable state-specific behavior, semantic content meaning, accessibility, and authority.
+- A `technical-*.png` owns only a process depiction explicitly adopted by authoritative prose and otherwise remains guidance.
+- An approved implementation spec may own an explicit appearance departure only for its collective outcome and only when compatible with governing authorities.
+- The skill routes schema questions to `docs/contracts/README.md` without restating an independent artifact taxonomy.
+Indivisibility_rationale:
+- none; this task changes only the frontend skill's consumption of one already-approved authority model.
+Expected_surfaces:
+- `.agents/skills/frontend-design/SKILL.md` authority and reference-artifact sections.
+- `scripts/validation/harness-task-transitions.mjs` final-empty active-store newline normalization.
+- `scripts/validation/harness-h1-batch-transition.mjs` distinct final-batch and in-flight authority-prefix identities.
+- `tests/unit/harness-integrity.test.ts` focused final-empty closeout and H1 batch fixtures.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0039.md
