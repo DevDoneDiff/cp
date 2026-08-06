@@ -146,9 +146,9 @@ Review the complete task diff against `BASE_BRANCH` for:
 - security, privacy, auth, and trust boundaries;
 - data integrity, migration, rollback, and compatibility;
 - architectural boundaries and unnecessary complexity;
-- files with multiple primary responsibilities;
-- hand-authored runtime source above 250 nonblank lines without a documented split evaluation;
-- hand-authored runtime source above 350 nonblank lines without an accepted cohesion rationale;
+- files with mixed layers, multiple or independently evolving reasons to change, reversed dependency direction, or obscured proof boundaries;
+- hand-authored runtime source above 250 nonblank lines without a documented primary-responsibility and reason-to-change evaluation;
+- hand-authored runtime source above 350 nonblank lines without explicit independent review escalation and an accepted cohesion or proof-quality rationale when it remains large;
 - error handling, recovery, observability, and concurrency;
 - missing or weakened tests;
 - required visual fidelity.

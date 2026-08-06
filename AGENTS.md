@@ -176,9 +176,10 @@ MUST:
 
 File responsibility checks:
 
-- before expanding a hand-authored runtime source file beyond roughly 250 nonblank lines, evaluate whether it contains more than one responsibility and record the conclusion in the scratchpad;
-- a hand-authored runtime source file above 350 nonblank lines blocks completion unless it is predominantly declarative or generated, splitting would reduce cohesion, and independent review accepts the written rationale;
-- line count never justifies meaningless fragmentation; responsibility and change boundaries control.
+- when an active task changes a hand-authored runtime source file above 250 nonblank lines, document its primary responsibility, main reason to change, mixed or independently evolving responsibilities, dependency direction, and proof boundaries in the scratchpad;
+- a hand-authored runtime source file above 350 nonblank lines requires explicit independent review escalation of that written analysis;
+- a cohesive imperative file may remain above 350 when independent review accepts that it has one primary responsibility and splitting would reduce cohesion or proof quality; declarative or generated content may support the analysis but is never required for acceptance;
+- line count alone never requires a split and never justifies meaningless fragmentation or unrelated responsibility accumulation; responsibility and change boundaries control.
 
 MUST NOT:
 
@@ -201,7 +202,7 @@ Review for:
 - security, privacy, authorization, and trust-boundary regressions;
 - data integrity, migrations, rollback, and compatibility;
 - architectural boundary violations and unnecessary complexity;
-- files with multiple responsibilities or unjustified size growth;
+- files with mixed layers, multiple or independent reasons to change, reversed dependency direction, obscured proof boundaries, or unjustified size growth;
 - error handling, recovery, observability, and concurrency risk;
 - missing or weakened tests;
 - required visual fidelity.
