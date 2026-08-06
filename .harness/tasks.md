@@ -166,7 +166,7 @@ Brick_id: harness/H1/precloseout-lesson-disposition
 Traceability: F25f
 Priority: P1
 Depends_on: [T-0030]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
