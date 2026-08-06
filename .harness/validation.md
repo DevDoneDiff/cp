@@ -15,8 +15,11 @@ PUSH_COMMAND: git push -u origin HEAD
 PR_CREATE_OR_UPDATE_COMMAND: Run gh pr view <HEAD_BRANCH> --repo DevDoneDiff/cp, then an all-state exact-head gh pr list; edit the sole matching open PR with gh pr edit, or create with gh pr create only after authenticated zero-result proof
 PR_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --watch --required
 CI_ENABLED: true
-CI_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --json name,bucket,state,link,workflow; require exact CI / baseline and CI / browser-smoke entries with bucket pass, then reread the matching headRefOid with gh pr view
+CI_STATUS_COMMAND: Bind the sole exact-identity PR and its headRefOid to EXPECTED_HEAD_SHA; run gh pr checks <PR> --repo DevDoneDiff/cp --json name,bucket,state,link,workflow; require the exact CI / baseline and CI / browser-smoke names with bucket pass and no missing, duplicate, conflicting, or substituted required result; then reread the same PR identity and unchanged headRefOid
+EXACT_HEAD_CI_PROCEDURE: Require the configured-repository head and base identities, remote branch SHA, PR headRefOid, EXPECTED_HEAD_SHA, both exact required check results, and the post-query PR headRefOid readback to describe one unchanged closeout head; record the check identities and links
+PRE_MERGE_BASE_REFRESH_PROCEDURE: Immediately before either manual or autonomous merge, run git fetch --prune origin without changing the working tree or current branch; require the exact fetched origin/BASE_BRANCH SHA to be an ancestor of EXPECTED_HEAD_SHA, require the exact remote task branch and sole PR headRefOid still equal EXPECTED_HEAD_SHA, and repeat complete non-force redelivery if the fetched base advanced
 MERGE_COMMAND: gh pr merge <PR> --repo DevDoneDiff/cp --squash --delete-branch --match-head-commit <EXPECTED_HEAD_SHA> --subject "<TASK_TAG> <TITLE>"
+MERGE_READBACK_PROCEDURE: Fetch origin/main, reread the same PR as MERGED, bind its base/head identities and reported mergeCommit OID, require that exact OID reachable from fetched origin/main with the tagged subject and exact first-parent archive introduction plus active absence, then synchronize local main by fast-forward only
 POST_MERGE_CLEANUP_PROCEDURE: After successful guarded merge, fetch and prune; check out and fast-forward BASE_BRANCH; require exact local and remote base SHA equality, clean state, task-tag history proof, merged pull-request proof, and remote task-branch absence; attempt ordinary local branch deletion; permit exact-target force deletion only when squash ancestry alone blocks ordinary deletion
 AGENT_REVIEW_PROCEDURE: dedicated read-only Codex review of the exact candidate-content SHA against BASE_BRANCH
 SECURITY_REVIEW_PROCEDURE: dedicated read-only security review of the exact security-sensitive candidate-content SHA against BASE_BRANCH
@@ -64,6 +67,8 @@ The eventual pull request records a read-only resumption procedure case with the
 `pnpm validate` is the complete local baseline. Its deterministic order is toolchain, formatting, lint, strict typecheck, annotation structure, network-free harness integrity, security, coverage tests, and production build. Harness integrity proves local active/archive structure and accepts one legal provisional closeout; it does not query GitHub or claim that an unmerged task is complete.
 
 `CI / baseline` checks out the exact pull-request head, or the pushed branch ref, with three task-store generations before running the same command. This preserves local transition semantics instead of validating GitHub's synthetic pull-request merge commit. `CI / browser-smoke` retains its independent checkout and browser behavior.
+
+Remote CI is accepted only through `EXACT_HEAD_CI_PROCEDURE`. Check-name prefix matching, a successful result from another workflow or SHA, a stale pre-query result, a missing configured check, a conflicting duplicate, or a PR-head change during the query fails the gate. Repository protection readback must separately show that its required-check set is exactly `CI / baseline` and `CI / browser-smoke`; other informational checks do not substitute for either required identity.
 
 One compatibility path exists only for this authorized H1 batch delivery: when configured `main` has exact parent `5d515d9f8224ed607219fd5f29d0f20305fdcc16`, structural validation may accept the single exact passed transform of the original queued T-0008 through T-0039 stores, including only truthful append-only `Expected_surfaces` expansions made while a task was working. The parent revision, seed-only archive, exact tag order, H1 source identity, queued state, canonical final store prefixes, every unchanged pre-existing surface entry, every other task byte, complete remaining active store, and complete appended archive must all match. This exception does not apply to a pull-request branch, another revision, a subset or superset, removed or rewritten surfaces, other modified task content, future tasks, reversal, or ordinary closeout.
 
@@ -208,7 +213,7 @@ After the archived entry reaches configured base-branch history, it is immutable
 For every post-H1 task, completion and dependency satisfaction are the same predicate. From authenticated GitHub and fetched configured-base readback, prove all of the following refer to one identity:
 
 1. exactly one pull request for the exact configured-repository task branch is merged into `BASE_BRANCH`;
-2. its reported merge commit OID is the exact fetched configured-base commit being evaluated and is reachable from `origin/BASE_BRANCH`;
+2. its reported merge commit OID identifies the exact fetched commit being evaluated and is reachable from `origin/BASE_BRANCH`;
 3. that exact merge commit subject preserves the task tag;
 4. compared with its first parent, that merge introduces the task's exact final archived block with `Status: passed` and `Pass: true`;
 5. the same merge tree contains no active block for the task tag;
@@ -218,13 +223,29 @@ Tag-only history, archive-only state, active/archive duplication, an unmerged or
 
 T-0001 through T-0007 satisfy dependencies only through the immutable seed provenance and their existing tagged base-branch history. They are never represented as having executed this procedure, and the seed exception cannot apply to any later tag.
 
+## Exact-Head CI, Base Refresh, and Guarded Merge
+
+After provisional closeout and before either manual or autonomous merge:
+
+1. Resolve exactly one pull request in `DevDoneDiff/cp` whose head repository is `DevDoneDiff/cp`, head ref is the exact task branch, base ref is `BASE_BRANCH`, and `headRefOid` equals the remote task-branch SHA and `EXPECTED_HEAD_SHA`. A fork, duplicate, wrong base, mismatched remote branch, or moving PR head fails the identity gate.
+2. Run `EXACT_HEAD_CI_PROCEDURE`. Accept only successful results named exactly `CI / baseline` and `CI / browser-smoke` for that unchanged head. Reread the PR after the checks query and fail if its identity or `headRefOid` changed.
+3. Immediately before merge, run `git fetch --prune origin` without changing the working tree or current branch and record the exact fetched `origin/BASE_BRANCH` SHA. Reread repository protection or ruleset state and require the configured pull-request, linear-history, up-to-date-branch, squash-only, exact-required-check, branch-deletion, force-push, base-deletion, and no-bypass controls, or the already documented procedural equivalent for an unavailable hosting control.
+4. Require the fetched `origin/BASE_BRANCH` SHA to be an ancestor of `EXPECTED_HEAD_SHA`, and reread the exact remote task branch and pull request to require both still equal `EXPECTED_HEAD_SHA`. A stale base, stale head, missing check, wrong identity, or bypass-capable merge path blocks merge.
+5. If the fetched base differs from the base used for the current candidate delivery or is not an ancestor of the closeout head, do not merge. First perform and prove the exact provisional reversal. Then merge the fetched base into the retained task branch with ordinary history-preserving Git, reconcile only the task-authorized result, and commit the active `working`/`Pass: false` state. Never rebase a published task branch, force-push, discard either side, or reuse the stale candidate review. Treat the resulting committed head as a new candidate and repeat complete local validation, exact-SHA reviews, provisional closeout, inheritance proof, non-force push/readback, and exact-head CI.
+6. Repeat the immediate fetch and all freshness checks after any redelivery. Any further base advance restarts step 5; prior green checks never authorize a later head or base.
+7. In manual mode, preserve the proven closeout and stop for the user's merge decision. Once authorized, manual and autonomous delivery both rerun steps 1 through 4 and use only `MERGE_COMMAND`, with the exact closeout SHA, squash mode, tagged subject, branch deletion, and no `--admin` or other bypass.
+8. After the merge attempt has an unambiguous successful result, run `MERGE_READBACK_PROCEDURE`. Require the same PR to report `MERGED`, its reported merge commit OID to be reachable from the freshly fetched configured base, that exact commit's subject to begin with the task tag, its first-parent diff to introduce the exact final archived block while omitting the active block, and the remote task branch to be absent. Fast-forward local `BASE_BRANCH` to the exact fetched remote tip and require equal SHAs and a clean tree. Only the canonical completion predicate may then advance the queue.
+
+The pull request records the exact candidate and closeout SHAs, PR and branch identity, required check names/results/links, reviewed and immediate pre-merge base SHAs, protection readback, any base-advance reversal and complete redelivery, guarded merge invocation, reported merge OID, ancestry and first-parent results, synchronized base SHA, and remote branch absence. Include at least one read-only base-advance procedure case and one completed-merge readback case. T-0032 owns failed or ambiguous remote-command classification and retry behavior.
+
 ## Merge Rules
 
 - never push directly to `BASE_BRANCH`;
 - pull-request and commit titles begin with the task tag;
 - merge preserves the task tag in base-branch Git history;
 - manual merge mode stops at a review-clean, CI-green pull request;
-- autonomous merge mode uses `MERGE_COMMAND` only after every gate passes;
+- manual and autonomous merge use `PRE_MERGE_BASE_REFRESH_PROCEDURE` and `MERGE_COMMAND` only after every exact-head and exact-base gate passes;
+- merge success uses `MERGE_READBACK_PROCEDURE`, never command exit status alone;
 - queue advancement requires the complete canonical completion proof, not tag or archive presence alone.
 
 ## Post-Merge Cleanup
