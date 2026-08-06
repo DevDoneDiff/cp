@@ -166,7 +166,7 @@ Brick_id: harness/H1/exact-sha-review-evidence
 Traceability: F7, F8, F9, F24
 Priority: P0
 Depends_on: [T-0008], [T-0017], [T-0028]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
