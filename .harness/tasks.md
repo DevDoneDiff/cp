@@ -166,7 +166,7 @@ Brick_id: harness/H1/status-only-approval-recording
 Traceability: F1
 Priority: P0
 Depends_on: [T-0027], [T-0036]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
