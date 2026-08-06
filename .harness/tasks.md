@@ -166,7 +166,7 @@ Brick_id: harness/H1/frontend-artifact-authority
 Traceability: F18
 Priority: P1
 Depends_on: [T-0014]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
