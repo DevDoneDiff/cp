@@ -199,6 +199,8 @@ Expected_surfaces:
 - scripts/validation/harness-task-graph.mjs
 - scripts/validation/harness-validation-registry.mjs
 - tests/unit/validation-runner.test.ts
+- .harness/LESSONS.md
+- scripts/validation/harness-t0040-recovery-transition.mjs
 Reference_artifacts:
 - none
 Validation_sets:

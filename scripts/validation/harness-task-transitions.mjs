@@ -8,6 +8,7 @@
  *   - Unchanged-archive active growth is limited to the exact task-authoring append transition.
  *   - An empty active queue may normalize only the parser-approved second terminal newline; every non-empty byte remains exact.
  *   - One exact H1 checkpoint may use the separately bounded batch-merge compatibility proof.
+ *   - One exact T-0040 recovery squash may bootstrap the repaired authoring lane.
  * BOUNDARIES:
  *   - Remote completion and dependency satisfaction are deliberately excluded from this local structural validator.
  * RELATED: task stores, task schema, the task-authoring transition owner, and .harness/validation.md lifecycle procedures.
@@ -20,6 +21,7 @@ import {
 } from "./harness-task-schema.mjs";
 import { validateTaskAuthoringAppend } from "./harness-task-authoring-transition.mjs";
 import { validateTaskDependencyGraph } from "./harness-task-graph.mjs";
+import { validateAuthorizedT0040RecoveryMerge } from "./harness-t0040-recovery-transition.mjs";
 import {
   isAuthorizedH1BatchBaseRevision,
   isAuthorizedH1AuthorityUpdate,
@@ -255,6 +257,15 @@ function validateArchiveTransition(
     return;
   }
   if (allowMergedCloseout) {
+    const t0040Recovery = validateAuthorizedT0040RecoveryMerge({
+      current,
+      base,
+      baseRevision: mergedBaseRevision,
+    });
+    if (t0040Recovery.recognized) {
+      errors.push(...t0040Recovery.errors);
+      return;
+    }
     const h1Batch = validateAuthorizedH1BatchMerge({
       current,
       base,

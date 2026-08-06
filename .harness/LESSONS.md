@@ -54,4 +54,25 @@ Status:
 
 ## Active Lessons
 
-No lessons yet.
+### [L-0001] Preserve exact delivery state during a GitHub Actions queue incident
+
+Scope:
+- GitHub Actions exact-head CI and guarded task delivery.
+
+Trigger:
+- A required exact-head run is absent while a superseded run remains queued, or GitHub cancellation endpoints return server errors without applying the requested state change.
+
+Failed approach:
+- On 2026-08-06T11:31:41.2975921-07:00, normal cancellation and force-cancellation of superseded run 31125644078 each used their initial attempt and one retry; all four calls returned HTTP 502 while authenticated readback repeatedly proved the run remained queued with both jobs unstarted.
+
+Evidence:
+- PR #12 remained open at reviewed head `04bac018d911d4d08c49e755ae1120a80a52fccc`; the only visible workflow run remained bound to superseded head `a8727c6fc82bf880da7b81ff2e7ea9e5c1747045`, and no current-head check could be substituted. Exact close/reopen readback preserved the PR identity but did not produce a visible current-head run before the explicit user override.
+
+Durable rule:
+- Preserve the exact task, branch, PR, and review identities; never accept a stale run or repeat an exhausted remote mutation. Continue without required CI only under an explicit user override that is recorded in the task scratchpad and pull-request evidence.
+
+Source task:
+- [T-0040]
+
+Status:
+- active

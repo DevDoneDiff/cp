@@ -20,7 +20,10 @@ import {
   parseTaskStore,
   renderTaskStore,
 } from "../../scripts/validation/harness-task-stores.mjs";
-import { replaceTaskList } from "../../scripts/validation/harness-task-transforms.mjs";
+import {
+  passedTaskBlock,
+  replaceTaskList,
+} from "../../scripts/validation/harness-task-transforms.mjs";
 import {
   H1_PATH,
   activeStore,
@@ -810,6 +813,84 @@ describe("harness integrity validation", () => {
     });
     expect(errors(mutatedArchive)).toContain(
       ".harness/completed.md: [T-0040] squash-merged closeout did not preserve both complete stores",
+    );
+  });
+
+  it("accepts only the exact T-0040 repair recovery squash at its checkpoint", async () => {
+    const context = await fixtureContext();
+    const liveActive = parseTaskStore(
+      await readFile(path.join(repositoryRoot, ".harness", "tasks.md"), "utf8"),
+      "active",
+    );
+    const liveCompleted = parseTaskStore(
+      await readFile(
+        path.join(repositoryRoot, ".harness", "completed.md"),
+        "utf8",
+      ),
+      "completed",
+    );
+    const source =
+      liveActive.blocks.find(({ tag }) => tag === "T-0040") ??
+      liveCompleted.blocks.find(({ tag }) => tag === "T-0040");
+    expect(source).toBeDefined();
+    if (!source) {
+      return;
+    }
+    const archived = {
+      ...source,
+      raw:
+        source.fields.Status === "passed"
+          ? source.raw
+          : passedTaskBlock(source.raw),
+    };
+    const completedT0040Index = liveCompleted.blocks.findIndex(
+      ({ tag }) => tag === "T-0040",
+    );
+    const baseCompletedBlocks =
+      completedT0040Index < 0
+        ? liveCompleted.blocks
+        : liveCompleted.blocks.slice(0, completedT0040Index);
+    const baseActive = renderTaskStore(liveActive, [])
+      .replace(/^- `NEXT_TASK_TAG`: \d{4}$/m, "- `NEXT_TASK_TAG`: 0040")
+      .replace(/^- `NEXT_REFACTOR_TAG`: \d{4}$/m, "- `NEXT_REFACTOR_TAG`: 0001")
+      .replace(/\n\n$/, "\n");
+    const finalActive = renderTaskStore(liveActive, [])
+      .replace(/^- `NEXT_TASK_TAG`: \d{4}$/m, "- `NEXT_TASK_TAG`: 0041")
+      .replace(/^- `NEXT_REFACTOR_TAG`: \d{4}$/m, "- `NEXT_REFACTOR_TAG`: 0001")
+      .replace(/\n\n$/, "\n");
+    const baseCompleted = renderTaskStore(liveCompleted, baseCompletedBlocks);
+    const finalCompleted = renderTaskStore(liveCompleted, [
+      ...baseCompletedBlocks,
+      archived,
+    ]);
+    const merged = copySnapshot(
+      positiveHarnessScenarios(context).seededArchive,
+      {
+        activeText: finalActive,
+        completedText: finalCompleted,
+        baseActiveText: baseActive,
+        baseCompletedText: baseCompleted,
+        allowMergedCloseout: true,
+        mergedBaseRevision: "24fe977b83b6fe18a3bc599e5d2b901ea797bf87",
+      },
+    );
+    expect(errors(merged)).toEqual([]);
+
+    const wrongRevision = copySnapshot(merged, {
+      mergedBaseRevision: "0".repeat(40),
+    });
+    expect(errors(wrongRevision)).toContain(
+      ".harness/completed.md: squash-merged closeout must represent exactly one queued source task",
+    );
+
+    const mutatedTask = copySnapshot(merged, {
+      completedText: merged.completedText.replace(
+        "Repair ordinary task-authoring validation",
+        "Mutate the recovery task",
+      ),
+    });
+    expect(errors(mutatedTask)).toContain(
+      ".harness/completed.md: authorized T-0040 recovery merge must exactly archive the repair task onto checkpoint 24fe977b83b6fe18a3bc599e5d2b901ea797bf87",
     );
   });
 
