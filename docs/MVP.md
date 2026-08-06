@@ -12,7 +12,16 @@ No implementation task may expand the MVP beyond this document without explicit 
 ## Authority
 This document owns the investor-demo objective, canonical scenario, start and endpoint, proof requirements, real/seeded/simulated/deferred boundaries, non-goals, and constraints.
 
-Individual `sNN-state.md` specifications own state-level journey flow, composition, behavior, mutations, transitions, exact references, and state-specific acceptance criteria.
+It does not redefine durable product, architecture, shared design, state-contract, artifact, implementation-spec, or harness authority.
+
+## Upstream Durable Authorities
+
+- `docs/PRODUCT.md` owns durable product identity, actor authority, non-negotiable rules, lifecycle, project model, intelligence limits, transactions, trust, privacy, and custody.
+- `docs/ARCHITECTURE.md` owns the technical baseline, runtime and persistence, mutation and event contracts, integrations, trust and reliability, validation requirements, and system invariants.
+- `docs/DESIGN.md` owns shared experience, interaction, content, motion, responsive, accessibility, reference, and browser-validation rules.
+- `docs/contracts/README.md` owns state-contract, artifact, implementation-spec, and terminal-state routing.
+
+The MVP narrows those authorities to the demo below and cannot weaken or duplicate them.
 
 ## Demo Objective
 Prove one uninterrupted customer journey:
@@ -85,7 +94,10 @@ Production breadth outside this proof remains deferred.
 
 Seeded and simulated inputs must flow through canonical project state. Hard-coded screen indexes cannot substitute for project mutations and transitions.
 
-## Demo-Wide Requirements
+## Demo-Wide Observable Proof
+
+The canonical run demonstrates the applicable durable product lifecycle and trust rules from `docs/PRODUCT.md` through these demo observations:
+
 - The experience remains one continuous project environment.
 - The same project identity survives from property resolution through verified execution.
 - Homeowners receive useful value before account creation.
@@ -100,7 +112,10 @@ Seeded and simulated inputs must flow through canonical project state. Hard-code
 - Provider updates remain claims until required support exists.
 - The flow avoids a conventional dashboard, permanent sidebar, persistent chatbot, wizard stepper, and disconnected page sequence.
 
-## Data and Authority Requirements
+## Demo Data and Authority Observations
+
+The canonical run demonstrates the applicable mutation, intelligence, transaction, and verification contracts from `docs/ARCHITECTURE.md` through these observations:
+
 - Consequential mutations append events and increment project version.
 - Agent and external patches reference the project version they read.
 - Stale writes reject, rebuild, or explicitly merge.
@@ -137,7 +152,7 @@ The MVP is complete only when one uninterrupted run proves:
 19. Accessibility, reduced-motion, keyboard, and real-browser proof pass.
 20. No deferred capability is required to complete the canonical run.
 
-State specifications may add narrower criteria and cannot weaken this contract.
+State contracts may add narrower state-validity criteria and cannot weaken this MVP proof; approved implementation specs own outcome-specific validation expectations.
 
 ## MVP Non-Goals
 - generic contractor marketplace
@@ -152,33 +167,24 @@ State specifications may add narrower criteria and cannot weaken this contract.
 - multi-category implementation
 
 ## Technical Baseline
-- Next.js, TypeScript, and Node.js
-- Postgres with Neon acceptable
-- Drizzle ORM
-- OTP through a project-owned auth port
-- Stripe Checkout test mode and webhook
-- Replaceable property and solar adapters with seeded fallback
-- One scoped Project Intelligence Harness with structured outputs
-- Unit, integration, component, workflow, and real-browser validation
 
-`ARCHITECTURE.md` owns the full technical contract.
+The demo uses the complete baseline and invariants owned by `docs/ARCHITECTURE.md`, especially [Technology Baseline](ARCHITECTURE.md#technology-baseline), [Architectural Invariants](ARCHITECTURE.md#architectural-invariants), and [Validation](ARCHITECTURE.md#validation). MVP scope does not create a second technical contract.
 
 ## Constraints
 - Business: investor-grade proof using one canonical scenario.
 - Timeline: prioritize continuous proof over operational breadth.
 - Cost: bound vendor calls, cache permitted data, and preserve seeded fallbacks.
-- Legal and regulatory: modeled information remains preliminary; licensed, governmental, legal, and financing authority remains external.
-- Accessibility: keyboard operation, semantic controls, visible focus, sufficient contrast, and reduced motion.
+- Legal and regulatory: the run demonstrates the product authority and trust boundaries in `docs/PRODUCT.md`; MVP scope grants no licensed, governmental, legal, or financing authority.
+- Accessibility: the run passes the shared requirements in `docs/DESIGN.md`, including keyboard operation, semantic controls, visible focus, sufficient contrast, and reduced motion.
 - Platform: desktop investor demonstration is primary; mobile remains usable.
 - Reliability: the canonical run remains available when external property or solar services fail.
 
-## State Specification Relationship
-The MVP is implemented through approved `sNN-state.md` source bundles in journey order. Each state owns its entry data, visible variants, actions, behavior, mutations, authority boundaries, transition conditions, exact references, and state-specific proof.
+## Contract and Implementation Relationship
 
-The core documents remain state-independent.
+State contracts, exact artifacts, and approved implementation specs follow the canonical ownership and routing in `docs/contracts/README.md`. MVP names the demo proof to deliver; it does not assign composition, renderer choice, artifacts, implementation mutations, task decomposition, or harness procedures.
 
 ## Change Control
 - Update only when approved MVP scope or proof changes.
-- Product, architecture, and design invariants remain binding.
-- State specifications may narrow implementation and cannot expand MVP scope.
+- `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, and `docs/DESIGN.md` remain binding in their domains.
+- State contracts and approved implementation specs may narrow their domains and cannot expand MVP scope.
 - Git owns prior versions and change history.

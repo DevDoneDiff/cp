@@ -151,7 +151,7 @@ Brick_id: harness/H1/mvp-proof-deduplication
 Traceability: F12, F20
 Priority: P1
 Depends_on: [T-0013]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
