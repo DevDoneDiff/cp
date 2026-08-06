@@ -44,6 +44,16 @@ When normative sources materially conflict, stop mutation, identify the exact co
 
 Current values live in `.harness/tasks.md`.
 
+## Non-Task Authoring Identity
+
+Non-task authoring is limited to specs, status-only approval metadata, contracts and other durable authority, task decomposition, and directly related authority or queue changes. It uses a descriptive `codex/authoring-<slug>` branch and descriptive commit and pull-request titles without a task or refactor tag.
+
+Authoring identity never uses task `RUN_MODE` or `MERGE_MODE`, `Pass`, an implementation scratchpad, task closeout, archive transfer, dependency proof, or task-completion history. Explicit user instruction independently authorizes an authoring delivery and whether its guarded merge may be autonomous. Adding a task to the queue does not complete it, satisfy one of its dependencies, or authorize any change to an existing completed block.
+
+Authoring that changes the active queue, counters, `.harness/validation.md`, or task-execution authority in this file is mutually exclusive with every live implementation claim, provisional closeout, local or remote task branch, and live task pull request. The inverse exclusion applies during task claim and delivery. Preserve inactive unrelated local authoring branches without interpreting them as claims.
+
+The non-task authoring lane is currently unavailable. Do not publish, open, merge, or route an authoring skill through that lane until the canonical delivery procedure and producer routing are activated by T-0036.
+
 ## Context Routing
 
 For the selected task, read in this order:

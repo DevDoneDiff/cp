@@ -11,6 +11,8 @@ Tasks reference validation sets by exact name.
 ```text
 BASE_BRANCH: main
 BRANCH_PATTERN: codex/<TAG>-<slug>
+AUTHORING_LANE_STATE: unavailable
+AUTHORING_BRANCH_PATTERN: codex/authoring-<slug>
 PUSH_COMMAND: git push -u origin HEAD
 PR_CREATE_OR_UPDATE_COMMAND: Run gh pr view <HEAD_BRANCH> --repo DevDoneDiff/cp, then an all-state exact-head gh pr list; edit the sole matching open PR with gh pr edit, or create with gh pr create only after authenticated zero-result proof
 PR_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --watch --required
@@ -30,6 +32,16 @@ CLOSEOUT_REVIEW_INHERITANCE_PROCEDURE: Require a clean tree at CLOSEOUT_SHA; req
 A task cannot have `Ready: true` when a required command or procedure is unset.
 
 Historical `[T-0001]` consumed the one-time bootstrap exception. No future task may use `Bootstrap: true`.
+
+## Non-Task Authoring Classification and Exclusion
+
+The non-task authoring lane is limited to specs, status-only approval metadata, contracts and other durable authority, task decomposition, and directly related authority or queue changes. Its branch, commit, and pull-request identity is descriptive, uses `AUTHORING_BRANCH_PATTERN`, and contains no task or refactor tag. It never creates or changes task `RUN_MODE` or `MERGE_MODE` as authoring-delivery authority, `Pass`, an implementation scratchpad, task closeout, the completed archive, dependency proof, or task-completion history.
+
+Each delivery and its autonomous-merge authority require explicit user instruction independent of the task modes. An authoring change that introduces a queued task cannot satisfy that task or any dependency, and every existing completed block remains immutable.
+
+Before authoring work that changes `.harness/tasks.md`, its counters, this registry, or task-execution authority in `AGENTS.md`, prove there is no active `working` task, provisional closeout, local or remote task branch, or live task pull request. Before task claim or delivery, apply the inverse check to the current non-task branch and every live non-task pull request. Preserve unrelated inactive local authoring branches, but never reinterpret a live conflicting identity as harmless.
+
+`AUTHORING_LANE_STATE` remains `unavailable` until T-0036 activates the canonical proof and delivery procedure and routes the authoring skills to it. While unavailable, do not push an authoring branch, create or update an authoring pull request, merge authoring work, or route an authoring skill through this lane.
 
 ## Task Claim and Same-Task Resumption
 

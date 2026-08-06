@@ -33,6 +33,15 @@ If the hosting plan cannot enforce a required control, the pull-request procedur
 - Manual and autonomous merge use the same immediate exact-base, exact-head, required-check, squash, tagged-subject, and no-bypass gates.
 - Completion requires fresh readback of the same merged PR, its exact reported merge OID reachable from fetched `origin/main`, that merge commit's first parent equal to `EXPECTED_BASE_SHA`, tagged subject, exact first-parent archive introduction with active absence, synchronized clean local `main`, and absent remote task branch.
 
+## Non-task authoring
+
+- Authoring-only delivery is limited to specs, status-only approval metadata, contracts and other durable authority, task decomposition, and directly related authority or queue changes.
+- Its branch, commits, and pull request use descriptive non-task identity without a task or refactor tag. They never claim `Pass`, task closeout, archive transfer, dependency satisfaction, or implementation completion.
+- Explicit user instruction, independent of task `RUN_MODE` and `MERGE_MODE`, authorizes each authoring delivery and whether its guarded merge may be autonomous.
+- Queue, counter, validation-registry, or task-execution-authority authoring is mutually exclusive with a live implementation claim, provisional closeout, task branch, or task pull request. The inverse exclusion applies during task claim and delivery.
+- Introducing a queued task cannot complete it or satisfy a dependency, and completed task blocks remain immutable.
+- This lane remains unavailable until T-0036 activates its canonical validation and delivery procedure. Authoring skills cannot route work into it before then.
+
 ## Evidence
 
 The pull request's exact-SHA review records, GitHub check runs, protection API readback, guarded merge result, and `origin/main` history are the durable evidence. Local credentials and task scratchpads remain uncommitted.
