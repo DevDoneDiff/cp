@@ -65,7 +65,7 @@ Within the canonical owner directory, the filename is `<SEQUENCE>-<kebab-case-ou
 
 Forward task entries retain both `Source_spec_id` and the exact current repository-relative `Source_spec` path. Templates define structure only; authoring, approval, decomposition, and queue mutation remain with their explicit workflow owners.
 
-Once a forward task is archived, its recorded `Source_spec` path and the approved spec at that path remain immutable. Relocation requires a separately approved executable migration that preserves validation of every immutable archive reference atomically; until that mechanism exists, implemented specs must not move.
+Once a forward task is archived, its recorded `Source_spec` path is immutable and must continue to resolve to an approved spec with the matching stable identity. Relocation requires a separately approved executable migration that preserves validation of every immutable archive reference atomically; until that mechanism exists, implemented specs must not move.
 
 ## Legacy Spec Compatibility
 

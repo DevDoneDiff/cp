@@ -289,6 +289,22 @@ describe("harness integrity validation", () => {
       ".harness/tasks.md: [T-0040] task-authoring append requires Status: queued and Pass: false",
     );
 
+    for (const invalidTask of [
+      taskBlock({ status: "blocked" }),
+      taskBlock({ pass: true }),
+    ]) {
+      expect(
+        errors(
+          copySnapshot(seeded, {
+            activeText: activeStore([invalidTask], 41, 1),
+            baseActiveText: baseActive,
+          }),
+        ),
+      ).toContain(
+        ".harness/tasks.md: [T-0040] task-authoring append requires Status: queued and Pass: false",
+      );
+    }
+
     const baseWorking = activeStore([taskBlock({ status: "working" })], 41);
     expect(
       errors(
@@ -499,6 +515,14 @@ describe("harness integrity validation", () => {
       "\n  | malformed registry row |\n\n## Independent Review Gate",
     );
     expect(errors(withValidationText(queued, malformed))).toContain(
+      ".harness/validation.md: validation registry contains a malformed or unconsumed row",
+    );
+
+    const extraColumn = queued.validationText.replace(
+      baselineRow!,
+      baselineRow!.replace(/ \|$/, " | extra-column |"),
+    );
+    expect(errors(withValidationText(queued, extraColumn))).toContain(
       ".harness/validation.md: validation registry contains a malformed or unconsumed row",
     );
 

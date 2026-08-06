@@ -66,16 +66,28 @@ export function parseValidationRegistry(validationText) {
 
   const names = [];
   for (const line of tableLines.slice(2)) {
-    const match = line.match(
-      /^\| `([a-z][a-z0-9-]*)` \| (\S(?:.*\S)?) \| (\S(?:.*\S)?) \|$/,
-    );
-    if (!match) {
+    if (!line.startsWith("| ") || !line.endsWith(" |")) {
       errors.push(
         ".harness/validation.md: validation registry contains a malformed or unconsumed row",
       );
       continue;
     }
-    names.push(match[1]);
+    const cells = line.slice(2, -2).split(" | ");
+    const name = cells[0]?.match(/^`([a-z][a-z0-9-]*)`$/)?.[1];
+    if (
+      cells.length !== 3 ||
+      !name ||
+      cells[1]?.trim() !== cells[1] ||
+      cells[2]?.trim() !== cells[2] ||
+      cells[1]?.length === 0 ||
+      cells[2]?.length === 0
+    ) {
+      errors.push(
+        ".harness/validation.md: validation registry contains a malformed or unconsumed row",
+      );
+      continue;
+    }
+    names.push(name);
   }
 
   const registered = new Set(names);
