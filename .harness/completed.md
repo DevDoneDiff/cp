@@ -1524,3 +1524,47 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0035.md
+
+### [T-0036] Activate non-task authoring delivery
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/non-task-authoring-delivery
+Traceability: F2, F8, F11
+Priority: P0
+Depends_on: [T-0024], [T-0027], [T-0029], [T-0031], [T-0032], [T-0034], [T-0035]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Activate end-to-end authoring delivery by reusing the canonical proof, review, CI, merge, recovery, and cleanup procedures.
+Scope:
+- Wire scoped validation, exact-SHA read-only review, exact-head CI, guarded merge, ambiguous-result readback, clean synchronization, and spec- and task-authoring routing to the established non-task identity.
+Non_goals:
+- Create a second delivery algorithm, use implementation completion identity, record approval without evidence, or mutate completed-task blocks.
+Acceptance_criteria:
+- The lane reuses canonical local proof, exact-SHA review, exact-head CI, base refresh, guarded merge, remote readback, and clean synchronization without restating divergent procedures.
+- Authoring delivery uses no `Pass`, implementation scratchpad, task closeout, archive transfer, dependency proof, or task-completion history.
+- Spec and task authoring output routes to the lane only after every activation precondition is satisfied.
+- The task-authoring route cannot start, pass, or complete any task it introduces.
+- Durable PR evidence records a read-only authoring/task exclusion case and proves completed-task blocks are unchanged.
+- A failed or ambiguous authoring delivery preserves its branch and evidence and follows the same readback and retry boundaries as canonical delivery.
+Indivisibility_rationale:
+- T-0035 leaves the lane truthfully unavailable; this brick atomically activates the reusable end-to-end procedure and its producer routing so no skill advertises a partial delivery path.
+Expected_surfaces:
+- `.harness/validation.md` non-task authoring delivery procedure.
+- `AGENTS.md` operational routing consequence.
+- `docs/REPOSITORY_POLICY.md` guarded authoring delivery consequence.
+- `.agents/skills/spec-authoring/SKILL.md` and `.agents/skills/task-authoring/SKILL.md` output delivery routing.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+- security
+- security-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0036.md
