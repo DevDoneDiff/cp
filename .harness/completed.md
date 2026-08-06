@@ -1032,3 +1032,43 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0023.md
+
+### [T-0024] Make task authoring identity-aware and idempotent
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/task-authoring-identity
+Traceability: F13, F14, F15, F17
+Priority: P0
+Depends_on: [T-0023]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Make `$task-authoring` emit the stable active-task schema and refuse to recreate represented implementation bricks.
+Scope:
+- Consume canonical owning-authority routing, dual spec references, stable brick IDs, the legacy registry, active artifact vocabulary, and targeted active/archive identity evidence without loading the full archive into ordinary context.
+Non_goals:
+- Change task-size judgment, execute tasks, mutate completed blocks, or define lifecycle delivery procedures.
+Acceptance_criteria:
+- Every new task records `Source_spec_id`, canonical `Source_spec`, and a unique source-scoped `Brick_id`.
+- Owner and path routing comes from the canonical contract schema and primary-outcome inclusion test.
+- Git-only legacy specs are matched by stable ID and cannot impose superseded workflow or decomposition mechanics.
+- A narrow validator or lookup returns only relevant active and historical identity evidence without loading deprecated spec bodies as examples.
+- A rerun or partial prior decomposition refuses a duplicate brick ID and preserves unrelated queue entries and counters.
+- Task authoring accepts only exact `visual`, `technical`, or `none` artifact routes; `content` is absent from its active vocabulary.
+- Exact repository-relative global paths and only registered validation-set names are used.
+Indivisibility_rationale:
+- none; the task-authoring skill is the single producer being corrected after its schema and validator already exist.
+Expected_surfaces:
+- `.agents/skills/task-authoring/SKILL.md` authority, preconditions, identity lookup, writing, and output rules.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0024.md
