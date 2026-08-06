@@ -142,46 +142,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0012] Clarify top-level authority and evidence routing
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/top-level-authority-routing
-Traceability: F16, F17, F19, F25c
-Priority: P1
-Depends_on: [T-0009]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Give fresh Codex sessions one coherent top-level distinction between normative targets, current implementation evidence, and routed contract authority.
-Scope:
-- Align `AGENTS.md` and `docs/README.md` on normative sources, code reality, test expectations, annotation summaries, durable-authority updates, canonical contract routing, and removal of the unsupported content-artifact route.
-Non_goals:
-- Rewrite global product, architecture, design, or MVP semantics; change implementation behavior; or duplicate the full contract-routing rules.
-Acceptance_criteria:
-- Normative user, durable authority, adopted artifact, approved spec, task-store, validation, and Git domains are explicit and non-overlapping.
-- Code is current implementation reality; tests are executable expectations that may be stale or failing; annotation headers summarize inspected code and never overrule it.
-- A code/test mismatch is reported as an implementation or proof defect rather than silently treated as durable truth.
-- A resolved durable decision must be recorded in its owning authority before dependent spec drafting resumes.
-- The active top-level artifact bundle uses only visual and technical references; `content` is absent as an artifact type.
-- Both top-level entrypoints route terminal-state and spec classification to `docs/contracts/README.md` while retaining progressive context loading.
-Indivisibility_rationale:
-- `AGENTS.md` and `docs/README.md` are alternate entrypoints for a fresh session; changing only one would preserve two competing authority maps.
-Expected_surfaces:
-- `AGENTS.md` authority, context, Artifact Gate, and decision-boundary sections.
-- `docs/README.md` ownership and routing sections.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0012.md
-
 ### [T-0013] Align global state and artifact ownership
 Type: maintenance
 Bootstrap: false
