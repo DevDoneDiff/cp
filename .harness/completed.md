@@ -1072,3 +1072,42 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0024.md
+
+### [T-0025] Make task sizing deterministic
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/task-sizing-determinism
+Traceability: F21
+Priority: P1
+Depends_on: [T-0015], [T-0024]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Close the remaining task-size loophole so independently provable work cannot be called nonfunctional merely because it lacks complete customer value.
+Scope:
+- Refine split and combine rules around invalid or misleading intermediate states, proof, failure, rollback, recovery, migration, compatibility, and committed indivisibility rationale.
+Non_goals:
+- Add time, file-count, line-count, or estimated-effort limits or predesign implementation mechanics.
+Acceptance_criteria:
+- Lack of standalone customer value is explicitly insufficient to justify combining tasks.
+- Separation fails only when it leaves the repository invalid, misleading, knowingly false, independently unprovable, or dependent on disposable architecture.
+- Independent proof, failure, rollback, recovery, migration, and compatibility seams require splitting by default.
+- A cross-seam exception records a concise rationale in the committed task block against the combine-only test.
+- Shared specs, screens, files, eventual outcomes, or delivery convenience never justify combination by themselves.
+- Task-local acceptance remains concise and does not reproduce most of the source spec.
+Indivisibility_rationale:
+- none; task sizing is one specialized judgment boundary in `$task-authoring` and can be reviewed independently of identity lookup.
+Expected_surfaces:
+- `.agents/skills/task-authoring/SKILL.md` task-size, split, combine, and content-discipline sections.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0025.md
