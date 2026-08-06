@@ -94,6 +94,8 @@ Do not design the full implementation in advance. Use repository reality to prod
 
 Prefer more small tasks over fewer large tasks.
 
+A separated brick does not need standalone customer value. It needs a truthful repository state and an independent proof boundary.
+
 One task must have:
 
 - one primary observable result;
@@ -113,6 +115,7 @@ Create separate tasks when any of the following is true:
 - infrastructure can be merged truthfully before behavior that consumes it;
 - user-facing composition and transport, persistence, migration, or compatibility work can be proven independently;
 - normal behavior and a substantial fallback, recovery, or migration path have separate failure boundaries;
+- proof, failure, rollback, recovery, migration, or compatibility can be exercised and accepted independently;
 - two acceptance clusters can pass independently;
 - one result can fail or be corrected without invalidating the other;
 - one task would introduce multiple unrelated primary verbs or stopping conditions;
@@ -121,14 +124,11 @@ Create separate tasks when any of the following is true:
 
 ### Combine Only When
 
-Combine work only when separating it would make either task:
+Combine work only when separation would leave the repository or either task invalid, misleading, knowingly false, independently unprovable, or dependent on temporary false behavior or a disposable architecture.
 
-- nonfunctional;
-- misleading;
-- impossible to validate independently;
-- dependent on temporary false behavior or a disposable architecture.
+Lack of complete customer value, shared source-spec ownership, a shared screen, shared files, an eventual collective outcome, or delivery convenience is never enough reason to combine work.
 
-Shared source-spec ownership, a shared screen, or shared files is not enough reason to combine work.
+When one task must cross an otherwise independent proof, failure, rollback, recovery, migration, or compatibility seam, its committed `Indivisibility_rationale` concisely names the crossed seam and explains exactly which combine-only failure separation would cause.
 
 ## Task Content Discipline
 
