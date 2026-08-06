@@ -198,6 +198,8 @@ Do not turn recommendations into requirements without explicit authority.
 9. save with `State: draft` and `Approved: false`;
 10. report the path, ownership, affected contracts, discovery basis, conflicts, and readiness.
 
+This drafting workflow always stops at draft status. The authoring agent is prohibited from approving its own draft. Approval recording is a separate later metadata transition with explicit user evidence.
+
 ## Drafting Rules
 
 MUST:
@@ -220,7 +222,7 @@ MUST NOT:
 - prescribe coding steps Codex can determine from the repository;
 - lock speculative abstractions, dependencies, providers, or design techniques;
 - duplicate durable truth better owned by a global or state contract;
-- mark the spec approved;
+- mark the spec approved during drafting or outside the exact later status-only workflow below;
 - implement code or configuration.
 
 ## Readiness Gate
@@ -252,14 +254,26 @@ State: draft
 Approved: false
 ```
 
-Only explicit user approval may change them to:
+Drafting always ends at those values. A separate later explicit user approval of the exact current draft is mandatory before recording:
 
 ```text
 State: approved
 Approved: true
 ```
 
-Do not amend an approved spec without explicit instruction to reopen it.
+Never infer approval from readiness, prior drafting authority, silence, task urgency, or the agent's own review.
+
+### Status-Only Approval Recording
+
+The agent cannot approve a spec. It may only record approval that the user has already explicitly given in a later run for the exact current draft:
+
+1. Identify the exact spec path and quote or precisely identify the later user instruction that supplies approval evidence. Require the spec to be `State: draft`, `Approved: false`, readiness-complete, and unchanged from the content the user approved. Ambiguous target, conditional approval, or approval of an older revision blocks the transition.
+2. Begin through the activated `Non-Task Authoring Delivery` procedure before tracked mutation. Require a clean tracked tree and record `PRE_APPROVAL_COMMIT`, the exact spec blob, and the approval-evidence identity in the authoring recovery record and eventual pull-request evidence.
+3. Change only `**State:** draft` to `**State:** approved` and `**Approved:** false` to `**Approved:** true`. Do not add approval prose to the spec, revise wording, reformat content, update references, or combine any other tracked change.
+4. Before commit, require `git diff --name-only <PRE_APPROVAL_COMMIT>` to return only the exact spec path. Inspect `git diff --unified=0 <PRE_APPROVAL_COMMIT> -- <SPEC_PATH>` and require exactly the two permitted metadata substitutions with no other added, removed, or changed line. Any other diff rejects status-only classification.
+5. Commit with descriptive non-task identity, bind the new exact candidate SHA, and run the complete authoring delivery proof. The independent exact-SHA reviewer must compare the pre-approval blob with the candidate blob and confirm that normalizing only the two approval fields makes their remaining bytes identical.
+
+If content revision is separately authorized, perform it as a distinct authoring change while the spec remains draft, obtain review of that exact revised content, and wait for a new later explicit approval before using this transition. An already approved spec remains closed to amendment unless the user explicitly reopens it or authorizes a new bounded-lineage spec.
 
 ## Output
 
@@ -273,6 +287,8 @@ Return:
 - files created or updated;
 - exact reference artifacts;
 - `Readiness: ready_for_review | blocked`.
+
+For status-only approval recording, additionally return the exact spec path, `PRE_APPROVAL_COMMIT` and blob, identified explicit approval evidence, the two changed metadata fields, content-diff result, reviewed candidate SHA, and non-task delivery result. Never report approval recorded when the exact diff or delivery proof is incomplete.
 
 When explicit user instruction also authorizes repository delivery, route only the eligible spec, approval-metadata, contract, or directly related authority output through the activated `Non-Task Authoring Delivery` procedure in `.harness/validation.md`. First prove its durable operational-availability predicate and authoring/task exclusion checks. If that predicate does not pass, keep the output local and report the lane unavailable; never push, open a pull request, merge, or improvise a delivery path. Authoring delivery remains descriptive and cannot use task status, `Pass`, an implementation scratchpad, closeout, archive, dependency, or completion identity.
 
