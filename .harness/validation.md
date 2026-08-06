@@ -47,11 +47,21 @@ Before any authorized source edit:
 6. Create the task branch from the proven base or reuse only the exact local branch authorized by the immediately preceding same-task resumption proof, while preserving inventoried non-overlapping local changes. Change only the selected task from `Status: queued` to `Status: working`, create its ignored scratchpad, and commit a claim whose subject begins with the exact task tag. Do not edit an authorized source surface in the claim commit.
 7. Publish the branch with the configured non-force push, then read back the exact remote branch SHA and require it to equal the local claim SHA. Only that successful readback establishes the repository claim and permits source mutation.
 
-A failed push, conflicting reference, changed base, or unavailable readback leaves `Pass: false`, creates or retains the scratchpad, records the exact evidence there and in `Blocker`, sets `Status: blocked`, and stops before source mutation. Preserve the branch, worktree, and remote state for resolution; do not retry without new evidence.
+A proven conflicting reference or changed base stops the claim before source mutation and may transition the active `Pass: false` task to `blocked` only when no remote operation is unresolved. A failed, timed-out, interrupted, or uncertain claim push or readback instead enters `REMOTE_OUTCOME_READBACK_PROCEDURE`. Proven application of the exact claim SHA establishes publication without another push; proven non-application permits only the root intent's bounded continuation; unresolved state preserves the exact `working` claim commit and every tracked surface, records evidence only in the ignored scratchpad, and stops before source mutation. Never write `Blocker` or change task status while claim publication is uncertain.
+
+### Frozen working-claim reconciliation
+
+An invocation may re-enter an unresolved claim only when the active task remains `working`/`Pass: false`, its scratchpad records the immutable claim-publication `ROOT_OPERATION_ID`, and the exact local branch tip is the original claim commit with no authorized source change after it.
+
+1. Rehydrate the recorded intent without changing its identity or attempt count. Require a clean index and tracked worktree, byte-identical task stores at the claim commit, the exact configured branch, task tag, `Source_spec_id`, and `Brick_id`, and no later local commit.
+2. Repeat authenticated remote-ref, all-state pull-request, fetched-base, active-store, narrow archive-boundary, and competing-claim readback. Classify the original publication intent only through `REMOTE_OUTCOME_READBACK_PROCEDURE`; any partial, moved, duplicate, conflicting, or unavailable result remains unresolved and preserves the frozen state.
+3. On proven application, require the exact remote task branch to equal the recorded claim SHA, rerun every current claim, dependency, artifact, and conflicting-authoring check, record the resolution in the scratchpad and eventual PR evidence, and continue from source-mutation eligibility without changing task status or repeating the push.
+4. On proven non-application, require the exact remote task branch and matching pull request to be absent. After current claim preconditions pass, use only the same root intent's unspent `ATTEMPT: 1` publication retry. If that retry is proven not applied, record the resolved blocker in the scratchpad and only then permit a separate validated local transition to `blocked`; no source mutation or further publication retry is authorized.
+5. A later blocked-task resumption uses the procedure below. No transition to `blocked`, `queued`, or another branch identity is permitted until the original publication outcome is proven.
 
 ### Same-task resumption
 
-A blocked task resumes only through an explicit primary-agent transition:
+A task already in `blocked` state resumes only through an explicit primary-agent transition:
 
 1. Rehydrate its scratchpad and recorded blocker, fetch and prune the remote, and repeat the base, active-store, narrow archive-boundary, all-local-branch, all-remote-branch, pull-request, and conflicting-authoring reads from the claim procedure.
 2. Prove any retained local branch uses the exact configured branch identity and contains the exact task tag, `Source_spec_id`, and `Brick_id`. Authenticated remote readback must establish exactly one of two states: the exact remote branch exists and contains the published claim, or that exact remote branch is absent. Ambiguous or contradictory readback remains blocking.
