@@ -1,15 +1,16 @@
 /**
  * MODULE: scripts/validation/harness-task-transitions.mjs
- * PURPOSE: Prove cross-store identity and the only legal local active/archive transitions.
+ * PURPOSE: Prove cross-store identity and the only legal local active/archive and authoring-append transitions.
  * PUBLIC API / ENTRYPOINTS: validateHarnessStores.
  * CONTROL_FLOW: parse generations, reject identity drift, then prove one legal transition.
  * INVARIANTS:
  *   - [INV-HARNESS-TRANSFER] Archive changes are limited to one full-store provisional transfer or exact reversal.
+ *   - Unchanged-archive active growth is limited to the exact task-authoring append transition.
  *   - An empty active queue may normalize only the parser-approved second terminal newline; every non-empty byte remains exact.
  *   - One exact H1 checkpoint may use the separately bounded batch-merge compatibility proof.
  * BOUNDARIES:
- *   - Remote completion and dependency proof are deliberately excluded from this local structural validator.
- * RELATED: task stores, task schema, the H1 batch-transition compatibility owner, and .harness/validation.md lifecycle procedures.
+ *   - Remote completion and dependency satisfaction are deliberately excluded from this local structural validator.
+ * RELATED: task stores, task schema, the task-authoring transition owner, and .harness/validation.md lifecycle procedures.
  * SECURITY:
  *   - A changed archive fails closed unless the complete local transition shape is proven exactly.
  */
@@ -17,6 +18,8 @@ import {
   validateStableTaskIdentities,
   validateTaskStoreShape,
 } from "./harness-task-schema.mjs";
+import { validateTaskAuthoringAppend } from "./harness-task-authoring-transition.mjs";
+import { validateTaskDependencyGraph } from "./harness-task-graph.mjs";
 import {
   isAuthorizedH1BatchBaseRevision,
   isAuthorizedH1AuthorityUpdate,
@@ -36,6 +39,7 @@ import {
   passedTaskBlock,
   replaceTaskField,
 } from "./harness-task-transforms.mjs";
+import { parseValidationRegistry } from "./harness-validation-registry.mjs";
 
 function provisionalSource(prior) {
   const working = prior.active.blocks.filter(
@@ -242,6 +246,11 @@ function validateArchiveTransition(
   }
   // @ah INV-HARNESS-TRANSFER
   if (current.completed.normalized === base.completed.normalized) {
+    const authoringAppend = validateTaskAuthoringAppend(current, base);
+    if (authoringAppend.recognized) {
+      errors.push(...authoringAppend.errors);
+      return;
+    }
     validateUnchangedArchive(current, base, errors);
     return;
   }
@@ -275,16 +284,24 @@ function parseAndValidate(
   activeText,
   completedText,
   label,
+  assignableValidationSets,
   errors,
   { allowHistoricalSeedProvenance = false } = {},
 ) {
   const active = parseTaskStore(activeText, "active");
   const completed = parseTaskStore(completedText, "completed");
-  validateTaskStoreShape(active, "active", `${label}.harness/tasks.md`, errors);
+  validateTaskStoreShape(
+    active,
+    "active",
+    `${label}.harness/tasks.md`,
+    assignableValidationSets,
+    errors,
+  );
   validateTaskStoreShape(
     completed,
     "completed",
     `${label}.harness/completed.md`,
+    assignableValidationSets,
     errors,
   );
   if (!allowHistoricalSeedProvenance) {
@@ -307,9 +324,19 @@ export function validateHarnessStores({
   baseParentCompletedText,
   allowMergedCloseout = false,
   mergedBaseRevision,
+  validationText = "",
 }) {
   const errors = [];
-  const current = parseAndValidate(activeText, completedText, "", errors);
+  const registry = parseValidationRegistry(validationText);
+  errors.push(...registry.errors);
+  const current = parseAndValidate(
+    activeText,
+    completedText,
+    "",
+    registry.assignable,
+    errors,
+  );
+  validateTaskDependencyGraph(current.completed, current.active, errors);
   const all = [...current.active.blocks, ...current.completed.blocks];
   for (const duplicate of duplicateValues(all.map(({ tag }) => tag))) {
     errors.push(
@@ -328,6 +355,7 @@ export function validateHarnessStores({
       baseActiveText,
       baseCompletedText,
       "base:",
+      registry.assignable,
       errors,
       {
         allowHistoricalSeedProvenance:
@@ -350,6 +378,7 @@ export function validateHarnessStores({
       baseParentActiveText,
       baseParentCompletedText,
       "base-parent:",
+      registry.assignable,
       errors,
     );
   }

@@ -36,6 +36,10 @@ async function fixtureContext(): Promise<HarnessFixtureContext> {
       path.join(repositoryRoot, "docs", "contracts", "README.md"),
       "utf8",
     ),
+    validationText: await readFile(
+      path.join(repositoryRoot, ".harness", "validation.md"),
+      "utf8",
+    ),
     statesReadme: await readFile(
       path.join(repositoryRoot, "docs", "contracts", "states", "README.md"),
       "utf8",

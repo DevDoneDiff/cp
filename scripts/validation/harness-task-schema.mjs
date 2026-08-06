@@ -15,6 +15,7 @@
  * RELATED:
  *   - .harness/tasks.md: owns the canonical task template and active-state meanings.
  *   - scripts/validation/harness-task-stores.mjs: owns source-region parsing.
+ *   - scripts/validation/harness-validation-registry.mjs: supplies canonical assignable validation-set names.
  * SECURITY:
  *   - Malformed or unconsumed schema content fails closed with the exact task identity.
  */
@@ -87,17 +88,6 @@ const TASK_TYPES = new Set([
   "maintenance",
   "refactor",
 ]);
-const REGISTERED_VALIDATION_SETS = new Set([
-  "agent-review",
-  "baseline",
-  "frontend-component",
-  "frontend-e2e",
-  "frontend-visual",
-  "security",
-  "security-review",
-  "smoke",
-]);
-
 export function taskListItems(block, field) {
   const start = block.raw.indexOf(`${field}:\n`);
   const fieldIndex = FORWARD_FIELDS.indexOf(field);
@@ -193,7 +183,7 @@ function validateScalarFields(block, file, errors) {
   }
 }
 
-function validateLists(block, file, errors) {
+function validateLists(block, file, assignableValidationSets, errors) {
   const lists = new Map();
   for (const field of LIST_FIELDS) {
     const parsed = taskListItems(block, field);
@@ -221,7 +211,7 @@ function validateLists(block, file, errors) {
   const sets = lists.get("Validation_sets") ?? [];
   if (
     sets.some((item) => !/^[a-z][a-z0-9-]*$/.test(item)) ||
-    sets.some((item) => !REGISTERED_VALIDATION_SETS.has(item)) ||
+    sets.some((item) => !assignableValidationSets.has(item)) ||
     duplicateValues(sets).length > 0 ||
     !sets.includes("baseline") ||
     !sets.includes("agent-review")
@@ -257,7 +247,7 @@ function renderForwardBlock(block, lists) {
   return lines.join("\n");
 }
 
-function validateForwardBlock(block, file, errors) {
+function validateForwardBlock(block, file, assignableValidationSets, errors) {
   const names = block.entries.map(({ name }) => name);
   for (const duplicate of duplicateValues(names)) {
     errors.push(`${file}: [${block.tag}] duplicates field ${duplicate}`);
@@ -276,7 +266,7 @@ function validateForwardBlock(block, file, errors) {
     }
   }
   validateScalarFields(block, file, errors);
-  const lists = validateLists(block, file, errors);
+  const lists = validateLists(block, file, assignableValidationSets, errors);
   if (renderForwardBlock(block, lists) !== block.raw) {
     errors.push(
       `${file}: [${block.tag}] contains unconsumed or noncanonical schema content`,
@@ -284,7 +274,13 @@ function validateForwardBlock(block, file, errors) {
   }
 }
 
-export function validateTaskStoreShape(parsed, kind, file, errors) {
+export function validateTaskStoreShape(
+  parsed,
+  kind,
+  file,
+  assignableValidationSets,
+  errors,
+) {
   errors.push(...parsed.errors.map((error) => `${file}: ${error}`));
   for (const duplicate of duplicateValues(
     parsed.blocks.map(({ tag }) => tag),
@@ -300,7 +296,7 @@ export function validateTaskStoreShape(parsed, kind, file, errors) {
         errors.push(`${file}: historical seed task [${tag}] cannot be active`);
       }
     } else {
-      validateForwardBlock(block, file, errors);
+      validateForwardBlock(block, file, assignableValidationSets, errors);
     }
 
     if (kind === "active") {

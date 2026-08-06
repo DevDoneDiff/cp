@@ -8,7 +8,7 @@
  *   - validateHarnessRepository: validates one materialized local repository.
  * CONTROL_FLOW:
  *   1. Read canonical non-symlink repository paths and revision-bound local Git task-store generations.
- *   2. Validate task/archive structure and exact local transition shape.
+ *   2. Parse the canonical validation registry and validate task/archive structure and exact local transition shape.
  *   3. Validate exact spec, artifact, and state-contract routes.
  * INVARIANTS:
  *   - [INV-HARNESS-NETWORK-FREE] Discovery uses only local filesystem reads and read-only Git commands.
@@ -18,7 +18,7 @@
  * RELATED:
  *   - scripts/validation/harness-task-transitions.mjs: owns task/archive structural comparison.
  *   - scripts/validation/harness-contract-routes.mjs: owns current and legacy spec routing.
- *   - scripts/validation/harness-artifact-routes.mjs: owns artifact and concrete state-contract routes.
+ *   - scripts/validation/harness-validation-registry.mjs: owns canonical validation-set discovery.
  * SECURITY:
  *   - The validator rejects noncanonical and symlink paths and performs no network request or external mutation.
  */
@@ -284,6 +284,7 @@ export async function readHarnessRepository(root) {
   return {
     activeText,
     completedText,
+    validationText,
     ...selected,
     allowMergedCloseout,
     mergedBaseRevision: allowMergedCloseout ? selected.baseRevision : undefined,

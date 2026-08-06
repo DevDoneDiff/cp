@@ -195,6 +195,10 @@ Expected_surfaces:
 - tests/fixtures/harness-integrity/scenarios.ts
 - tests/unit/harness-integrity.test.ts
 - docs/contracts/README.md
+- scripts/validation/harness-task-authoring-transition.mjs
+- scripts/validation/harness-task-graph.mjs
+- scripts/validation/harness-validation-registry.mjs
+- tests/unit/validation-runner.test.ts
 Reference_artifacts:
 - none
 Validation_sets:

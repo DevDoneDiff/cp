@@ -54,6 +54,10 @@ async function fixtureContext(): Promise<HarnessFixtureContext> {
       path.join(repositoryRoot, "docs", "contracts", "README.md"),
       "utf8",
     ),
+    validationText: await readFile(
+      path.join(repositoryRoot, ".harness", "validation.md"),
+      "utf8",
+    ),
     statesReadme: await readFile(
       path.join(repositoryRoot, "docs", "contracts", "states", "README.md"),
       "utf8",
@@ -86,6 +90,15 @@ function withContractsReadme(
   const files = new Map(snapshot.files);
   files.set("docs/contracts/README.md", Buffer.from(contractsReadme));
   return copySnapshot(snapshot, { contractsReadme, files });
+}
+
+function withValidationText(
+  snapshot: HarnessSnapshotFixture,
+  validationText: string,
+) {
+  const files = new Map(snapshot.files);
+  files.set(".harness/validation.md", Buffer.from(validationText));
+  return copySnapshot(snapshot, { files, validationText });
 }
 
 function artifactState(
@@ -206,6 +219,295 @@ describe("harness integrity validation", () => {
     });
     expect(errors(reusedBrick)).toContain(
       "task identity: Brick_id harness/H1/fixture-task was already represented by [T-0040]",
+    );
+  });
+
+  it("accepts only an exact append-only task-authoring transition", async () => {
+    const context = await fixtureContext();
+    const seeded = positiveHarnessScenarios(context).seededArchive;
+    const baseActive = activeStore([], 40, 1);
+    const first = taskBlock();
+    const refactor = taskBlock({
+      tag: "R-0001",
+      brick: "harness/H1/refactor-fixture",
+    });
+    const second = taskBlock({
+      tag: "T-0041",
+      brick: "harness/H1/second-fixture",
+    });
+    const authored = activeStore([first, refactor, second], 42, 2);
+    expect(
+      errors(
+        copySnapshot(seeded, {
+          activeText: authored,
+          baseActiveText: baseActive,
+        }),
+      ),
+    ).toEqual([]);
+
+    const counterDrift = activeStore([first], 42, 1);
+    expect(
+      errors(
+        copySnapshot(seeded, {
+          activeText: counterDrift,
+          baseActiveText: baseActive,
+        }),
+      ),
+    ).toContain(
+      ".harness/tasks.md: task-authoring append must advance NEXT_TASK_TAG exactly to 0041",
+    );
+
+    const wrongTag = activeStore(
+      [taskBlock({ tag: "T-0041", brick: "harness/H1/wrong-tag" })],
+      42,
+      1,
+    );
+    expect(
+      errors(
+        copySnapshot(seeded, {
+          activeText: wrongTag,
+          baseActiveText: baseActive,
+        }),
+      ),
+    ).toContain(
+      ".harness/tasks.md: task-authoring append expected [T-0040] but found [T-0041]",
+    );
+
+    const workingAppend = activeStore(
+      [taskBlock({ status: "working" })],
+      41,
+      1,
+    );
+    expect(
+      errors(
+        copySnapshot(seeded, {
+          activeText: workingAppend,
+          baseActiveText: baseActive,
+        }),
+      ),
+    ).toContain(
+      ".harness/tasks.md: [T-0040] task-authoring append requires Status: queued and Pass: false",
+    );
+
+    const baseWorking = activeStore([taskBlock({ status: "working" })], 41);
+    expect(
+      errors(
+        copySnapshot(seeded, {
+          activeText: activeStore(
+            [
+              taskBlock({ status: "working" }),
+              taskBlock({
+                tag: "T-0041",
+                brick: "harness/H1/blocked-authoring-fixture",
+              }),
+            ],
+            42,
+          ),
+          baseActiveText: baseWorking,
+        }),
+      ),
+    ).toContain(
+      ".harness/tasks.md: task-authoring append cannot occur while an active task is working",
+    );
+
+    const modeDrift = authored.replace(
+      "- `RUN_MODE`: autonomous",
+      "- `RUN_MODE`: manual",
+    );
+    expect(
+      errors(
+        copySnapshot(seeded, {
+          activeText: modeDrift,
+          baseActiveText: baseActive,
+        }),
+      ),
+    ).toContain(
+      ".harness/tasks.md: task-authoring append may change only the exact applicable counters outside appended task blocks",
+    );
+
+    const changedFirst = first.replace(
+      "Prove one fixture task.",
+      "Change one represented task.",
+    );
+    expect(
+      errors(
+        copySnapshot(seeded, {
+          activeText: activeStore([changedFirst, second], 42),
+          baseActiveText: activeStore([first], 41),
+        }),
+      ),
+    ).toContain(
+      ".harness/tasks.md: task-authoring append must preserve every existing active task byte-for-byte and in order",
+    );
+
+    const interleaved = activeStore(
+      [
+        first,
+        taskBlock({ tag: "T-0042", brick: "harness/H1/third-fixture" }),
+        second,
+      ],
+      43,
+    );
+    expect(
+      errors(
+        copySnapshot(seeded, {
+          activeText: interleaved,
+          baseActiveText: activeStore([first, second], 42),
+        }),
+      ),
+    ).toContain(
+      ".harness/tasks.md: task-authoring append must preserve every existing active task byte-for-byte and in order",
+    );
+
+    const changedArchive = seeded.completedText.replace(
+      "Repository foundation",
+      "Repository foundation changed during authoring",
+    );
+    expect(
+      errors(
+        copySnapshot(seeded, {
+          activeText: activeStore([first], 41),
+          baseActiveText: baseActive,
+          completedText: changedArchive,
+        }),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("historical seed SHA-256"),
+      ]),
+    );
+  });
+
+  it("validates dependency existence, uniqueness, order, and acyclicity", async () => {
+    const context = await fixtureContext();
+    const queued = positiveHarnessScenarios(context).queued;
+    const first = taskBlock();
+    const dependent = taskBlock({
+      tag: "T-0041",
+      brick: "harness/H1/dependent-fixture",
+      dependsOn: "[T-0007], [T-0040]",
+    });
+    const valid = activeStore([first, dependent], 42);
+    expect(
+      errors(
+        copySnapshot(queued, {
+          activeText: valid,
+          baseActiveText: valid,
+        }),
+      ),
+    ).toEqual([]);
+
+    const missing = activeStore([taskBlock({ dependsOn: "[T-9999]" })], 41);
+    expect(
+      errors(
+        copySnapshot(queued, {
+          activeText: missing,
+          baseActiveText: missing,
+        }),
+      ),
+    ).toContain("task dependency graph: [T-0040] depends on missing [T-9999]");
+
+    const duplicate = activeStore(
+      [taskBlock({ dependsOn: "[T-0007], [T-0007]" })],
+      41,
+    );
+    expect(
+      errors(
+        copySnapshot(queued, {
+          activeText: duplicate,
+          baseActiveText: duplicate,
+        }),
+      ),
+    ).toContain("task dependency graph: [T-0040] repeats dependency [T-0007]");
+
+    const cycle = activeStore(
+      [
+        taskBlock({ dependsOn: "[T-0041]" }),
+        taskBlock({
+          tag: "T-0041",
+          brick: "harness/H1/cycle-fixture",
+          dependsOn: "[T-0040]",
+        }),
+      ],
+      42,
+    );
+    const cycleErrors = errors(
+      copySnapshot(queued, {
+        activeText: cycle,
+        baseActiveText: cycle,
+      }),
+    );
+    expect(cycleErrors).toContain(
+      "task dependency graph: [T-0040] dependency [T-0041] must precede it in completed-then-active order",
+    );
+    expect(cycleErrors).toContain(
+      "task dependency graph: cycle detected at [T-0040]",
+    );
+  });
+
+  it("derives forward validation sets from the canonical registry", async () => {
+    const queued = positiveHarnessScenarios(await fixtureContext()).queued;
+    const customRegistry = queued.validationText.replace(
+      "\n## Independent Review Gate",
+      "\n| `custom-proof` | configured fixture proof | fixture behavior |\n\n## Independent Review Gate",
+    );
+    const customTask = taskBlock({
+      validationSets: ["baseline", "agent-review", "custom-proof"],
+    });
+    const customActive = activeStore([customTask]);
+    expect(
+      errors(
+        withValidationText(
+          copySnapshot(queued, {
+            activeText: customActive,
+            baseActiveText: customActive,
+          }),
+          customRegistry,
+        ),
+      ),
+    ).toEqual([]);
+
+    const bootstrapTask = taskBlock({
+      validationSets: ["baseline", "agent-review", "bootstrap-preflight"],
+    });
+    const bootstrapActive = activeStore([bootstrapTask]);
+    expect(
+      errors(
+        copySnapshot(queued, {
+          activeText: bootstrapActive,
+          baseActiveText: bootstrapActive,
+        }),
+      ),
+    ).toContain(
+      ".harness/tasks.md: [T-0040] Validation_sets has invalid or incomplete set names",
+    );
+
+    const baselineRow = queued.validationText
+      .split("\n")
+      .find((line) => line.startsWith("| `baseline` |"));
+    expect(baselineRow).toBeDefined();
+    const duplicated = queued.validationText.replace(
+      baselineRow!,
+      `${baselineRow!}\n${baselineRow!}`,
+    );
+    expect(errors(withValidationText(queued, duplicated))).toContain(
+      ".harness/validation.md: validation registry set names must be unique",
+    );
+
+    const malformed = queued.validationText.replace(
+      "\n## Independent Review Gate",
+      "\n  | malformed registry row |\n\n## Independent Review Gate",
+    );
+    expect(errors(withValidationText(queued, malformed))).toContain(
+      ".harness/validation.md: validation registry contains a malformed or unconsumed row",
+    );
+
+    const unconsumed = queued.validationText.replace(
+      "\n## Independent Review Gate",
+      "\nattacker-controlled registry content\n\n## Independent Review Gate",
+    );
+    expect(errors(withValidationText(queued, unconsumed))).toContain(
+      ".harness/validation.md: validation registry contains malformed or unconsumed content",
     );
   });
 
@@ -485,6 +787,12 @@ describe("harness integrity validation", () => {
       ),
       "completed",
     );
+    const h1FinalActive = renderTaskStore(liveActive, [])
+      .replace(/^- `NEXT_TASK_TAG`: \d{4}$/m, "- `NEXT_TASK_TAG`: 0040")
+      .replace(
+        /^- `NEXT_REFACTOR_TAG`: \d{4}$/m,
+        "- `NEXT_REFACTOR_TAG`: 0001",
+      );
     const tags = Array.from(
       { length: 32 },
       (_, index) => `T-${String(index + 8).padStart(4, "0")}`,
@@ -508,7 +816,7 @@ describe("harness integrity validation", () => {
     const merged = copySnapshot(
       positiveHarnessScenarios(context).seededArchive,
       {
-        activeText: renderTaskStore(liveActive, []).replace(/\n\n$/, "\n"),
+        activeText: h1FinalActive.replace(/\n\n$/, "\n"),
         completedText: renderTaskStore(liveCompleted, [
           ...seedBlocks,
           ...passedBlocks,
@@ -841,6 +1149,24 @@ describe("harness integrity validation", () => {
       errors(copySnapshot(queued, { files: duplicateMetadataFiles })),
     ).toContain(
       `${H1_PATH}: [T-0040] source spec must declare exactly one Spec ID`,
+    );
+  });
+
+  it("keeps an archived task source-spec path live until migration is executable", async () => {
+    const context = await fixtureContext();
+    const seeded = positiveHarnessScenarios(context).seededArchive;
+    const passed = taskBlock({ status: "passed", pass: true });
+    const completed = completedStore(context.seedText, [passed]);
+    const stable = copySnapshot(seeded, {
+      activeText: activeStore([]),
+      baseActiveText: activeStore([]),
+      completedText: completed,
+      baseCompletedText: completed,
+    });
+    const files = new Map(stable.files);
+    files.delete(H1_PATH);
+    expect(errors(copySnapshot(stable, { files }))).toContain(
+      `.harness/completed.md: [T-0040] Source_spec does not exist: ${H1_PATH}`,
     );
   });
 

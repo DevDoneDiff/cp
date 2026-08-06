@@ -1,6 +1,7 @@
 export interface HarnessFixtureContext {
   seedText: string;
   contractsReadme: string;
+  validationText: string;
   statesReadme: string;
   stateTemplate: string;
 }
@@ -8,6 +9,7 @@ export interface HarnessFixtureContext {
 export interface HarnessSnapshotFixture {
   activeText: string;
   completedText: string;
+  validationText: string;
   baseActiveText?: string;
   baseCompletedText?: string;
   baseParentActiveText?: string;
@@ -29,8 +31,11 @@ interface TaskBlockOptions {
   sourceSpecId?: string;
   sourceSpec?: string;
   traceability?: string;
+  dependsOn?: string;
   objective?: string;
   artifact?: string;
+  validationSets?: string[];
+  type?: "maintenance" | "refactor";
 }
 
 const H1_PATH =
@@ -61,18 +66,21 @@ export function taskBlock({
   sourceSpecId = "harness/H1",
   sourceSpec = H1_PATH,
   traceability = "F4",
+  dependsOn = "none",
   objective = "Prove one fixture task.",
   artifact = "none",
+  validationSets = ["baseline", "agent-review"],
+  type = tag.startsWith("R-") ? "refactor" : "maintenance",
 }: TaskBlockOptions = {}) {
   return `### [${tag}] ${title}
-Type: maintenance
+Type: ${type}
 Bootstrap: false
 Source_spec_id: ${sourceSpecId}
 Source_spec: ${sourceSpec}
 Brick_id: ${brick}
 Traceability: ${traceability}
 Priority: P0
-Depends_on: none
+Depends_on: ${dependsOn}
 Status: ${status}
 Ready: true
 Pass: ${String(pass)}
@@ -91,15 +99,14 @@ Expected_surfaces:
 Reference_artifacts:
 - ${artifact}
 Validation_sets:
-- baseline
-- agent-review
+${validationSets.map((set) => `- ${set}`).join("\n")}
 Open_questions:
 - none
 Blocker: ${blocker}
 Scratchpad: .harness/work/${tag}.md`;
 }
 
-export function activeStore(blocks: string[], nextTask = 41) {
+export function activeStore(blocks: string[], nextTask = 41, nextRefactor = 1) {
   return `# Tasks
 
 ## Control
@@ -107,7 +114,7 @@ export function activeStore(blocks: string[], nextTask = 41) {
 - \`RUN_MODE\`: autonomous
 - \`MERGE_MODE\`: autonomous
 - \`NEXT_TASK_TAG\`: ${String(nextTask).padStart(4, "0")}
-- \`NEXT_REFACTOR_TAG\`: 0001
+- \`NEXT_REFACTOR_TAG\`: ${String(nextRefactor).padStart(4, "0")}
 
 ## Active Queue
 
@@ -153,6 +160,7 @@ function fixtureFiles(
   const files = new Map<string, Buffer>();
   files.set(".harness/tasks.md", Buffer.from(activeText));
   files.set(".harness/completed.md", Buffer.from(completedText));
+  files.set(".harness/validation.md", Buffer.from(context.validationText));
   files.set("docs/contracts/README.md", Buffer.from(context.contractsReadme));
   files.set(
     "docs/contracts/states/README.md",
@@ -185,6 +193,7 @@ function snapshot(
   return {
     activeText,
     completedText,
+    validationText: context.validationText,
     baseActiveText,
     baseCompletedText,
     baseParentActiveText,
