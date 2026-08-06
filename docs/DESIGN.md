@@ -3,166 +3,188 @@
 ## Status
 - State: approved
 - Approved: true
-- Approval_scope: shared MVP visual system plus confirmed S1 and S2 states
-- Deferred_scope: state-specific S3-S10 composition until each visual reference is approved
+- Approval scope: shared visual, interaction, content, motion, responsive, and accessibility system
+- Change frequency: slow; update only when approved shared design truth changes
 
-UI work cannot become ready when required visual authority for its state is unresolved.
-
-## Source Basis
-- `docs/source/PRODUCT_SYSTEM_SPEC.md`
-- `docs/source/MVP_DEMO_SYSTEM_SPEC.md`
-- `docs/source/MVP_STATE_FLOW_SPEC.md`
+State-specific composition remains unresolved until its approved `sNN-state.md` specification and linked references exist.
 
 ## Authority
 Apply design direction in this order:
 1. explicit user instruction
-2. active approved spec
-3. approved visual reference linked by the spec
-4. this document for shared rules
+2. active approved `sNN-state.md` specification
+3. exact approved visual reference linked by that specification
+4. this document
 5. established tokens and components
-6. `$frontend-design`
+6. approved design skills
 7. agent judgment
 
-A technical infographic is implementation guidance only. Any required decision must also exist in the approved spec or architecture. When a reference and authoritative text conflict, stop and resolve the conflict before implementation.
+This document owns shared design rules. State specifications own composition, variants, flow, copy, exact references, and state-specific proof. Technical references provide guidance and cannot introduce unstated behavior, authority, or architecture.
 
-## Approved Reference Registry
-| Artifact | Status | Type | Role |
-|---|---|---|---|
-| `references/states/s01-address-entry/visual-default.png` | approved | visual | S1 default landing state with `How it works` closed |
-| `references/states/s01-address-entry/visual-how-it-works-open.png` | approved | visual | S1 landing state with the `How it works` surface open |
-| `references/states/s02-property-analysis/visual-property-confirmation.png` | approved | visual | S2 property-confirmation target |
-| `references/states/s02-property-analysis/visual-live-roof-assembly.png` | approved | visual | S2 live-assembly target and S3 continuity source |
-| `references/states/s02-property-analysis/technical-persistent-project-assembly.png` | approved guidance | technical | S1-S3 continuity and implementation explanation; no standalone authority |
-| S3-S10 reference bundles | pending | visual and technical as required | required before corresponding UI tasks become ready |
+## Experience Character
+- Direction: premium cinematic contractor-project experience.
+- Character: calm, intelligent, precise, trustworthy, and visibly alive through real state change.
+- Goal: confidence and control without sales pressure or technical intimidation.
+- Model: continuous object-centered project environment.
+- Central object: property first, governed project over time.
+- Default interaction: simple enough for a low-effort homeowner.
+- Progressive disclosure: deeper concerns, exceptions, explanations, and consequences.
+- AI presence: useful structure and clarity rather than AI branding or a mandatory chatbot.
 
-Pending later-state references do not block repository foundation or approved S1/S2 work. Each later UI task becomes ready only after its own reference bundle is approved and linked by exact path.
+## Shared Principles
+- Familiar controls carry a continuous journey.
+- Pause only for homeowner meaning, correction, consent, or authority.
+- Show real work and trustworthy readiness.
+- Preserve project identity and context through transitions.
+- Keep uncertainty visible in plain language.
+- Compress completed interactions into durable project state.
+- Preview direct controls immediately and commit through one explicit action.
+- Keep explanations attached to the entity they describe.
+- Expose consequences, transactions, and evidence without removing project context.
+- Remain usable without high-end 3D, gesture-only input, or model latency.
+- Let the approved state reference own composition within these shared rules.
 
-The combined S1 comparison image is working material, not implementation authority. Keep it outside approved state folders or under ignored `references/_working/`.
+## Spatial Grammar
+- **Central project object:** property, system, packet, offer, or active project remains visually primary.
+- **Contextual instrument:** current decision, editable summary, or next action sits adjacent to the central object.
+- **Anchored expansion:** local explanation or editing stays attached to the selected entity.
+- **Vertical drawer:** estimates, obligations, transactions, or evidence open without replacing context.
+- **Horizontal progression:** major phase movement may use restrained lateral motion.
+- **Compression:** completed work condenses into durable project state.
+- **Persistent shell:** adjacent states preserve scene, camera, and object continuity when the active specification requires it.
 
-## Reference Consumption Rules
-- The approved active spec selects the exact artifacts required for an implementation outcome.
-- `.harness/tasks.md` repeats those exact paths under `Reference_artifacts`.
-- Codex must not infer authority from other files in the same folder.
-- Visual artifacts own state-specific appearance within prose constraints.
-- Technical artifacts are guidance only; required decisions must also exist in approved prose.
-- Image-generation defects, fabricated values, malformed copy, and annotation marks are excluded unless an approved spec explicitly includes them.
+Traditional navigation remains secondary.
 
 ## Style Profile
-- Visual direction: Premium cinematic solar experience with a familiar landing entry and a future-feeling continuous project journey after address submission.
-- Product character: Calm, intelligent, precise, trustworthy, and visibly alive through real state change.
-- Emotional tone: Confidence and control without sales pressure or technical intimidation.
-- Preferred references: The approved registry above.
-- Typography character: Editorial serif for major human-facing statements; neutral modern sans for UI, facts, controls, and labels.
-- Color character: Near-black navy foundation, cool white text, restrained blue interaction accent, semantic green/orange status colors.
-- Layout character: Full-frame compositions, strong image-led hierarchy, minimal navigation, persistent project context, and one dominant action.
-- Shape character: Large soft containers with thin cool borders; restrained radii and depth.
-- Motion character: State, causality, and continuity driven. No decorative perpetual animation.
-- Signature elements: Cinematic property scene, blue property boundary, panels appearing as durable objects, contextual right-side instrument, visible source/certainty.
-- Explicitly avoid: generic SaaS dashboard, permanent sidebar, card grid, eco-green branding default, glassmorphism, sci-fi HUD, chatbot-first layout, wizard stepper, fake loading percentage, and disconnected page transitions.
-
-## Design Principles
-- Familiar controls carry a new continuous journey.
-- Pause only when homeowner meaning, correction, consent, or authority is required.
-- Show real assembly work as it becomes trustworthy.
-- Preserve the property scene, camera context, and project object through state transitions.
-- Keep uncertainty visible and plain-language.
-- Use progressive disclosure; default interaction remains simple.
-- One explicit commit action applies previewed project changes.
-- The approved image owns composition; shared tokens and rules create consistency across states.
+- Typography: editorial serif for major human statements; neutral modern sans for UI, facts, controls, and labels.
+- Color: near-black navy foundation, cool white text, restrained blue accent, and semantic green, orange, and red.
+- Layout: full-frame composition, image-led hierarchy, minimal navigation, persistent context, and one dominant action.
+- Shape: large soft containers, thin cool borders, restrained radii, and controlled depth.
+- Motion: causality, continuity, and state change.
+- Signature elements: cinematic property imagery, precise boundaries, durable visual objects, contextual instruments, and visible source or certainty.
 
 ## Typography
-- Primary UI family: Inter.
+- UI family: Inter.
 - Display family: Cormorant Garamond.
-- Scale: 12 label, 14 supporting, 16 body/control, 20 section, 28 title, 48-64 display depending on viewport.
-- Weight policy: 400 body, 500 labels, 600 controls and facts, 700 key UI emphasis; display uses 500-600.
+- Scale: 12 label, 14 supporting, 16 body/control, 20 section, 28 title, 48 to 64 display.
+- Weights: 400 body, 500 labels, 600 controls and facts, 700 key emphasis, 500 to 600 display.
 - Line height: 1.15 display, 1.3 headings, 1.5 body.
-- Readable measure: 45-70 characters for prose; transactional labels remain shorter.
+- Prose measure: 45 to 70 characters.
 - Fallbacks: system sans and Georgia-compatible serif.
 
 ## Color
-- Canvas: `#06111C`
-- Surface: `#0B1A29`
-- Elevated surface: `#102235`
-- Primary text: `#F7F9FC`
-- Secondary text: `#A8B5C3`
-- Brand/accent: `#2F80FF`
-- Success/verified: `#78D65B`
-- Warning/user attention: `#F2B84B`
-- Error/blocked: `#E36A5D`
-- Border: `#1D3A52`
-- Focus: `#70ADFF`
-- Contrast: meet WCAG AA for text and controls; focus indication cannot rely on color alone.
+| Token | Value | Use |
+|---|---|---|
+| Canvas | `#06111C` | Primary background |
+| Surface | `#0B1A29` | Main containers |
+| Elevated | `#102235` | Drawers and overlays |
+| Primary text | `#F7F9FC` | Main content |
+| Secondary text | `#A8B5C3` | Supporting content |
+| Accent | `#2F80FF` | Primary interaction |
+| Verified | `#78D65B` | Satisfied evidence |
+| Attention | `#F2B84B` | Unknown or pending |
+| Blocked | `#E36A5D` | Error or blocked |
+| Border | `#1D3A52` | Structural separation |
+| Focus | `#70ADFF` | Keyboard focus |
 
-Use semantic tokens. Do not add one-off colors without an approved reason.
-The listed families and colors are the initial MVP extraction from the approved references. A visual task may adjust them only when browser comparison proves a closer match, and must update this document in the same task.
+Use semantic tokens. New one-off colors require an approved product-purpose reason. Meet WCAG AA contrast, and never rely on color alone.
 
-## Spacing and Layout
-- Base spacing unit: 4 px.
-- Desktop frame: fluid to 1536 px with 16-32 px outer margin.
-- Grid: 12-column desktop composition; state references may override column distribution.
-- Density: visually rich scene with restrained control density and generous primary-action spacing.
-- Alignment: strong shared edges; overlays attach to the entity or state they explain.
-- Breakpoints: mobile under 640, tablet 640-1023, desktop 1024 and above.
+## Layout, Shape, and Components
+- Base spacing: 4 px.
+- Desktop frame: fluid to 1536 px with 16 to 32 px outer margin.
+- Grid: 12-column base unless the approved reference defines another distribution.
+- Breakpoints: mobile below 640 px, tablet 640 to 1023 px, desktop 1024 px and above.
 - Required viewports: 1536x1024, 1440x900, 1024x768, and 390x844.
-- S1 may use a distinct landing composition. After address submission, use one persistent project shell.
+- Radii: 10 px controls, 16 px instruments, 24 to 28 px primary frames.
+- Borders: 1 px cool blue; bright accent only for focus, selection, and active project boundaries.
+- Shadows: restrained overlay and imagery separation; no default decorative glow.
+- Forms: visible labels, large targets, and clear validation.
+- Components: framework-native primitives and local components unless architecture approves a library.
+- Required states: default, hover, focus, active, disabled, loading, empty, error, success, pending, unknown, and verified where applicable.
+- One primary action dominates each decision point.
+- Gestures require click, keyboard, and visible-control alternatives.
 
-## Shape, Components, and Feedback
-- Radius scale: 10 px controls, 16 px instruments, 24-28 px primary frames.
-- Borders: 1 px cool-blue structural borders; brighter accent only for focus, selection, and active property boundary.
-- Shadows: restrained and used to separate overlays from imagery; no glow as default decoration.
-- Component source: framework-native primitives and local components. Add a library only through approved architecture.
-- Forms: visible labels, large targets, clear validation, no phone-number requirement at entry.
-- Navigation: minimal. No permanent sidebar or state wizard.
-- Feedback: deterministic controls preview immediately; authoritative commit, pending, success, failure, and unknown states are distinct.
-- Required component states: default, hover, focus, active, disabled, loading, empty, error, and success where applicable.
+## Imagery and Visual Objects
+- Use cinematic seeded property imagery for the demo.
+- Actual provider imagery remains source labeled.
+- Project visual objects remain stable when continuity is required.
+- Renderer or scene changes cannot fabricate a new project identity.
+- Placeholders use labeled skeletons, unavailable states, or explicit partial data.
+- Decoration cannot obscure controls, source, certainty, correction, or permission.
+- Icons use a consistent line style and semantic purpose.
 
-## Icons and Imagery
-- Icons: simple line icons with consistent stroke and semantic use.
-- Property imagery: cinematic seeded property imagery for the demo; actual provider imagery remains source-labeled.
-- S2 confirmation to S2 assembly to S3 must preserve the same property scene and geometry. Camera motion may pan or zoom and cannot swap the property render.
-- Panel objects appear only when their stable objects exist and remain the same objects in S3.
-- Placeholders: labeled skeleton or source-unavailable state; never fabricated precision.
-- Decorative assets cannot obscure controls, certainty, source, or property correction.
+## Interaction Grammar
+```text
+user expresses intent
+  -> system assembles or proposes structured state
+  -> user corrects exceptions or confirms authority
+  -> interface reorganizes around the resulting project
+```
+
+Direct control changes remain preview state until explicit commit. Agent work appears as bounded candidate structure, explanation, or exception. Material interpretations remain inspectable and editable. High-consequence actions use explicit language and visible effects. Progress follows real readiness or approved seeded equivalents, never fake certainty or a timer-only percentage.
 
 ## Motion
-- Purpose: clarify morph, state progression, cause and effect, attachment, and compression.
-- Control feedback: 120-220 ms.
-- Local expansion and layout change: 220-400 ms.
-- Camera or state morph: 400-700 ms when motion is allowed.
-- S2 live assembly: actual 20-30 second work window driven by readiness events and panel-object creation, never a timer-only animation.
-- Panel reveal: short opacity/transform entrance when each stable object arrives; no replacement panel set at S3.
-- Prohibited: indefinite shimmer, fake percent completion, looping scans, decorative particles, and animation that blocks deterministic controls.
-- Reduced motion: remove camera travel and spatial transforms; use immediate scene preservation plus short fades and status updates.
+Motion meanings:
+- morph: generic becomes project-specific
+- in-place reconfiguration: current choice changes
+- horizontal movement: phase progression
+- vertical movement: consequence, transaction, obligation, or evidence
+- anchored expansion: local explanation or editing
+- compression: completed work becomes durable state
+
+Timing: 120 to 220 ms for control feedback, 220 to 400 ms for local expansion, and 400 to 700 ms for camera or major-state morph when allowed.
+
+Prohibited: indefinite shimmer, fake percent completion, looping scans, decorative particles, meaningless idle animation, and animation that blocks deterministic controls.
+
+Reduced-motion mode removes camera travel and spatial transforms while preserving information, identity, state change, and action.
 
 ## Content and Voice
-- Voice: plain, calm, specific, and source-aware.
-- Reading level: everyday homeowner; define solar or transaction terms in context.
-- CTA style: explicit result, such as `Yes, this is my property` or `Update system`.
-- Error style: state what failed, what remains safe, and the next available action.
-- Terminology source: `docs/PRODUCT.md`.
-- Prohibited language: unsupported certainty, sales urgency, AI hype, hidden lead language, and unexplained technical jargon.
+- Plain, calm, specific, and source aware.
+- Everyday homeowner reading level.
+- Define technical and transaction terms in context.
+- Calls to action describe their result.
+- Errors state what failed, what remains safe, and the next available action.
+- Use canonical terminology from `PRODUCT.md`.
+- Avoid sales urgency, unsupported certainty, AI hype, hidden lead language, and unexplained jargon.
 
-## Accessibility
-- Target: WCAG 2.2 AA.
-- Keyboard: every control, confirmation, lens, drawer, and correction path is operable without pointer or gesture.
-- Focus: persistent visible ring with logical order.
-- Semantics: landmarks, headings, labels, status announcements, and accessible names.
-- Screen reader: announce state changes, assembly milestones, errors, and control unlocks without narrating decorative motion.
-- Reduced motion: honor system preference and preserve all information and actions.
+## Accessibility and Responsive Behavior
+Target WCAG 2.2 AA.
+
+Every control, Lens, drawer, confirmation, correction path, and transaction action works by keyboard. Focus remains visible and logical. Use semantic landmarks, labels, status announcements, and accessible names. Screen readers receive meaningful state changes without decorative narration. Touch targets remain usable on mobile.
+
+Desktop investor demonstration is primary; mobile remains fully usable. Responsive adaptation preserves project identity, action priority, source, certainty, and consequences. Complex spatial layouts may collapse into ordered vertical sections. State specifications own state-specific responsive composition.
+
+## Reference Authority
+- Each state specification lists the exact approved visual and technical reference paths.
+- Tasks repeat those exact paths.
+- Agents cannot infer authority from neighboring files or folders.
+- Visual references own state-specific appearance within prose constraints.
+- Technical references remain guidance only.
+- Image defects, fabricated values, annotations, and malformed copy are excluded unless approved prose includes them.
+- Working references remain outside approved state-reference paths.
 
 ## Browser Validation
-- Commands and base URL: owned by `.harness/validation.md` after repository foundation.
-- Required routes: landing route and persistent project route.
-- Required S1/S2 states: address entry, `How it works` open/closed, property confirmation, correction affordance, partial live assembly, minimum-usable transition, error/fallback, and reduced-motion transition.
-- Required references: every artifact linked by the active spec.
-- Browser tool: Playwright plus real-browser visual inspection.
+Shared validation covers required viewports, keyboard and focus, reduced motion, semantic controls, status announcements, component states, and visual comparison against each exact reference linked by the active state specification.
 
-## Open Questions
-- none within approval scope
+The repository harness owns commands and evidence procedures. State specifications own their state-level proof.
 
-## Maintenance Rules
-- Update when the approved shared design system changes, not for isolated state implementation.
-- State-specific composition belongs to the approved visual reference and active spec.
-- Reuse tokens and components before adding variants.
-- New visual patterns require a product-purpose reason and approval.
-- Git owns prior design history.
+## Explicitly Avoid
+- generic SaaS dashboard
+- permanent sidebar
+- card-grid marketplace
+- eco-green default branding
+- glassmorphism
+- sci-fi HUD
+- chatbot-first composition
+- wizard stepper
+- fake loading percentage
+- disconnected page transitions
+- decorative perpetual animation
+- unexplained precision
+- state-specific rules hidden inside this shared document
+
+## Change Control
+- Update when the shared design system changes.
+- State-specific composition and behavior belong to state specifications and approved references.
+- Reuse tokens, components, and interaction grammar before adding variants.
+- New shared patterns require a product-purpose reason and approval.
+- Git owns prior versions and change history.

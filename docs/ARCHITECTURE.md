@@ -1,182 +1,189 @@
 # Architecture
-
 ## Status
 - State: approved
 - Approved: true
-- Approval_scope: repository foundation and complete investor-demo MVP architecture
-- Deferred_scope: production-scale provider operations, multi-region resilience, real financing, and post-MVP category expansion
+- Approval scope: durable platform architecture and current residential-solar MVP baseline
+- Change frequency: slow; update only when approved technical structure changes
 
-No implementation task may become ready while required architecture within its scope is unresolved.
+No implementation task may contradict this document within its scope.
+## Authority
+This document owns system structure, dependency direction, technology baseline, runtime and persistence, data and mutation contracts, component boundaries, versioning, authorization, agent architecture, verification, integrations, reliability, and technical invariants.
 
-## Source Basis
-- `docs/source/PRODUCT_SYSTEM_SPEC.md`
-- `docs/source/MVP_DEMO_SYSTEM_SPEC.md`
-- `docs/source/MVP_STATE_FLOW_SPEC.md`
-
+Individual `sNN-state.md` specifications own state-level behavior, readiness events, transitions, renderer details, and exact references.
 ## System Summary
-- System type: Full-stack TypeScript web application.
-- Runtime model: Public landing state followed by one persistent project runtime whose visible state advances without page-level resets.
-- Deployment target: Vercel-hosted Next.js application with Neon Postgres for the MVP.
-- Repository shape: One application repository. No microservices or monorepo split for the MVP.
-- Primary architectural style: Modular monolith with domain/application boundaries, typed ports, provider adapters, explicit events, and versioned projections.
+- System type: full-stack TypeScript web application.
+- Repository shape: one application repository.
+- Architecture: modular monolith with domain and application boundaries, typed ports, replaceable adapters, explicit events, and versioned projections.
+- Runtime: public entry followed by one persistent project environment.
+- Deployment: Vercel-hosted Next.js application with Neon Postgres for the MVP.
+- Scale rule: no microservice or monorepo split until an approved need exceeds the modular monolith.
+## Technology Baseline
+| Layer | Choice | Constraint |
+|---|---|---|
+| Runtime | Node.js active LTS | Pin and upgrade deliberately |
+| Language | TypeScript strict | Shared discriminated contracts |
+| Full stack | Next.js App Router and React | One application release train |
+| Backend | Next.js server modules, route handlers, and job interfaces | No separate MVP service |
+| Database | Postgres on Neon | Durable transactional authority |
+| ORM | Drizzle | Typed schema and migrations |
+| Authentication | OTP through a project-owned port | Replaceable provider adapter |
+| Payments | Stripe Checkout test mode and webhook | Authoritative demo payment state |
+| Property and solar | Replaceable adapters | Seeded fallback required |
+| Client state | Typed reducers and state contracts | No generalized workflow engine |
+| Testing | Vitest, Testing Library, and Playwright | Unit through real-browser proof |
 
-## Technology Stack
-| Layer | Choice | Version policy | Reason or constraint |
-|---|---|---|---|
-| Runtime | Node.js | Pin active LTS during foundation | Canonical Node/TypeScript baseline |
-| Language | TypeScript strict | Pin exact compiler | Shared types and discriminated state contracts |
-| Frontend | Next.js App Router + React | Pin stable compatible versions | One full-stack application and persistent client shell |
-| Backend | Next.js server modules, route handlers, and job interfaces | Same release train | Avoid a separate service before scale requires it |
-| Database | Postgres on Neon | Managed stable service | Transactional authority after account claim |
-| ORM | Drizzle | Pin exact version | Typed schema and migrations |
-| Auth | Clerk email OTP behind a project-owned port and adapter | SDK and exact integration deferred to the approved authentication spec | Custom product UI and replaceable provider boundary |
-| Payments | Stripe Checkout test mode + webhook | Current stable API version pinned in config | Canonical demo transaction |
-| Property | Address, imagery, and solar adapters with seeded fallback | Provider APIs versioned per adapter | Replaceable vendor boundary and demo reliability |
-| State | TypeScript state machine using discriminated unions and reducers | No workflow dependency | Explicit transitions without a generalized engine |
-| Testing | Vitest, Testing Library, Playwright | Pin exact versions | Unit, component, workflow, and browser proof |
-
-Production dependencies require an approved spec and task.
-
-## System Components
-| Component | Responsibility | Owns | Must not own |
-|---|---|---|---|
-| Landing | S1 trust and normalized address entry | transient address input | project lifecycle or durable identity |
-| Project runtime shell | Persistent post-address scene, renderer, and state projection | current client projection and transition presentation | canonical durable data |
-| Project application service | Validates commands and coordinates mutations | use cases, versions, event append, projection rebuild | provider-specific payloads |
-| Domain model | Project entities, relationships, certainty, authority, and invariants | canonical business rules | UI layout or vendor SDKs |
-| Session project store | Pre-account browser-session project through S4 claim | session projection and stable object IDs | durable homeowner record |
-| Projection builder | Produces current customer and agent views | versioned read models | canonical writes |
-| Event ledger/outbox | Consequential history and reliable side effects | immutable events and publication state | current UI composition |
-| Provider adapters | Address, property, solar, auth, payment, and later provider integration | normalization and failure mapping | domain authority |
-| Project intelligence harness | Scoped interpretation and typed patch proposals | bounded context and validated proposals | arbitrary mutation or deterministic calculations |
-| Verification service | Claims, artifacts, rules, and milestone transitions | evidence-gated verification | unsupported provider status acceptance |
-
+Production dependencies require an approved specification and task.
 ## Dependency Direction
 ```text
-UI and route entrypoints -> application services -> domain contracts -> ports -> adapters and infrastructure
+UI and route entrypoints
+  -> application services
+  -> domain contracts
+  -> ports
+  -> adapters and infrastructure
 ```
 
-Rules:
 - Domain modules import no framework, vendor SDK, UI, or persistence implementation.
-- UI reads the current projection and submits typed commands.
-- Adapters normalize external data before it reaches application or domain code.
-- Only application services authorize canonical mutations and append consequential events.
-- Technical reference artifacts cannot create dependencies absent from this document or an approved spec.
-
-## Persistent Project Runtime
-- S1 is the only distinct landing composition.
-- Address submission creates a browser-session project root and enters the persistent project shell.
-- S2 contains semantic substates `PROPERTY_CONFIRMATION` and `LIVE_ROOF_ASSEMBLY`; historical decimal image labels are asset labels, not execution order.
-- Property confirmation requires explicit homeowner authority.
-- Live assembly advances from completed work events and stable object counts. It never advances from a generic timer percentage.
-- The same renderer instance, camera context, property identity, and panel object IDs persist from assembly into S3.
-- Panel objects include stable `panel_id`, `surface_id`, `placement_rank`, geometry, render status, and selection state.
-- S3 controls unlock at `MINIMUM_USABLE_READY`; the state appears in place with no remount or replacement render.
-- The system advances automatically when the next valid state requires no additional user meaning or authority. Otherwise it stops and requests one explicit action.
-- Direct controls update local preview state. `Update system` sends one coherent command and creates one project version.
-
+- UI reads versioned projections and submits typed commands.
+- Application services validate, authorize, mutate, append events, and rebuild projections.
+- Adapters normalize external data and failures.
+- Infrastructure cannot redefine business authority.
+- Technical references cannot introduce dependencies absent from approved prose.
+## System Components
+| Component | Responsibility | Must not own |
+|---|---|---|
+| Public entry | Trust, address entry, and session start | Durable project lifecycle |
+| Persistent project runtime | Continuous scene, instruments, projection, and local previews | Canonical durable data |
+| Project application service | Command authorization, versions, transactions, events, and projection rebuild | Provider-specific payloads |
+| Domain model | Entities, relationships, certainty, authority, and invariants | UI composition and vendor SDKs |
+| Session project store | Pre-account projection and stable object identity | Durable homeowner record |
+| Durable project store | Account-owned canonical graph and transaction state | UI-only state |
+| Projection builder | Customer, integration, and agent read models | Canonical writes |
+| Event ledger and outbox | Consequential history and reliable publication | Current UI composition |
+| Provider adapters | External normalization and failure mapping | Domain authority |
+| Project Intelligence Harness | Scoped interpretation and typed proposals | Arbitrary mutation or deterministic calculation |
+| Verification service | Claims, artifacts, rules, and milestone transitions | Unsupported status acceptance |
+## Runtime and Persistence
+- Address resolution creates a browser-session project root.
+- Pre-account project state remains browser-session scoped.
+- Server routes may process vendor requests without creating a durable homeowner record.
+- Account claim persists the existing project without reset, replacement, or duplication.
+- The post-address experience runs inside one persistent project shell.
+- Expensive renderers and durable visual objects remain mounted when approved state specifications require continuity.
+- State transitions update the projection and available controls without replacing the canonical project.
+- Automatic advance occurs only when the next valid state requires no additional homeowner meaning or authority.
+- Explicit correction, consent, permission, selection, terms, payment, financing choice, or other consequential authority pauses progression.
 ## Data Architecture
-- Primary durable store: Postgres after account claim.
-- Pre-account ownership: browser `sessionStorage` holds the session project projection; server requests may use transient correlation and provider responses without creating a durable homeowner row.
-- Schema authority: Drizzle schema and migrations, constrained by approved domain contracts.
-- Four layers: transactional graph, immutable event ledger, current projection, and task-scoped agent context projection.
-- Transaction boundaries: one database transaction per authorized project mutation, event append, version increment, and projection update.
-- Versioning: every patch references the version it read; stale writes reject or rebuild.
-- Idempotency: account claim, Stripe webhooks, external events, artifact intake, and job publication require idempotency keys.
-- Retention: session state ends with the browser session; saved non-transactional drafts delete after 30 inactive days; transactional data follows state-aware retention.
-- Backup and recovery: managed Postgres recovery plus migration reproducibility; exact service settings are configured during foundation/deployment tasks.
+Postgres is the durable transactional authority after account claim. The project remains graph-shaped, with explicit relationships represented relationally.
 
-## Interfaces and Events
-### Public APIs
-- Address normalization and candidate resolution.
-- Property confirmation and correction.
-- Assembly status stream.
-- Project command endpoints for configuration commit, packet confirmation, selection, agreement, payment, and evidence inspection.
-- Stripe webhook and later provider event intake.
+Required layers:
+1. transactional graph
+2. immutable event ledger
+3. versioned current projection
+4. task-scoped agent context projection
 
-### Internal Contracts
-- Typed command/result schemas.
-- Provider adapter ports and normalized errors.
-- Agent capability input and typed patch output schemas.
-- Versioned current projection.
+No second store may independently own canonical state. A graph read projection may be added only when relationship-heavy cross-project queries justify it.
 
-### Events and Jobs
-- `ADDRESS_RESOLVED`
-- `PROPERTY_CONFIRMED`
-- `ROOF_GEOMETRY_READY`
-- `PANEL_OBJECT_ADDED`
-- `ENERGY_MODEL_READY`
-- `MINIMUM_USABLE_READY`
-- `PROJECT_MUTATED`
-- `PROJECT_CLAIMED`
-- `OFFER_SET_READY`
-- `PROVIDER_SELECTED`
-- `PAYMENT_UPDATED`
-- `CLAIM_REPORTED`
-- `ARTIFACT_ATTACHED`
-- `MILESTONE_VERIFIED`
+Material values retain value, source type and reference, certainty, timestamps, project version, and verification requirement when applicable.
+## Canonical Mutation Contract
+```text
+source action or event
+  -> preserve source
+  -> deterministic calculation or scoped interpretation
+  -> typed candidate patch
+  -> validate and authorize
+  -> canonical mutation
+  -> append event
+  -> increment version
+  -> rebuild projections
+  -> update dependents and UI
+```
 
-Assembly status uses Server-Sent Events with bounded polling fallback. Events carry project/session ID, version, stage, readiness, and object identifiers. Polling or transport choice cannot change domain state.
+- One database transaction covers mutation, event append, version increment, and projection update.
+- Corrections supersede prior values through new events.
+- Agent and external patches reference the version they read.
+- Stale writes reject, rebuild, or explicitly merge.
+- Consequential decisions create immutable snapshots.
+- Direct controls preview locally and commit through one coherent command.
+- Deterministic calculations remain outside model output.
+- High-consequence fields require explicit authorized confirmation.
+- Account claim, payment webhooks, external events, artifact intake, and outbox publication require idempotency keys.
+## Events and Side Effects
+The ledger records domain events; the outbox publishes reliable side effects.
 
+Event families cover project lifecycle, property and configuration readiness, project mutation, account claim, offer readiness, provider selection and disclosure, agreements and payment, claims and artifacts, verification, retention, and operator exceptions.
+
+Transports may include request-response, Server-Sent Events, webhooks, polling fallback, and jobs. Transport choice cannot change domain authority.
+## Project Intelligence Harness
+```text
+persistent project
+  + scoped context builder
+  + ephemeral capability worker
+  + typed proposal
+  + validation and authorization
+```
+
+Context includes task, selected entity, project version, relevant subgraph, sources, category and provider rules, contradictions, allowed outputs, prohibited actions, and schema.
+
+The harness may interpret, explain, compare, derive requirements, review completeness, and classify exceptions. It cannot own canonical state, geometry, production, pricing, provider selection, terms, payment, financing decisions, or unsupported verification.
+
+Reliability requires schema validation, version checks, source retention, prompt and policy versioning, capability evaluations, and human escalation.
+## Verification Architecture
+```text
+provider or external event
+  -> normalized claim
+  -> source recorded
+  -> verification rule
+  -> artifact, authoritative event, or authorized exception
+  -> verified transition or unresolved exception
+```
+
+A claim alone cannot complete a consequential milestone. The verification service owns claim creation, artifact association, rule evaluation, exception routing, milestone mutation, timeline recalculation, event append, and projection rebuild.
 ## Authentication and Authorization
-- Identity source: Clerk email OTP through a project-owned auth port and adapter at S4; Clerk owns no project-domain or account-claim authority.
-- UI boundary: the application uses a custom authentication interface; Clerk's prebuilt interface is not product UI.
-- Foundation boundary: no Clerk SDK, credential, environment value, hosted resource, call, or runtime behavior exists until the later approved authentication spec.
-- Session model: anonymous browser-session project before claim; authenticated session after claim.
-- Authorization: project-scoped role and permission checks in application services.
-- Permission enforcement: server command boundary and provider disclosure adapter.
-- Anonymous behavior: exploration only; no provider identity, real offer, durable homeowner record, or disclosure.
-- Service trust: webhook signature verification, adapter credentials, and idempotent event handling.
-
-## Trust Boundaries
-- Untrusted inputs: address, free text, uploads, query/path data, provider events, webhooks, and agent output.
-- Validation points: client affordance, server schema validation, domain invariants, authorization, and typed patch validation.
-- Secret boundary: server-only environment variables and provider adapters.
-- Sensitive-data boundary: project-scoped access, redacted logs, no secrets or private artifacts in fixtures.
-- External-provider boundary: normalized adapters with timeouts, retries, cost controls, and seeded fallback where required.
-- Secure failure: preserve current valid project state, expose a bounded error or fallback, and never invent a successful fact or transition.
-
+- Authentication uses OTP behind a project-owned port and adapter.
+- The provider owns identity challenge mechanics only.
+- Application services own project claim and domain authorization.
+- Anonymous sessions support exploration without durable identity or provider disclosure.
+- Permission checks run at the server command boundary.
+- Provider disclosure requires explicit project authorization.
+- Webhooks require signature verification, normalized payloads, and idempotent handling.
 ## External Services
-| Service | Purpose | Data sent | Failure behavior | Cost control |
-|---|---|---|---|---|
-| Address/Maps adapter | normalize address and property candidate | address and location query | correction path and seeded demo fallback | debounce, cache permitted results |
-| Solar/property adapter | roof, imagery, solar model inputs | property location | labeled partial/unknown state and seeded fallback | adapter cache and request budget |
-| Clerk email OTP adapter | account claim | contact identifier and challenge | retry or blocked account gate through replaceable normalized errors | rate limit and abuse controls |
-| Stripe | test checkout and payment state | fee, project reference, customer session | authoritative failed/pending state | one checkout session per idempotency key |
-| Neon | durable project data after claim | canonical project entities | fail closed for durable mutation | managed limits and connection pooling |
+| Boundary | Purpose | Failure contract |
+|---|---|---|
+| Address and maps | Normalize address and property candidate | Correction path plus seeded fallback |
+| Property and solar | Roof, imagery, and modeled inputs | Labeled partial or unknown state plus seeded fallback |
+| Authentication | OTP challenge and session identity | Normalized retry or blocked claim state |
+| Payments | Checkout and payment events | Authoritative pending, failed, or paid state |
+| Database | Durable canonical storage | Durable mutations fail closed |
+| Provider systems | Commercial rules, project events, and artifacts | Idempotent mapping, replay, health, and exception path |
 
-## Configuration, Reliability, and Observability
-- Environment: validated typed configuration with `.env.example`; no committed secrets.
-- Logging: structured logs with request, session/project, event, and task correlation; no sensitive payload dumps.
-- Metrics: transition failures, provider latency/error, assembly duration, stale writes, webhook retries, and verification outcomes.
-- Error reporting: platform-native logs first; add a vendor only through approved authority.
-- Retry: bounded exponential backoff only for idempotent external work.
-- Timeout: every external call and job has a configured finite timeout.
-- Rate limiting: address, OTP, agent, upload, and webhook boundaries.
-- Health: application startup, database connectivity, and critical adapter configuration.
+Adapters enforce timeouts, bounded retries, cost controls, and normalized errors. Provider-specific schemas never reach customer UI or domain contracts.
+## Trust and Reliability
+Untrusted inputs include addresses, free text, uploads, routes, agent output, provider events, webhooks, and external content.
 
-## Validation and Delivery
-- Exact commands and procedures are created by the repository-foundation spec and stored in `.harness/validation.md`.
-- Required foundation: format, lint, strict typecheck, unit, integration, component, Playwright workflow, browser visual proof, production build, smoke, CI, PR status, and read-only review.
-- Branch policy: one `codex/<TAG>-<slug>` branch per task; no direct base-branch push.
+Validation occurs through client affordances, server schemas, authorization, domain invariants, typed patch validation, and verification rules.
 
+Secrets remain server-only. Logs and fixtures exclude secrets and sensitive payloads. Secure failure preserves the valid project, exposes a bounded error or fallback, and never invents a successful fact or transition.
+
+Use validated configuration, structured correlation logs, finite timeouts, bounded retry for idempotent work, rate limits, reproducible migrations, managed recovery, and seeded demo fallbacks.
+## Validation
+The repository harness owns exact commands and evidence procedures. Architecture requires formatting, lint, strict typecheck, unit, integration, component, workflow, production-build, smoke, CI, real-browser behavior, and reference-based visual proof.
+
+State specifications own their exact references and state-level proof.
 ## Architectural Invariants
-- One project survives from address through verified execution.
+- One project survives from resolved property through verified execution and support.
 - Account claim persists the session project without reset or duplication.
-- One costly renderer remains mounted across S2 confirmation, S2 assembly, and S3.
-- Stable panel identities persist into later modification.
+- The persistent runtime preserves required scene and object continuity.
 - Direct controls never depend on model latency.
 - Agents cannot own canonical state or deterministic calculations.
-- Every material value retains source, certainty, timestamp, version, and required support.
-- Provider claims cannot become verified milestones without a satisfied rule or authorized exception.
-- No second store independently owns canonical state.
-- No generalized workflow engine or microservice split is introduced for the MVP.
-
-## Open Questions
-- none within approval scope
-
+- Material values retain source, certainty, timestamp, version, and support.
+- Offers compare against one confirmed baseline.
+- Selection creates an immutable snapshot and disclosure event.
+- Claims cannot become verified milestones without a satisfied rule or authorized exception.
+- One store owns canonical state.
+- No generalized workflow engine or microservice split enters the MVP without approval.
 ## Change Control
-- Tasks implement approved architecture and cannot silently redefine it.
-- Material changes require user approval and this document updated in the same task.
-- Annotation headers localize current file responsibility and do not replace this map.
-- Git owns prior architecture history.
+- Tasks cannot silently redefine architecture.
+- Material changes require approval and an update to this document.
+- State specifications may narrow implementation and cannot contradict these contracts.
+- Annotation headers localize file responsibility and do not replace this map.
+- Git owns prior versions and change history.
