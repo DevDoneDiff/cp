@@ -13,6 +13,7 @@ export interface HarnessSnapshotFixture {
   baseParentActiveText?: string;
   baseParentCompletedText?: string;
   allowMergedCloseout?: boolean;
+  mergedBaseRevision?: string;
   contractsReadme: string;
   statesReadme: string;
   files: Map<string, Buffer>;

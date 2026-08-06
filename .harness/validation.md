@@ -60,6 +60,14 @@ The eventual pull request records a read-only resumption procedure case with the
 
 ## Proof Model
 
+`pnpm validate` is the complete local baseline. Its deterministic order is toolchain, formatting, lint, strict typecheck, annotation structure, network-free harness integrity, security, coverage tests, and production build. Harness integrity proves local active/archive structure and accepts one legal provisional closeout; it does not query GitHub or claim that an unmerged task is complete.
+
+`CI / baseline` checks out the exact pull-request head, or the pushed branch ref, with three task-store generations before running the same command. This preserves local transition semantics instead of validating GitHub's synthetic pull-request merge commit. `CI / browser-smoke` retains its independent checkout and browser behavior.
+
+One compatibility path exists only for this authorized H1 batch delivery: when configured `main` has exact parent `5d515d9f8224ed607219fd5f29d0f20305fdcc16`, structural validation may accept the single exact passed transform of the original queued T-0008 through T-0039 stores, including only truthful append-only `Expected_surfaces` expansions made while a task was working. The parent revision, seed-only archive, exact tag order, H1 source identity, queued state, canonical final store prefixes, every unchanged pre-existing surface entry, every other task byte, complete remaining active store, and complete appended archive must all match. This exception does not apply to a pull-request branch, another revision, a subset or superset, removed or rewritten surfaces, other modified task content, future tasks, reversal, or ordinary closeout.
+
+Live completion proof is separate. Selection, review evidence, exact-head CI, merge readback, dependency satisfaction, and cleanup use the configured Git and GitHub procedures. Remote unavailability therefore blocks delivery operations but never changes the meaning or result of local structural proof.
+
 Every repository behavior change requires:
 
 - task-assigned focused validation;
@@ -119,7 +127,7 @@ Do not invent validation-set names.
 | Set | Command or procedure | Proves |
 |---|---|---|
 | `bootstrap-preflight` | Inspect Git status/history/origin; verify Node `24.19.0`, pnpm `11.18.0`, and GitHub CLI; run authenticated repository, permission, visibility, exact-head branch/PR, and protection readbacks without external mutation | Historical bootstrap prerequisites and safe initial state |
-| `baseline` | `pnpm validate` | format, lint, strict typecheck, required tests, and production build |
+| `baseline` | `pnpm validate` | exact ordered toolchain, format, lint, strict typecheck, annotation, network-free harness-integrity, security, coverage-test, and production-build proof |
 | `agent-review` | configured dedicated read-only Codex review | correctness, acceptance, architecture, data, regression, file responsibility, and required reference review |
 | `frontend-component` | `pnpm test:component` | rendered states, interaction, accessibility, and contracts |
 | `frontend-e2e` | For one unchanged working tree, pass `pnpm test:smoke`, then run `pnpm test:e2e`; Playwright starts only the reusable production build | critical user workflows |

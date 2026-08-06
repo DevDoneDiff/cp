@@ -7,7 +7,7 @@
  *   - validateHarnessSnapshot: validates an injected repository snapshot for focused fixtures.
  *   - validateHarnessRepository: validates one materialized local repository.
  * CONTROL_FLOW:
- *   1. Read canonical non-symlink repository paths and local Git task-store generations.
+ *   1. Read canonical non-symlink repository paths and revision-bound local Git task-store generations.
  *   2. Validate task/archive structure and exact local transition shape.
  *   3. Validate exact spec, artifact, and state-contract routes.
  * INVARIANTS:
@@ -185,6 +185,9 @@ function containsPostSeed(completedText) {
  *   parentCompletedText?: string,
  *   grandparentActiveText?: string,
  *   grandparentCompletedText?: string,
+ *   headRevision?: string,
+ *   parentRevision?: string,
+ *   grandparentRevision?: string,
  * }} generations
  */
 export function selectTaskStoreBase({
@@ -196,6 +199,9 @@ export function selectTaskStoreBase({
   parentCompletedText,
   grandparentActiveText,
   grandparentCompletedText,
+  headRevision,
+  parentRevision,
+  grandparentRevision,
 }) {
   const committed =
     normalizeText(currentActiveText) === normalizeText(headActiveText) &&
@@ -204,8 +210,10 @@ export function selectTaskStoreBase({
     return {
       baseActiveText: headActiveText,
       baseCompletedText: headCompletedText,
+      baseRevision: headRevision,
       baseParentActiveText: parentActiveText,
       baseParentCompletedText: parentCompletedText,
+      baseParentRevision: parentRevision,
       adapterErrors: [],
     };
   }
@@ -221,8 +229,10 @@ export function selectTaskStoreBase({
   return {
     baseActiveText: parentActiveText,
     baseCompletedText: parentCompletedText,
+    baseRevision: parentRevision,
     baseParentActiveText: grandparentActiveText,
     baseParentCompletedText: grandparentCompletedText,
+    baseParentRevision: grandparentRevision,
     adapterErrors: [],
   };
 }
@@ -244,7 +254,13 @@ export async function readHarnessRepository(root) {
   const baseConfiguration = configuredBaseBranch(validationText);
   adapterErrors.push(...baseConfiguration.errors);
   const currentBranch = runGit(root, ["branch", "--show-current"]).trim();
+  const allowMergedCloseout =
+    currentBranch === baseConfiguration.baseBranch &&
+    baseConfiguration.errors.length === 0;
   const headActiveText = runGit(root, ["show", "HEAD:.harness/tasks.md"]);
+  const headRevision = runGit(root, ["rev-parse", "HEAD"]).trim();
+  const parentRevision = tryGit(root, ["rev-parse", "HEAD^"])?.trim();
+  const grandparentRevision = tryGit(root, ["rev-parse", "HEAD^^"])?.trim();
   const headCompletedText = runGit(root, [
     "show",
     "HEAD:.harness/completed.md",
@@ -261,14 +277,16 @@ export async function readHarnessRepository(root) {
       "show",
       "HEAD^^:.harness/completed.md",
     ]),
+    headRevision,
+    parentRevision,
+    grandparentRevision,
   });
   return {
     activeText,
     completedText,
     ...selected,
-    allowMergedCloseout:
-      currentBranch === baseConfiguration.baseBranch &&
-      baseConfiguration.errors.length === 0,
+    allowMergedCloseout,
+    mergedBaseRevision: allowMergedCloseout ? selected.baseRevision : undefined,
     adapterErrors: [...adapterErrors, ...selected.adapterErrors],
     contractsReadme: toText(
       files.get("docs/contracts/README.md"),

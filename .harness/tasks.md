@@ -189,6 +189,10 @@ Expected_surfaces:
 - `package.json` only if the callable script requires reconciliation.
 - `.harness/validation.md` proof model and registry wording.
 - Focused validation-orchestration tests if required.
+- `.github/workflows/ci.yml` baseline checkout only.
+- `scripts/validation/harness-integrity.mjs` and its task-schema, transition, transform, and H1 batch-compatibility owners.
+- `scripts/validation/repository-security.mjs` and its exact workflow fixtures and tests.
+- Focused harness-integrity fixtures and tests for exact-head and batch-transition regressions.
 Reference_artifacts:
 - none
 Validation_sets:

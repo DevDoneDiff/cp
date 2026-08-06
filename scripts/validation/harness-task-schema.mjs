@@ -2,6 +2,7 @@
  * MODULE: scripts/validation/harness-task-schema.mjs
  * PURPOSE: Validate the exact forward task-entry schema and legal active or completed state combinations.
  * PUBLIC API / ENTRYPOINTS:
+ *   - validateStableTaskIdentities: rejects tag or brick reuse across parsed generations.
  *   - validateTaskStoreShape: validates parsed task fields, list grammar, allowed values, and state semantics.
  * CONTROL_FLOW:
  *   1. Validate exact field order and singleton field representation.
@@ -10,7 +11,7 @@
  * INVARIANTS:
  *   - [INV-TASK-SCHEMA] Every forward task consumes the complete canonical schema without ignored fields or list lines.
  * BOUNDARIES:
- *   - Cross-store uniqueness, counters, and transition shape remain owned by sibling harness modules.
+ *   - Cross-store membership, counters, and transition shape remain owned by sibling harness modules.
  * RELATED:
  *   - .harness/tasks.md: owns the canonical task template and active-state meanings.
  *   - scripts/validation/harness-task-stores.mjs: owns source-region parsing.
@@ -18,6 +19,37 @@
  *   - Malformed or unconsumed schema content fails closed with the exact task identity.
  */
 import { duplicateValues, isSeedTaskTag } from "./harness-task-stores.mjs";
+
+function stableIdentity(block) {
+  return `${block.title}\n${block.fields.Source_spec_id ?? "seed"}\n${block.fields.Brick_id ?? "seed"}`;
+}
+
+export function validateStableTaskIdentities(
+  baseBlocks,
+  currentBlocks,
+  errors,
+) {
+  const baseByTag = new Map(baseBlocks.map((block) => [block.tag, block]));
+  const baseByBrick = new Map(
+    baseBlocks
+      .filter(({ fields }) => fields.Brick_id)
+      .map((block) => [block.fields.Brick_id, block]),
+  );
+  for (const block of currentBlocks) {
+    const priorTag = baseByTag.get(block.tag);
+    if (priorTag && stableIdentity(priorTag) !== stableIdentity(block)) {
+      errors.push(
+        `task identity: [${block.tag}] reuses an existing tag for different content`,
+      );
+    }
+    const priorBrick = baseByBrick.get(block.fields.Brick_id);
+    if (priorBrick && priorBrick.tag !== block.tag) {
+      errors.push(
+        `task identity: Brick_id ${block.fields.Brick_id} was already represented by [${priorBrick.tag}]`,
+      );
+    }
+  }
+}
 
 const FORWARD_FIELDS = [
   "Type",

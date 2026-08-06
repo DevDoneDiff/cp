@@ -5,13 +5,21 @@
  * CONTROL_FLOW: parse generations, reject identity drift, then prove one legal transition.
  * INVARIANTS:
  *   - [INV-HARNESS-TRANSFER] Archive changes are limited to one full-store provisional transfer or exact reversal.
+ *   - One exact H1 checkpoint may use the separately bounded batch-merge compatibility proof.
  * BOUNDARIES:
  *   - Remote completion and dependency proof are deliberately excluded from this local structural validator.
- * RELATED: task stores, task schema, and .harness/validation.md lifecycle procedures.
+ * RELATED: task stores, task schema, the H1 batch-transition compatibility owner, and .harness/validation.md lifecycle procedures.
  * SECURITY:
  *   - A changed archive fails closed unless the complete local transition shape is proven exactly.
  */
-import { validateTaskStoreShape } from "./harness-task-schema.mjs";
+import {
+  validateStableTaskIdentities,
+  validateTaskStoreShape,
+} from "./harness-task-schema.mjs";
+import {
+  isAuthorizedH1BatchBaseRevision,
+  validateAuthorizedH1BatchMerge,
+} from "./harness-h1-batch-transition.mjs";
 import {
   duplicateValues,
   parseTaskStore,
@@ -20,63 +28,12 @@ import {
   validateSeedArchive,
   validateTaskCounters,
 } from "./harness-task-stores.mjs";
-
-function replaceField(block, field, value) {
-  return block.replace(
-    new RegExp(`^${field}: .*?$`, "m"),
-    `${field}: ${value}`,
-  );
-}
-
-function passedBlock(activeBlock) {
-  return replaceField(
-    replaceField(activeBlock, "Status", "passed"),
-    "Pass",
-    "true",
-  );
-}
-
-function identity(block) {
-  return `${block.title}\n${block.fields.Source_spec_id ?? "seed"}\n${block.fields.Brick_id ?? "seed"}`;
-}
-
-function validateStableIdentities(baseBlocks, currentBlocks, errors) {
-  const baseByTag = new Map(baseBlocks.map((block) => [block.tag, block]));
-  const baseByBrick = new Map(
-    baseBlocks
-      .filter(({ fields }) => fields.Brick_id)
-      .map((block) => [block.fields.Brick_id, block]),
-  );
-  for (const block of currentBlocks) {
-    const priorTag = baseByTag.get(block.tag);
-    if (priorTag && identity(priorTag) !== identity(block)) {
-      errors.push(
-        `task identity: [${block.tag}] reuses an existing tag for different content`,
-      );
-    }
-    const priorBrick = baseByBrick.get(block.fields.Brick_id);
-    if (priorBrick && priorBrick.tag !== block.tag) {
-      errors.push(
-        `task identity: Brick_id ${block.fields.Brick_id} was already represented by [${priorBrick.tag}]`,
-      );
-    }
-  }
-}
-
-function expectedProvisional(prior, source) {
-  const remaining = prior.active.blocks.filter(({ tag }) => tag !== source.tag);
-  const archived = {
-    ...source,
-    raw: passedBlock(source.raw),
-  };
-  return {
-    activeText: renderTaskStore(prior.active, remaining),
-    completedText: renderTaskStore(prior.completed, [
-      ...prior.completed.blocks,
-      archived,
-    ]),
-  };
-}
+import {
+  expectedProvisional,
+  matchesExpectedSurfaceExpansion,
+  passedTaskBlock,
+  replaceTaskField,
+} from "./harness-task-transforms.mjs";
 
 function provisionalSource(prior) {
   const working = prior.active.blocks.filter(
@@ -126,6 +83,14 @@ function validateUnchangedArchive(current, base, errors) {
   }
   const [{ block, prior }] = changes;
   const transition = `${prior.fields.Status}->${block.fields.Status}`;
+  if (transition === "working->working") {
+    if (!matchesExpectedSurfaceExpansion(prior, block)) {
+      errors.push(
+        `.harness/tasks.md: [${block.tag}] working task may change only by append-only Expected_surfaces expansion`,
+      );
+    }
+    return;
+  }
   const allowed = new Set([
     "queued->working",
     "queued->blocked",
@@ -139,11 +104,11 @@ function validateUnchangedArchive(current, base, errors) {
     );
     return;
   }
-  let expected = replaceField(prior.raw, "Status", block.fields.Status);
+  let expected = replaceTaskField(prior.raw, "Status", block.fields.Status);
   if (block.fields.Status === "blocked") {
-    expected = replaceField(expected, "Blocker", block.fields.Blocker);
+    expected = replaceTaskField(expected, "Blocker", block.fields.Blocker);
   } else if (prior.fields.Status === "blocked") {
-    expected = replaceField(expected, "Blocker", "none");
+    expected = replaceTaskField(expected, "Blocker", "none");
   }
   if (block.raw !== expected) {
     errors.push(
@@ -190,7 +155,7 @@ function validateMergedCloseout(current, base, errors) {
     base.active,
     base.active.blocks.filter(({ tag }) => tag !== source.tag),
   );
-  const archived = { ...source, raw: passedBlock(source.raw) };
+  const archived = { ...source, raw: passedTaskBlock(source.raw) };
   const expectedCompleted = renderTaskStore(base.completed, [
     ...base.completed.blocks,
     archived,
@@ -253,6 +218,7 @@ function validateArchiveTransition(
   base,
   baseParent,
   allowMergedCloseout,
+  mergedBaseRevision,
   errors,
 ) {
   if (!base) {
@@ -262,6 +228,17 @@ function validateArchiveTransition(
   if (current.completed.normalized === base.completed.normalized) {
     validateUnchangedArchive(current, base, errors);
     return;
+  }
+  if (allowMergedCloseout) {
+    const h1Batch = validateAuthorizedH1BatchMerge({
+      current,
+      base,
+      baseRevision: mergedBaseRevision,
+    });
+    if (h1Batch.recognized) {
+      errors.push(...h1Batch.errors);
+      return;
+    }
   }
   if (current.completed.blocks.length === base.completed.blocks.length + 1) {
     if (allowMergedCloseout) {
@@ -278,7 +255,13 @@ function validateArchiveTransition(
   reportArchiveDrift(current.completed.blocks, base.completed.blocks, errors);
 }
 
-function parseAndValidate(activeText, completedText, label, errors) {
+function parseAndValidate(
+  activeText,
+  completedText,
+  label,
+  errors,
+  { allowHistoricalSeedProvenance = false } = {},
+) {
   const active = parseTaskStore(activeText, "active");
   const completed = parseTaskStore(completedText, "completed");
   validateTaskStoreShape(active, "active", `${label}.harness/tasks.md`, errors);
@@ -288,11 +271,13 @@ function parseAndValidate(activeText, completedText, label, errors) {
     `${label}.harness/completed.md`,
     errors,
   );
-  validateArchiveProvenance(
-    completedText,
-    errors,
-    `${label}.harness/completed.md`,
-  );
+  if (!allowHistoricalSeedProvenance) {
+    validateArchiveProvenance(
+      completedText,
+      errors,
+      `${label}.harness/completed.md`,
+    );
+  }
   validateSeedArchive(completedText, errors, `${label}.harness/completed.md`);
   return { active, completed };
 }
@@ -305,6 +290,7 @@ export function validateHarnessStores({
   baseParentActiveText,
   baseParentCompletedText,
   allowMergedCloseout = false,
+  mergedBaseRevision,
 }) {
   const errors = [];
   const current = parseAndValidate(activeText, completedText, "", errors);
@@ -322,8 +308,18 @@ export function validateHarnessStores({
 
   let base;
   if (baseActiveText !== undefined && baseCompletedText !== undefined) {
-    base = parseAndValidate(baseActiveText, baseCompletedText, "base:", errors);
-    validateStableIdentities(
+    base = parseAndValidate(
+      baseActiveText,
+      baseCompletedText,
+      "base:",
+      errors,
+      {
+        allowHistoricalSeedProvenance:
+          allowMergedCloseout &&
+          isAuthorizedH1BatchBaseRevision(mergedBaseRevision),
+      },
+    );
+    validateStableTaskIdentities(
       [...base.active.blocks, ...base.completed.blocks],
       all,
       errors,
@@ -354,6 +350,7 @@ export function validateHarnessStores({
     base,
     baseParent,
     allowMergedCloseout,
+    mergedBaseRevision,
     errors,
   );
 

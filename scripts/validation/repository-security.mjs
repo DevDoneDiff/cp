@@ -14,7 +14,8 @@
  * INVARIANTS:
  *   - Every direct package and machine runtime uses one exact approved version.
  *   - Next.js resolves patched PostCSS and Sharp versions without changing its approved direct pin.
- *   - CI uses immutable actions, frozen installs, no secrets, and only contents read permission.
+ *   - Every canonical baseline stage, including network-free harness integrity, has a non-empty package script.
+ *   - CI uses immutable actions, frozen installs, no secrets, and only contents read permission; baseline materializes exact-head task history.
  * RELATED:
  *   - package.json: owns exact direct dependencies and cross-platform scripts.
  *   - .github/workflows/ci.yml: owns remote foundation proof.
@@ -64,6 +65,7 @@ const REQUIRED_SCRIPTS = [
   "test:smoke",
   "test:e2e",
   "validate:annotations",
+  "validate:harness",
   "validate:security",
   "validate",
 ];
@@ -343,6 +345,17 @@ function validateWorkflow(snapshot, errors) {
     2
   ) {
     errors.push("both checkout steps must disable persisted credentials");
+  }
+
+  const baselineJob = workflow
+    .split(/^  baseline:\s*$/m)[1]
+    ?.split(/^  browser-smoke:\s*$/m)[0];
+  const exactBaselineCheckout =
+    /^\s+- (?:name:[^\r\n]+\r?\n\s+)?uses: actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1\r?\n\s+with:\r?\n\s+persist-credentials:\s*false\r?\n\s+ref:\s*\$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.ref \}\}\r?\n\s+fetch-depth:\s*3\s*$/m;
+  if (!baselineJob || !exactBaselineCheckout.test(baselineJob)) {
+    errors.push(
+      "baseline checkout must use the exact pull-request head or pushed ref with fetch-depth 3",
+    );
   }
 
   const browserJob = workflow.split(/^  browser-smoke:\s*$/m)[1] ?? "";

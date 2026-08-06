@@ -16,7 +16,10 @@ import {
 import {
   CANONICAL_SEED_HASH,
   canonicalSeedText,
+  parseTaskStore,
+  renderTaskStore,
 } from "../../scripts/validation/harness-task-stores.mjs";
+import { replaceTaskList } from "../../scripts/validation/harness-task-transforms.mjs";
 import {
   H1_PATH,
   activeStore,
@@ -458,6 +461,115 @@ describe("harness integrity validation", () => {
     );
   });
 
+  it("accepts only the exact authorized H1 batch merge at its checkpoint", async () => {
+    const context = await fixtureContext();
+    const seed = completedStore(context.seedText);
+    const liveActive = parseTaskStore(
+      await readFile(path.join(repositoryRoot, ".harness", "tasks.md"), "utf8"),
+      "active",
+    );
+    const liveCompleted = parseTaskStore(
+      await readFile(
+        path.join(repositoryRoot, ".harness", "completed.md"),
+        "utf8",
+      ),
+      "completed",
+    );
+    const tags = Array.from(
+      { length: 32 },
+      (_, index) => `T-${String(index + 8).padStart(4, "0")}`,
+    );
+    const queued = tags.map((tag) =>
+      taskBlock({ tag, brick: `harness/H1/batch-${tag.toLowerCase()}` }),
+    );
+    const passed = tags.map((tag) =>
+      taskBlock({
+        tag,
+        brick: `harness/H1/batch-${tag.toLowerCase()}`,
+        status: "passed",
+        pass: true,
+      }),
+    );
+    const seedBlocks = parseTaskStore(seed, "completed").blocks;
+    const passedBlocks = parseTaskStore(
+      completedStore(context.seedText, passed),
+      "completed",
+    ).blocks.slice(seedBlocks.length);
+    const merged = copySnapshot(
+      positiveHarnessScenarios(context).seededArchive,
+      {
+        activeText: renderTaskStore(liveActive, []),
+        completedText: renderTaskStore(liveCompleted, [
+          ...seedBlocks,
+          ...passedBlocks,
+        ]),
+        baseActiveText: activeStore(queued, 40),
+        baseCompletedText: seed,
+        allowMergedCloseout: true,
+        mergedBaseRevision: "5d515d9f8224ed607219fd5f29d0f20305fdcc16",
+      },
+    );
+    expect(errors(merged)).toEqual([]);
+
+    const wrongRevision = copySnapshot(merged, {
+      mergedBaseRevision: "0".repeat(40),
+    });
+    expect(errors(wrongRevision)).toContain(
+      ".harness/completed.md: archive changed by more than one provisional transfer or reversal",
+    );
+
+    const mutated = copySnapshot(merged, {
+      completedText: merged.completedText.replace(
+        "Prove one fixture task.",
+        "Mutate one archived H1 task.",
+      ),
+    });
+    expect(errors(mutated)).toContain(
+      ".harness/completed.md: authorized H1 batch merge must be the exact T-0008 through T-0039 passed and append-only Expected_surfaces transform of checkpoint 5d515d9f8224ed607219fd5f29d0f20305fdcc16",
+    );
+
+    const expandedBlock = {
+      ...passedBlocks[15],
+      raw: replaceTaskList(
+        passedBlocks[15].raw,
+        "Expected_surfaces",
+        "Reference_artifacts",
+        [
+          "tests/fixtures/harness-integrity/scenarios.ts",
+          "scripts/validation/harness-integrity.mjs",
+        ],
+      ),
+    };
+    const expanded = copySnapshot(merged, {
+      completedText: renderTaskStore(liveCompleted, [
+        ...seedBlocks,
+        ...passedBlocks.slice(0, 15),
+        expandedBlock,
+        ...passedBlocks.slice(16),
+      ]),
+    });
+    expect(errors(expanded)).toEqual([]);
+
+    const futureQueued = [
+      taskBlock({ tag: "T-0040", brick: "harness/H2/future-40" }),
+      taskBlock({ tag: "T-0041", brick: "harness/H2/future-41" }),
+    ];
+    const futurePassed = futureQueued.map((block) =>
+      block
+        .replace("Status: queued", "Status: passed")
+        .replace("Pass: false", "Pass: true"),
+    );
+    const futureMulti = copySnapshot(merged, {
+      activeText: activeStore([], 42),
+      completedText: completedStore(context.seedText, futurePassed),
+      baseActiveText: activeStore(futureQueued, 42),
+      baseCompletedText: seed,
+    });
+    expect(errors(futureMulti)).toContain(
+      ".harness/completed.md: archive changed by more than one provisional transfer or reversal",
+    );
+  });
+
   it("resolves the four seeded legacy specs only through the ID-bearing map", async () => {
     const context = await fixtureContext();
     const queued = positiveHarnessScenarios(context).queued;
@@ -807,8 +919,11 @@ describe("harness integrity validation", () => {
       headCompletedText: seed,
       parentActiveText: activeStore([]),
       parentCompletedText: seed,
+      headRevision: "1".repeat(40),
+      parentRevision: "5d515d9f8224ed607219fd5f29d0f20305fdcc16",
     });
     expect(dirty.baseActiveText).toBe(queued);
+    expect(dirty.baseRevision).toBe("1".repeat(40));
 
     const committed = selectTaskStoreBase({
       currentActiveText: working,
@@ -817,8 +932,11 @@ describe("harness integrity validation", () => {
       headCompletedText: seed,
       parentActiveText: queued,
       parentCompletedText: seed,
+      headRevision: "2".repeat(40),
+      parentRevision: "1".repeat(40),
     });
     expect(committed.baseActiveText).toBe(queued);
+    expect(committed.baseRevision).toBe("1".repeat(40));
 
     const passed = taskBlock({ status: "passed", pass: true });
     const shallow = selectTaskStoreBase({
