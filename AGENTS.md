@@ -6,7 +6,7 @@ Operating contract for Codex work in this repository.
 
 ## Authority and Source Ownership
 
-Use each source only for the domain it owns:
+Use each source only for the domain it owns. Normative target authority is distinct from descriptive implementation evidence:
 
 - explicit user instruction owns the current requested decision;
 - `docs/PRODUCT.md` owns durable product truth;
@@ -16,19 +16,21 @@ Use each source only for the domain it owns:
 - `docs/REPOSITORY_POLICY.md` owns repository-specific policy;
 - `docs/contracts/states/<state>/sNN-state.md` owns durable state-specific behavior;
 - exact linked `visual-*.png` files own approved state-specific appearance;
-- exact linked `technical-*.png` files own their approved process depiction within governing prose;
+- exact linked `technical-*.png` files own only the process depiction explicitly adopted by governing prose and otherwise remain guidance;
 - an approved spec owns one collective implementation outcome;
+- `docs/contracts/README.md` owns spec classification, identity, and terminal-state routing;
 - `.harness/tasks.md` owns active task state and execution order;
 - `.harness/completed.md` owns immutable completed-task entries;
-- `.harness/validation.md` owns proof and delivery procedures;
+- `.harness/validation.md` owns registered proof sets and delivery procedures;
 - `.harness/work/<TAG>.md` owns ephemeral task rehydration;
-- annotation headers own current local architectural context;
-- current code and tests own behavioral reality;
-- Git owns history.
+- current code is current implementation reality;
+- tests are executable expectations and evidence that may be stale or failing;
+- annotation headers summarize inspected code for local architectural context and never overrule it;
+- Git owns history and durable delivery evidence.
 
 A narrower source may constrain a broader source within its domain. It may not contradict it.
 
-When authoritative sources materially conflict, stop mutation, identify the exact conflict, and request resolution.
+When normative sources materially conflict, stop mutation, identify the exact conflict, and request resolution. A normative target that differs from current code is an implementation gap unless it exposes an unresolved durable decision. A code/test mismatch is reported and resolved as an implementation or proof defect; neither silently becomes durable target authority.
 
 ## Modes
 
@@ -42,13 +44,23 @@ When authoritative sources materially conflict, stop mutation, identify the exac
 
 Current values live in `.harness/tasks.md`.
 
+## Non-Task Authoring Identity
+
+Non-task authoring is limited to specs, status-only approval metadata, contracts and other durable authority, task decomposition, and directly related authority or queue changes. It uses a descriptive `codex/authoring-<slug>` branch and descriptive commit and pull-request titles without a task or refactor tag.
+
+Authoring identity never uses task `RUN_MODE` or `MERGE_MODE`, `Pass`, an implementation scratchpad, task closeout, archive transfer, dependency proof, or task-completion history. Explicit user instruction independently authorizes an authoring delivery and whether its guarded merge may be autonomous. Adding a task to the queue does not complete it, satisfy one of its dependencies, or authorize any change to an existing completed block.
+
+Authoring that changes the active queue, counters, `.harness/validation.md`, or task-execution authority in this file is mutually exclusive with every live implementation claim, provisional closeout, local or remote task branch, and live task pull request. The inverse exclusion applies during task claim and delivery. Preserve inactive unrelated local authoring branches without interpreting them as claims.
+
+The non-task authoring lane is operational only when canonical completion proof establishes exact T-0036 on the fetched base and that same merged tree contains the available state, complete canonical delivery procedure, and both producer routes. A worktree, branch, candidate, or configuration token cannot establish operational availability. Once that predicate passes, spec and task authoring route explicitly authorized delivery through `.harness/validation.md`; otherwise the lane remains unavailable.
+
 ## Context Routing
 
 For the selected task, read in this order:
 
 1. the full active task entry in `.harness/tasks.md`;
 2. the linked approved spec;
-3. the owning contract and every affected state contract named by the spec;
+3. the owning authority and every affected state contract named by the spec, using the classification and terminal-state routing in `docs/contracts/README.md`;
 4. every exact reference artifact assigned by the spec or task;
 5. only relevant sections of global authority documents;
 6. `.harness/work/<TAG>.md` and relevant lessons;
@@ -56,7 +68,7 @@ For the selected task, read in this order:
 
 Do not load every spec, state package, reference folder, global document, or repository file by default.
 
-Do not load `.harness/completed.md` during ordinary task selection or implementation. Use it only for explicit historical investigation.
+Do not load archived task blocks from `.harness/completed.md` into ordinary selection or implementation context. The canonical claim procedure may make a narrow read-only lookup of archive identity and its terminal boundary solely to detect duplicate representation or provisional closeout. Full archived content is reserved for explicit historical investigation.
 
 ## Artifact Gate
 
@@ -66,11 +78,12 @@ For UI-bearing work, the implementation source bundle is:
 approved spec
 + owning and affected contracts
 + exact approved visual references
-+ exact approved technical or content references when required
++ exact approved technical references when required
 ```
 
 Rules:
 
+- active reference artifacts are `visual` or `technical`; `none` means no artifact is assigned;
 - visual artifacts own approved appearance within prose constraints;
 - technical infographics own their approved process depiction but cannot introduce unstated behavior or architecture;
 - generated-image defects, fabricated values, and annotation labels are excluded unless explicitly adopted;
@@ -81,6 +94,8 @@ Rules:
 ## Decision Boundary and Implementation Latitude
 
 Codex must resolve routine implementation choices with best judgment using current repository conventions, the approved architecture, framework-native capabilities, and the smallest maintainable approach.
+
+A resolved durable product, architecture, design, state, security, schema, or compatibility decision must be recorded through an explicitly authorized update to its owning authority before dependent spec drafting resumes.
 
 Do not ask the user to choose ordinary algorithms, module shapes, internal abstractions, rendering techniques, or infrastructure mechanics unless the choice changes a durable authority or approved outcome.
 
@@ -99,22 +114,31 @@ If material ambiguity appears during work, set the task to `blocked`, keep `Pass
 
 ## Readiness and Task Selection
 
-Do not mutate runtime code, configuration, schemas, dependencies, generated application artifacts, or external systems until:
+Do not begin a new task claim until:
 
 - the source spec is approved;
+- the task has `Status: queued`;
 - the task has `Ready: true`;
+- the task has `Pass: false` and `Blocker: none`;
 - `Open_questions: none`;
 - dependencies are satisfied;
 - required artifacts exist;
 - required validation and delivery procedures are configured.
 
+Do not mutate runtime code, configuration, schemas, dependencies, generated application artifacts, or other authorized source surfaces until the canonical claim has been published and the task has `Status: working`. Same-task resumption must re-establish that state through the canonical procedure.
+
 Selection rules:
 
+- autonomous primary invocations must be externally serialized before repository claim checks begin;
+- repository and GitHub claim checks detect stale or competing work; they are not a distributed lock and cannot make improperly concurrent invocations safe;
 - exactly one task may have `Status: working`;
-- a task is eligible when `Ready: true`, `Pass: false`, and dependencies are satisfied;
+- a task is eligible only when `Status: queued`, `Ready: true`, `Pass: false`, `Blocker: none`, and canonical dependencies are satisfied;
+- a blocked task is never eligible and may resume only through the same-task procedure in `.harness/validation.md`;
+- before source edits, use the canonical claim procedure to inspect base state, live task branches and pull requests, provisional closeout, and conflicting queue-authoring work, then publish the deterministic task claim;
+- a failed, unavailable, or competing claim blocks mutation;
 - one working task may use bounded read-only exploration or review subagents;
 - only the primary task agent may write;
-- do not advance the queue until the current task tag exists in configured base-branch history;
+- do not advance the queue until the canonical post-H1 completion proof, or the exact historical seed exception, satisfies the current task and every dependency;
 - `[T-0001]` consumed the one-time bootstrap authority; no future task may use `Bootstrap: true`.
 
 ## Required Skills
@@ -162,9 +186,10 @@ MUST:
 
 File responsibility checks:
 
-- before expanding a hand-authored runtime source file beyond roughly 250 nonblank lines, evaluate whether it contains more than one responsibility and record the conclusion in the scratchpad;
-- a hand-authored runtime source file above 350 nonblank lines blocks completion unless it is predominantly declarative or generated, splitting would reduce cohesion, and independent review accepts the written rationale;
-- line count never justifies meaningless fragmentation; responsibility and change boundaries control.
+- when an active task changes a hand-authored runtime source file above 250 nonblank lines, document its primary responsibility, main reason to change, mixed or independently evolving responsibilities, dependency direction, and proof boundaries in the scratchpad;
+- a hand-authored runtime source file above 350 nonblank lines requires explicit independent review escalation of that written analysis;
+- a cohesive imperative file may remain above 350 when independent review accepts that it has one primary responsibility and splitting would reduce cohesion or proof quality; declarative or generated content may support the analysis but is never required for acceptance;
+- line count alone never requires a split and never justifies meaningless fragmentation or unrelated responsibility accumulation; responsibility and change boundaries control.
 
 MUST NOT:
 
@@ -187,7 +212,7 @@ Review for:
 - security, privacy, authorization, and trust-boundary regressions;
 - data integrity, migrations, rollback, and compatibility;
 - architectural boundary violations and unnecessary complexity;
-- files with multiple responsibilities or unjustified size growth;
+- files with mixed layers, multiple or independent reasons to change, reversed dependency direction, obscured proof boundaries, or unjustified size growth;
 - error handling, recovery, observability, and concurrency risk;
 - missing or weakened tests;
 - required visual fidelity.
@@ -201,6 +226,8 @@ Correctness, security, data-loss, architecture, acceptance, file-responsibility,
 - use exact commands and procedures from `.harness/validation.md`;
 - keep `Pass: false` through implementation and candidate delivery;
 - closeout transfers the complete final task entry from `.harness/tasks.md` to `.harness/completed.md` with `Status: passed` and `Pass: true`;
+- an unmerged archive entry is provisional and never satisfies completion, dependency, or queue-advancement proof;
+- post-H1 completion and dependency satisfaction use the single exact merged-pull-request, merge-SHA, tagged-history, archive-introduction, active-absence, and remote-branch proof in `.harness/validation.md`;
 - after the archive entry reaches configured base-branch history, it is immutable;
 - if closeout, CI, or merge fails before that point, reverse the provisional transfer and restore `Pass: false`;
 - merge must preserve the task tag in base-branch history;

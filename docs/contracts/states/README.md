@@ -13,7 +13,7 @@ Implementation-specific decisions belong in specs or code rather than the state 
 ## State Package
 
 ```text
-contracts/states/
+docs/contracts/states/
   README.md
   STATE_TEMPLATE.md
 
@@ -22,7 +22,7 @@ contracts/states/
     visual-<descriptor>.png
     technical-<descriptor>.png
     specs/
-      <state-spec>.md
+      <SEQUENCE>-<kebab-case-outcome>.md
 ```
 
 Create the `specs/` directory when the state receives its first spec.
@@ -72,17 +72,11 @@ Specs do not contain task decomposition.
 
 ## Cross-State Specs
 
-A spec may affect multiple states when one collective outcome is only complete across their seam.
+Cross-state specs follow the canonical [Terminal-State Routing](../README.md#terminal-state-routing) rule. State packages do not define a second routing rule or a shared-state spec folder.
 
-Use terminal-state ownership:
+## Concrete Authority Gate
 
-- store the spec under the state whose completion makes the outcome whole;
-- identify that state as the single owner;
-- list every affected state contract;
-- keep durable cross-state system truth in `ARCHITECTURE.md`;
-- split the spec when each state has an independently complete outcome.
-
-Do not create a shared-state spec folder.
+`STATE_TEMPLATE.md` is structure only. A concrete `docs/contracts/states/sNN-kebab-case-state-name/sNN-state.md` must be explicitly approved, contain no unresolved template placeholder, and match its state package. Otherwise the concrete file is absent and dependent work is blocked.
 
 ## Artifact Consistency
 
@@ -114,13 +108,13 @@ sNN-state.md
 ### Visual Reference
 
 ```text
-visual-<kebab-case-descriptor>.png
+docs/contracts/states/sNN-kebab-case-state-name/visual-<kebab-case-descriptor>.png
 ```
 
 ### Technical Infographic
 
 ```text
-technical-<kebab-case-descriptor>.png
+docs/contracts/states/sNN-kebab-case-state-name/technical-<kebab-case-descriptor>.png
 ```
 
 Use the smallest descriptor that clearly distinguishes the asset.

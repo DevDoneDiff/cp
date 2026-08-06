@@ -19,30 +19,13 @@ Do not mutate repository behavior unless the task has:
 - `Open_questions: none`
 - satisfied dependencies
 - required reference artifacts present
-- configured required validation and delivery procedures, except for the one bootstrap task
+- configured required validation and delivery procedures
 
-## Bootstrap Path
+## Historical Bootstrap Compatibility
 
-Use only when the task has all of:
+`Bootstrap: true` and `bootstrap-preflight` describe the consumed historical `[T-0001]` exception only. They do not authorize an executable bootstrap branch for any current or future task. Use Git history for the original bootstrap procedure and evidence.
 
-```text
-Tag: [T-0001]
-Bootstrap: true
-Source_spec: docs/specs/A-repository-foundation.md
-```
-
-1. run `bootstrap-preflight`
-2. inspect whether Git and a remote already exist
-3. when Git is absent, initialize the approved base branch
-4. create one initial commit containing only preexisting harness, approved project documents, approved source specifications, approved references, the approved foundation spec, and the approved task queue
-5. create or connect an empty remote only when owner, name, visibility, and creation authority are explicit in the approved spec
-6. push the initial base branch once so a pull-request base exists
-7. create `codex/T-0001-repository-foundation`
-8. add all application and foundation implementation only on that task branch
-
-The initial base-branch commit cannot contain application implementation. Before candidate delivery, replace every required `<unset>` value in `.harness/validation.md` and use the normal gates below.
-
-## Normal Branch Gate
+## Branch Gate
 
 Before source edits:
 
@@ -52,7 +35,7 @@ Before source edits:
 4. confirm the branch contains only the active task
 5. confirm the current branch is not `BASE_BRANCH`
 
-Never push directly to `BASE_BRANCH`, force-push, rewrite shared history, or mix task tags on one branch outside the explicit initial bootstrap.
+Never push directly to `BASE_BRANCH`, force-push, rewrite shared history, or mix task tags on one branch.
 
 ## Scratchpad
 
@@ -114,24 +97,13 @@ Any failure returns to the failure loop.
 
 Keep the task at `Pass: false`.
 
-1. stage only task-scoped files
-2. commit with `[T-####] <imperative summary>` or `[R-####] <imperative summary>`
-3. push the task branch using the configured command
-4. open or update one pull request
-5. use the task tag at the start of the pull-request title
-6. include source spec, reference artifacts, acceptance results, validation evidence, and remaining risk in the pull-request body
+Execute the candidate portion of `.harness/validation.md`'s canonical pass, archive, and delivery sequence. That registry owns the exact staging, commit, push, pull-request, evidence, and remote-check procedures.
 
 If commit or push fails, keep `Pass: false`, record the exact failure, inspect branch, remote, auth, hooks, divergence, and policy, then apply a non-destructive fix.
 
 ## Independent Review and CI
 
-Run `agent-review` through the configured dedicated read-only reviewer.
-
-When assigned, also run:
-
-- `security-review`
-- remote CI
-- pull-request status checks
+Run every assigned review and CI procedure exactly as registered in `.harness/validation.md`. `agent-review` is universal and includes security implications. Security-sensitive work must assign and run `security-review`; a missing assignment is a blocking task-authoring defect, not a waiver.
 
 The primary task agent applies review fixes. Before further source edits, restore `ACTIVE_TASK` and `LOCAL_INTENT` to affected annotated files.
 
@@ -140,49 +112,19 @@ After each fix:
 1. rerun the affected focused set
 2. rerun all assigned sets and `baseline`
 3. reconcile annotations again
-4. commit and push the correction
-5. request a fresh review
-6. recheck CI
+4. redeliver and re-prove the correction through the canonical validation sequence
 
 No unresolved correctness, security, data-loss, architecture, acceptance, or required visual-fidelity finding may remain.
 
-## Closeout Commit
+## Closeout, Merge, and Completion
 
-Only after the latest candidate commit passes review and CI:
+Use `.harness/validation.md` as the sole exact owner of:
 
-1. set the task to `Status: passed`
-2. set `Pass: true`
-3. create a closeout commit containing only `.harness/tasks.md`
-4. push the closeout commit
-5. require latest CI to pass when enabled
+- the atomic active-queue to completed-archive transfer;
+- provisional closeout and reversal;
+- manual or autonomous merge gates;
+- live completion and dependency proof;
+- remote-result recovery; and
+- post-merge cleanup.
 
-If another file must change, restore `Pass: false` and return to the full local gate.
-
-If closeout push or latest CI fails:
-
-1. restore `Pass: false` in the next commit
-2. record evidence
-3. troubleshoot
-4. repeat candidate and closeout gates as applicable
-
-`Pass: true` is valid only while the latest pushed commit satisfies the configured gate.
-
-## Merge Gate
-
-- `MERGE_MODE: manual`: stop at a review-clean, CI-green pull request
-- `MERGE_MODE: autonomous`: run the configured merge command after every gate passes
-- merge must preserve the task tag in base-branch Git history
-- if autonomous merge fails, restore `Pass: false`, diagnose, and retry without destructive Git
-- queue advancement requires the tag on `BASE_BRANCH`
-- after successful merge and base-branch task-tag proof, execute the exact post-merge cleanup procedure from `.harness/validation.md`
-
-## Completion
-
-After base-branch history contains the task tag:
-
-- delete `.harness/work/<TAG>.md`
-- leave no temporary task annotations
-- do not create a closeout log
-- allow queue advancement
-
-Git and remote CI are the durable completion record.
+Keep scratchpad state and temporary annotations consistent with that canonical sequence. Do not restate or improvise an alternate procedure here.

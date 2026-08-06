@@ -27,6 +27,7 @@
     "validate:toolchain": "node scripts/enforce-toolchain.mjs",
     "validate:annotations": "node scripts/validation/annotation-headers.mjs --candidate",
     "validate:annotations:working": "node scripts/validation/annotation-headers.mjs --working",
+    "validate:harness": "node scripts/validation/harness-integrity.mjs",
     "validate:security": "node scripts/validation/repository-security.mjs",
     "validate": "node scripts/run-validation.mjs"
   },

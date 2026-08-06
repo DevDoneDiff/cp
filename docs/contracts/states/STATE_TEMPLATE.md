@@ -1,5 +1,9 @@
 # SNN: [State Name]
 
+**State:** [draft | approved]
+
+**Approved:** [false | true]
+
 ## Purpose and Scope
 
 **User objective:** [WHAT_THE_HOMEOWNER_MUST_ACCOMPLISH]
@@ -115,17 +119,17 @@ Reject the implementation if:
 ## References
 
 **Governing documents**
-- `[PATH_OR_DOCUMENT]`
-- `[PATH_OR_DOCUMENT]`
+- `[EXACT_REPOSITORY_RELATIVE_PATH]`
+- `[EXACT_REPOSITORY_RELATIVE_PATH]`
 
 **State reference images**
 
 | Asset | State or substate represented |
 |---|---|
-| `visual-<descriptor>.png` | [STATE_OR_SUBSTATE] |
+| `docs/contracts/states/sNN-kebab-case-state-name/visual-<descriptor>.png` | [STATE_OR_SUBSTATE] |
 
 **Technical infographics**
 
 | Asset | Processes represented |
 |---|---|
-| `technical-<descriptor>.png` | [PROCESS_SCOPE] |
+| `docs/contracts/states/sNN-kebab-case-state-name/technical-<descriptor>.png` | [PROCESS_SCOPE] |

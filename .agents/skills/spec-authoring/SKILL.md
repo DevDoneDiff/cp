@@ -21,10 +21,13 @@ This skill authors specs only. It does not create tasks, assign task tags, edit 
 - inspect the repository deeply enough to align the outcome with current reality
 - read only context relevant to the requested outcome rather than loading the entire repository by default
 
+If the explicit instruction also authorizes repository delivery, prove the activated non-task authoring predicate and enter its exact descriptive branch through `.harness/validation.md` before the first tracked authoring edit. Do not draft on a delivery path whose activation, identity, exclusion, or base precondition is incomplete.
+
 ## Authority Map
 
 Apply the narrowest applicable authority without allowing it to contradict a broader durable owner:
 
+- `docs/contracts/README.md` owns spec classification, owning-authority routing, stable identity and filenames, legacy compatibility, bounded lineage, terminal-state routing, and artifact paths
 - `docs/PRODUCT.md` owns durable product truth
 - `docs/ARCHITECTURE.md` owns durable technical and system truth
 - `docs/DESIGN.md` owns durable experience and interaction truth
@@ -43,20 +46,31 @@ When authoritative sources materially conflict, report the exact conflict and st
 
 ## Ownership and Routing
 
-Every spec has exactly one owner and one repository path.
+Every spec has exactly one owner, one `Owning authority`, one stable owner-scoped `Spec ID`, and one current repository path. Classify it by the primary outcome whose acceptance makes the work complete:
 
 ```text
-state outcome
+customer-visible state outcome
+  -> Owning authority: docs/contracts/states/sNN-kebab-case-state-name/sNN-state.md
   -> docs/contracts/states/<owning-state>/specs/
 
-harness outcome
+harness authoring, queue, validation, review, delivery, or lifecycle outcome
+  -> Owning authority: AGENTS.md
   -> docs/contracts/harness/specs/
 
-repository outcome
+repository or hosting outcome meaningful independently of the harness
+  -> Owning authority: docs/REPOSITORY_POLICY.md
   -> docs/contracts/repository/specs/
 ```
 
-Do not create loose specs or a new organizational category.
+A supporting change follows the outcome it enables. If two outcomes remain independently acceptable, they require separate specs. Do not classify by old placement, implementation surface, or delivery convenience, and do not create loose specs or a new organizational category.
+
+## Identity, Lineage, and Legacy Boundary
+
+Copy the stable ID from the owner namespace defined by `docs/contracts/README.md`: `state/sNN/<SEQUENCE>`, `harness/<SEQUENCE>`, or `repository/<SEQUENCE>`. `Sequence` is unique and never reused within that namespace. Save the spec in its canonical owner directory as `<SEQUENCE>-<kebab-case-outcome>.md`; the path may change, but the stable ID does not.
+
+Use `Amends` only for a bounded change to the named prior stable ID. Use `Supersedes` only when the named prior stable ID's forward authority is replaced. `none` means no such relationship. Lineage cannot replace unrelated durable authority, erase evidence, or change either spec's identity.
+
+Resolve prior paths through the exact Legacy Spec Compatibility table in `docs/contracts/README.md`. A legacy row with `Current path: none` is Git-only historical evidence. Discover it by stable ID and inspect its exact historical blob only for one named outcome, acceptance, or compatibility question. Never use a Git-only body as a template or forward authoring example, and ignore its historical placement, task count, proposed tasks, fixed decomposition, `do not split` language, deleted paths, and superseded authoring, approval, delivery, validation, closeout, lifecycle, routing, or artifact-governance mechanics.
 
 ### Cross-State Outcomes
 
@@ -68,7 +82,7 @@ The spec must:
 
 - name that state as the single owning contract;
 - list every affected state contract;
-- keep durable cross-state system truth in `ARCHITECTURE.md` rather than redefining it locally;
+- keep durable cross-state system truth in `docs/ARCHITECTURE.md` rather than redefining it locally;
 - remain one spec only when the cross-state result cannot be accepted truthfully as separate outcomes.
 
 If multiple states each have an independently complete outcome, author separate specs under their respective owners.
@@ -81,7 +95,7 @@ Before drafting:
 
 1. read the applicable global authority sections;
 2. read the owning contract and every affected state contract;
-3. inspect each exact visual, technical, or content artifact required by the outcome;
+3. inspect each exact `visual` or `technical` artifact required by the outcome, or record `none`;
 4. read relevant approved prior specs and repository policy;
 5. inspect applicable annotation headers, source files, tests, routes, schemas, adapters, and validation surfaces;
 6. map the current implementation, existing seams, reusable boundaries, constraints, proven debt, and compatibility obligations;
@@ -110,12 +124,14 @@ Routine implementation choices are not material ambiguity. Leave them to impleme
 
 Do not convert assumptions into approved decisions.
 
+When discovery or the user resolves a durable product, architecture, design, state, security, schema, or compatibility decision, record it first through an explicitly authorized update to its owning authority. Resume dependent drafting only after that owner contains the decision. If authority-update permission is missing, the owner is unavailable, or the durable decision remains unresolved, report the exact blocker and stop drafting instead of copying or inferring the decision into the spec.
+
 ## Reference Artifact Gate
 
 For every required artifact:
 
 - use its exact repository-relative path;
-- classify it as `visual`, `technical`, or `content`;
+- classify it as `visual`, `technical`, or `none` using `docs/contracts/README.md`;
 - state what it owns and where it applies;
 - verify that it exists;
 - reject folder-level or inferred authority.
@@ -152,13 +168,14 @@ A spec must be opinionated about the required outcome and restrained about imple
 Lock an implementation choice only when required by:
 
 - an existing durable authority;
-- security, privacy, data integrity, or compatibility;
+- safety, security, privacy, data integrity, or compatibility;
 - an external provider, credential, cost, or irreversible decision;
 - a public contract or migration boundary;
-- exact approved user-facing behavior;
-- the collective acceptance criteria.
+- exact approved user-facing behavior or another unavoidable observable result.
 
-Otherwise define the required result, constraints, exclusions, and proof while leaving algorithms, internal module shape, rendering technique, orchestration details, and other routine engineering choices to Codex's best judgment.
+Acceptance text authored in the same spec cannot bootstrap its preferred mechanism into authority. Every locked mechanism must cite an independent basis from the list above; if only the spec's own proposed acceptance wording requires it, express the observable outcome and leave the mechanism discretionary.
+
+Otherwise define the required result, constraints, exclusions, and proof while leaving algorithms, data structures, internal module boundaries, rendering and framework techniques, recovery implementation, sequencing, orchestration details, and other routine engineering choices to Codex's best judgment.
 
 Use the spec's `Implementation Latitude` section to distinguish:
 
@@ -171,7 +188,7 @@ Do not turn recommendations into requirements without explicit authority.
 ## Workflow
 
 1. ingest the requested outcome or source brief;
-2. determine its single owner, affected contracts, and exact path;
+2. apply the primary-outcome test and determine its single owner, exact `Owning authority`, stable `Spec ID`, `Sequence`, bounded lineage, affected contracts, and canonical path;
 3. perform the repository discovery required above;
 4. identify conflicts, missing material decisions, and artifact gaps;
 5. request resolution only for material ambiguity;
@@ -181,12 +198,14 @@ Do not turn recommendations into requirements without explicit authority.
 9. save with `State: draft` and `Approved: false`;
 10. report the path, ownership, affected contracts, discovery basis, conflicts, and readiness.
 
+This drafting workflow always stops at draft status. The authoring agent is prohibited from approving its own draft. Approval recording is a separate later metadata transition with explicit user evidence.
+
 ## Drafting Rules
 
 MUST:
 
 - define one observable collective completion state;
-- identify the single owner and every affected state;
+- identify the single owner, exact `Owning authority`, stable `Spec ID`, `Sequence`, bounded `Amends` and `Supersedes` lineage, and every affected state;
 - describe the relevant current implementation state discovered in the repository;
 - bound included and excluded outcomes;
 - preserve durable product, architecture, design, MVP, repository, and state truth;
@@ -203,7 +222,7 @@ MUST NOT:
 - prescribe coding steps Codex can determine from the repository;
 - lock speculative abstractions, dependencies, providers, or design techniques;
 - duplicate durable truth better owned by a global or state contract;
-- mark the spec approved;
+- mark the spec approved during drafting or outside the exact later status-only workflow below;
 - implement code or configuration.
 
 ## Readiness Gate
@@ -235,14 +254,26 @@ State: draft
 Approved: false
 ```
 
-Only explicit user approval may change them to:
+Drafting always ends at those values. A separate later explicit user approval of the exact current draft is mandatory before recording:
 
 ```text
 State: approved
 Approved: true
 ```
 
-Do not amend an approved spec without explicit instruction to reopen it.
+Never infer approval from readiness, prior drafting authority, silence, task urgency, or the agent's own review.
+
+### Status-Only Approval Recording
+
+The agent cannot approve a spec. It may only record approval that the user has already explicitly given in a later run for the exact current draft:
+
+1. Identify the exact spec path and quote or precisely identify the later user instruction that supplies approval evidence. Require the spec to be `State: draft`, `Approved: false`, readiness-complete, and unchanged from the content the user approved. Ambiguous target, conditional approval, or approval of an older revision blocks the transition.
+2. Begin through the activated `Non-Task Authoring Delivery` procedure before tracked mutation. Require a clean tracked tree and record `PRE_APPROVAL_COMMIT`, the exact spec blob, and the approval-evidence identity in the authoring recovery record and eventual pull-request evidence.
+3. Change only `**State:** draft` to `**State:** approved` and `**Approved:** false` to `**Approved:** true`. Do not add approval prose to the spec, revise wording, reformat content, update references, or combine any other tracked change.
+4. Before commit, require `git diff --name-only <PRE_APPROVAL_COMMIT>` to return only the exact spec path. Inspect `git diff --unified=0 <PRE_APPROVAL_COMMIT> -- <SPEC_PATH>` and require exactly the two permitted metadata substitutions with no other added, removed, or changed line. Any other diff rejects status-only classification.
+5. Commit with descriptive non-task identity, bind the new exact candidate SHA, and run the complete authoring delivery proof. The independent exact-SHA reviewer must compare the pre-approval blob with the candidate blob and confirm that normalizing only the two approval fields makes their remaining bytes identical.
+
+If content revision is separately authorized, perform it as a distinct authoring change while the spec remains draft, obtain review of that exact revised content, and wait for a new later explicit approval before using this transition. An already approved spec remains closed to amendment unless the user explicitly reopens it or authorizes a new bounded-lineage spec.
 
 ## Output
 
@@ -256,6 +287,10 @@ Return:
 - files created or updated;
 - exact reference artifacts;
 - `Readiness: ready_for_review | blocked`.
+
+For status-only approval recording, additionally return the exact spec path, `PRE_APPROVAL_COMMIT` and blob, identified explicit approval evidence, the two changed metadata fields, content-diff result, reviewed candidate SHA, and non-task delivery result. Never report approval recorded when the exact diff or delivery proof is incomplete.
+
+When explicit user instruction also authorizes repository delivery, route only the eligible spec, approval-metadata, contract, or directly related authority output through the activated `Non-Task Authoring Delivery` procedure in `.harness/validation.md`. First prove its durable operational-availability predicate and authoring/task exclusion checks. If that predicate does not pass, keep the output local and report the lane unavailable; never push, open a pull request, merge, or improvise a delivery path. Authoring delivery remains descriptive and cannot use task status, `Pass`, an implementation scratchpad, closeout, archive, dependency, or completion identity.
 
 ## Final Rule
 

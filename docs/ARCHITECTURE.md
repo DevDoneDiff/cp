@@ -9,7 +9,7 @@ No implementation task may contradict this document within its scope.
 ## Authority
 This document owns system structure, dependency direction, technology baseline, runtime and persistence, data and mutation contracts, component boundaries, versioning, authorization, agent architecture, verification, integrations, reliability, and technical invariants.
 
-Individual `sNN-state.md` specifications own state-level behavior, readiness events, transitions, renderer details, and exact references.
+Individual `sNN-state.md` contracts own durable state-specific behavior, readiness semantics, transitions, and authority. They do not own renderer choice, exact artifact assignment, task decomposition, or harness proof. Approved implementation specs own collective outcomes; exact technical artifacts own only a process depiction explicitly adopted by governing authority or an approved spec and otherwise remain guidance.
 ## System Summary
 - System type: full-stack TypeScript web application.
 - Repository shape: one application repository.
@@ -68,7 +68,7 @@ UI and route entrypoints
 - Server routes may process vendor requests without creating a durable homeowner record.
 - Account claim persists the existing project without reset, replacement, or duplication.
 - The post-address experience runs inside one persistent project shell.
-- Expensive renderers and durable visual objects remain mounted when approved state specifications require continuity.
+- Expensive renderers and durable visual objects remain mounted when durable state semantics or an approved implementation outcome requires continuity.
 - State transitions update the projection and available controls without replacing the canonical project.
 - Automatic advance occurs only when the next valid state requires no additional homeowner meaning or authority.
 - Explicit correction, consent, permission, selection, terms, payment, financing choice, or other consequential authority pauses progression.
@@ -168,7 +168,7 @@ Use validated configuration, structured correlation logs, finite timeouts, bound
 ## Validation
 The repository harness owns exact commands and evidence procedures. Architecture requires formatting, lint, strict typecheck, unit, integration, component, workflow, production-build, smoke, CI, real-browser behavior, and reference-based visual proof.
 
-State specifications own their exact references and state-level proof.
+Approved implementation specs assign exact references and validation expectations for their collective outcome. Exact visuals own appearance; the repository harness owns proof procedures.
 ## Architectural Invariants
 - One project survives from resolved property through verified execution and support.
 - Account claim persists the session project without reset or duplication.
@@ -184,6 +184,6 @@ State specifications own their exact references and state-level proof.
 ## Change Control
 - Tasks cannot silently redefine architecture.
 - Material changes require approval and an update to this document.
-- State specifications may narrow implementation and cannot contradict these contracts.
+- State contracts may narrow durable state semantics, and approved implementation specs may narrow their implementation outcome; neither may contradict these architectural contracts.
 - Annotation headers localize file responsibility and do not replace this map.
 - Git owns prior versions and change history.

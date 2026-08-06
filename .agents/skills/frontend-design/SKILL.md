@@ -7,31 +7,37 @@ description: Use for new UI, visual frontend changes, restyling, or visual revie
 
 ## Authority
 
-Apply visual direction in this order:
+Resolve each question through the source that owns its domain, not a total precedence list:
 
-1. explicit user instruction
-2. active approved spec
-3. exact approved reference artifacts linked by the spec and task
-4. `docs/DESIGN.md` shared rules
-5. existing design tokens, components, and established UI behavior
-6. this skill
-7. agent judgment
-
-A technical infographic is guidance only. It cannot create architecture, behavior, or data authority absent from approved prose.
+- explicit user instruction owns the current requested decision; a durable change must be recorded in its owning authority before dependent implementation;
+- `docs/PRODUCT.md` owns shared product meaning and truth;
+- `docs/DESIGN.md` owns shared experience, interaction, content, motion, responsive, and accessibility rules;
+- the exact approved `sNN-state.md` owns durable state-specific behavior, semantic content meaning, accessibility, and authority;
+- each exact assigned `visual-*.png` owns approved appearance at its represented state or viewport within governing prose constraints, but does not independently own behavior, accessibility, truthful content, or product meaning;
+- a `technical-*.png` owns only the process depiction explicitly adopted by governing prose and otherwise remains guidance; it cannot independently introduce product behavior, architecture, services, data, or state;
+- an approved implementation spec owns its collective outcome and may require an explicit appearance departure only for that outcome and only when compatible with every governing authority;
+- existing tokens, components, and UI behavior are current implementation evidence and reusable implementation context, not authority over the sources above.
 
 If visual direction, artifact role, or required UI state is missing, contradictory, or materially underspecified, ask targeted questions before visual implementation.
+
+## Reference Artifacts
+
+Use `docs/contracts/README.md` as the canonical owner for artifact schema, type vocabulary, exact path rules, and legacy migration. Do not restate or infer an independent artifact taxonomy here.
+
+Consume only the exact repository-relative artifacts assigned by the approved spec and active task. Never infer authority from a neighboring file, filename similarity, legacy path, or unassigned image. Treat an appearance departure as valid only when the approved implementation spec states it explicitly for the current collective outcome and it remains compatible with shared and state-specific governing authority.
 
 ## Modes
 
 - Build: create a new interface or flow.
 - Restyle: change presentation while preserving unrequested behavior and data flow.
-- Review: inspect a running interface, identify visual or interaction defects, correct them, and re-verify.
+- Review: read-only inspection of a running interface and immutable candidate evidence; report observations and blocking findings without modifying the worktree, branch, task state, pull request, or external evidence.
+- Repair: the authorized primary task agent applies accepted corrections, reruns focused proof, and requests a fresh independent Review. A reviewer never enters Repair.
 
 Visual review is part of completion for frontend visual work, not a prose-only critique.
 
 ## Design Intent
 
-Before editing, establish in `.harness/work/<TAG>.md`:
+Before Build, Restyle, or Repair editing, establish in `.harness/work/<TAG>.md`:
 
 - state or flow purpose
 - primary user action
@@ -83,7 +89,7 @@ MUST NOT:
 
 ## Browser Review
 
-Use available browser tooling against the running application.
+When `frontend-visual` is assigned, use available browser tooling against the running application.
 
 Inspect:
 
@@ -97,31 +103,31 @@ Inspect:
 - fidelity to each assigned visual reference
 - compliance with shared design rules
 
-For each defect:
-
-1. identify the visible cause
-2. make the smallest coherent correction
-3. run the narrowest applicable frontend test
-4. refresh and inspect again
+For each defect, the read-only reviewer identifies the visible cause, records exact evidence, and reports whether it blocks acceptance. The reviewer does not correct it. The authorized primary task agent then enters Repair, makes the smallest coherent correction, runs the narrowest assigned frontend proof, reruns every affected assigned set, and requests a fresh read-only Review of the new exact candidate SHA. Prior review does not carry forward across a content change.
 
 If browser tooling or the runnable environment is unavailable, `frontend-visual` cannot pass.
+
+Browser access is required only when `frontend-visual` is assigned to the active task. Documentation-only changes to this skill do not require a product browser run.
 
 ## Validation
 
 The active task and `.harness/validation.md` own required proof. Frontend work commonly requires:
 
-- `frontend-unit`
 - `frontend-component`
 - `frontend-e2e`
 - `frontend-visual`
 - `baseline`
 - `agent-review`
 
+Use only validation-set names registered in `.harness/validation.md`; add `security`, `security-review`, or `smoke` only when task assignment and the registry require them. The canonical independent-review gate owns reviewer identity, read-only independence, exact candidate SHA, durable evidence, blocking-finding disposition, repair invalidation, and fresh-review requirements. This skill adds frontend-specific observations and does not define a second review contract.
+
 Use `$code-change-verification` for final proof, Git delivery, review, and CI.
 
 ## Completion Output
 
-Record in the scratchpad and final task result:
+Read-only Review reports the reviewer identity, exact candidate SHA, routes or components inspected, exact references, viewports, states, observed evidence, and blocking findings or `none`. It makes no repair claim.
+
+The authorized primary task agent records in the scratchpad and final task result:
 
 - routes or components reviewed
 - exact references inspected
@@ -129,6 +135,7 @@ Record in the scratchpad and final task result:
 - states exercised
 - tests run
 - visual defects corrected
+- fresh review result after each repair
 - unresolved visual or accessibility blockers
 
 Do not create a separate design-review report unless the active spec requires one.
