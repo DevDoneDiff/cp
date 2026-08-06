@@ -166,7 +166,7 @@ Brick_id: harness/H1/harness-integrity-validator
 Traceability: F4, F5, F14, F25d, F25g, F25h
 Priority: P0
 Depends_on: [T-0010], [T-0011], [T-0015], [T-0016]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
