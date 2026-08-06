@@ -191,10 +191,11 @@ In manual merge mode, stop after review-clean exact closeout-head CI with the ta
 
 If any file other than `.harness/tasks.md` or `.harness/completed.md` must change after closeout begins:
 
-- restore only the affected complete task block to its exact prior active-queue position with `Pass: false` and the appropriate `working` or `blocked` status;
-- remove only that task's provisional archive block;
+- first restore only the affected complete task block byte-for-byte to its exact pre-closeout active-queue position (`Status: working`, `Pass: false`) and remove only that task's provisional archive block;
 - preserve every other active and archived byte, order, prefix, and counter;
-- run `pnpm validate:harness` to prove the exact reversal, then rerun the complete gate.
+- run `pnpm validate:harness` to prove the exact reversal;
+- only after that exact reversal is committed and proven, apply any required user-directed or blocker state through separate ordinary validated active-state transitions; never combine another status change with reversal;
+- rerun the complete gate.
 
 If closeout push, latest-head CI, or merge fails before base-branch proof, perform the same reversal before further implementation or redelivery.
 

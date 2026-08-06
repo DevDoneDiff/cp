@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseArtifactRoutes } from "../../scripts/validation/harness-artifact-routes.mjs";
 import { parseLegacySpecRoutes } from "../../scripts/validation/harness-contract-routes.mjs";
+import { matchesAuthorizedH1AuthorityUpdate } from "../../scripts/validation/harness-h1-batch-transition.mjs";
 import {
   configuredBaseBranch,
   selectTaskStoreBase,
@@ -72,6 +73,10 @@ async function fixtureContext(): Promise<HarnessFixtureContext> {
 
 function errors(snapshot: HarnessSnapshotFixture) {
   return validateHarnessSnapshot(snapshot);
+}
+
+function sha256(text: string) {
+  return createHash("sha256").update(text).digest("hex");
 }
 
 function withContractsReadme(
@@ -568,6 +573,106 @@ describe("harness integrity validation", () => {
     expect(errors(futureMulti)).toContain(
       ".harness/completed.md: archive changed by more than one provisional transfer or reversal",
     );
+  });
+
+  it("binds the T-0030 authority bridge to both complete stores and exact identities", async () => {
+    const context = await fixtureContext();
+    const completed = completedStore(context.seedText);
+    const baseActiveText = activeStore([
+      taskBlock({
+        tag: "T-0030",
+        brick: "harness/H1/provisional-closeout-completion",
+        status: "working",
+      }),
+      taskBlock({ tag: "T-0031", brick: "harness/H1/future-31" }),
+    ]);
+    const currentActiveText = baseActiveText.replace(
+      "# Tasks\n",
+      "# Tasks\n\nCanonical candidate authority.\n",
+    );
+    const currentCompletedText = completed.replace(
+      "# Completed Tasks\n",
+      "# Completed Tasks\n\nCanonical archive authority.\n",
+    );
+    const parse = (activeText: string, completedText: string) => ({
+      active: parseTaskStore(activeText, "active"),
+      completed: parseTaskStore(completedText, "completed"),
+    });
+    const base = parse(baseActiveText, completed);
+    const current = parse(currentActiveText, currentCompletedText);
+    const authority = {
+      baseActiveHash: sha256(base.active.normalized),
+      baseCompletedHash: sha256(base.completed.normalized),
+      currentActiveHash: sha256(current.active.normalized),
+      currentCompletedHash: sha256(current.completed.normalized),
+      currentActivePrefixHash: sha256(current.active.prefix),
+      currentCompletedPrefixHash: sha256(current.completed.prefix),
+      activeTags: ["T-0030", "T-0031"],
+      completedTags: base.completed.blocks.map(({ tag }) => tag),
+    };
+    const accepted = (next = current, prior = base) =>
+      matchesAuthorizedH1AuthorityUpdate(next, prior, authority);
+
+    expect(accepted()).toBe(true);
+    expect(
+      accepted(
+        current,
+        parse(baseActiveText.replace("# Tasks\n", "# Laundered\n"), completed),
+      ),
+    ).toBe(false);
+    expect(
+      accepted(
+        current,
+        parse(
+          baseActiveText.replace(
+            "Prove one fixture task.",
+            "Drift one predecessor block.",
+          ),
+          completed,
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      accepted(
+        parse(
+          currentActiveText.replace(
+            "### [T-0031]",
+            `${taskBlock({ tag: "T-0032", brick: "harness/H1/extra-32" })}\n\n### [T-0031]`,
+          ),
+          currentCompletedText,
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      accepted(
+        parse(
+          currentActiveText.replace("T-0031", "T-0030"),
+          currentCompletedText,
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      accepted(
+        parse(
+          currentActiveText.replace(
+            "Prove one fixture task.",
+            "Drift one block.",
+          ),
+          currentCompletedText,
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      accepted(
+        parse(
+          currentActiveText.replace(
+            "harness/H1/provisional-closeout-completion",
+            "harness/H1/wrong-identity",
+          ),
+          currentCompletedText,
+        ),
+      ),
+    ).toBe(false);
   });
 
   it("resolves the four seeded legacy specs only through the ID-bearing map", async () => {

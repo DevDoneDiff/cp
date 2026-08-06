@@ -4,6 +4,7 @@
  * PUBLIC API / ENTRYPOINTS:
  *   - isAuthorizedH1BatchBaseRevision: identifies the single historical parent whose pre-H1 provenance is compatible.
  *   - isAuthorizedH1AuthorityUpdate: recognizes the exact T-0030 store-header authority transition without permitting block drift.
+ *   - matchesAuthorizedH1AuthorityUpdate: evaluates the same transition against injected identities for focused tests.
  *   - validateAuthorizedH1BatchMerge: returns whether the exact checkpoint applies and any exact-transform errors.
  * CONTROL_FLOW:
  *   1. Bind the candidate base to the authorized Git revision and exact H1 queue identity.
@@ -36,10 +37,23 @@ const H1_FINAL_ACTIVE_PREFIX_HASH =
   "74723a431d65cdd1808e0f0a22d9b333bd0d6944a8bf614c8e39ce961cb40ba4";
 const H1_FINAL_COMPLETED_PREFIX_HASH =
   "e6d402261604c005b94b7ec0c7dc1388606f523399b95edbdbc159c7885283ef";
+const H1_AUTHORITY_BASE_ACTIVE_HASH =
+  "afac399a152fc0864a7dc1a36e429bda554d577a17a20b1f023ecf724a6ce046";
+const H1_AUTHORITY_BASE_COMPLETED_HASH =
+  "06812f15c8320012d9af977d2f6714e163829740b081f5ebae3bb26169f79f5c";
+const H1_AUTHORITY_CURRENT_ACTIVE_HASH =
+  "a450950992f9dbe7594d83bf810149ac7e4a99e811a045f43c3d6e2ad116a03e";
+const H1_AUTHORITY_CURRENT_COMPLETED_HASH =
+  "88ff0db614759b1b79ebab5cb484c7414a36fadb2eec1da34d2e0e744efa726e";
 const H1_BATCH_TAGS = Array.from(
   { length: 32 },
   (_, index) => `T-${String(index + 8).padStart(4, "0")}`,
 );
+const H1_AUTHORITY_ACTIVE_TAGS = H1_BATCH_TAGS.slice(22);
+const H1_AUTHORITY_COMPLETED_TAGS = [
+  ...SEED_TAGS,
+  ...H1_BATCH_TAGS.slice(0, 22),
+];
 
 function exactTags(blocks, expected) {
   return blocks.map(({ tag }) => tag).join("\n") === expected.join("\n");
@@ -53,13 +67,22 @@ export function isAuthorizedH1BatchBaseRevision(baseRevision) {
   return baseRevision === H1_BATCH_BASE_REVISION;
 }
 
-export function isAuthorizedH1AuthorityUpdate(current, base) {
+export function matchesAuthorizedH1AuthorityUpdate(
+  current,
+  base,
+  {
+    baseActiveHash,
+    baseCompletedHash,
+    currentActiveHash,
+    currentCompletedHash,
+    currentActivePrefixHash,
+    currentCompletedPrefixHash,
+    activeTags,
+    completedTags,
+  },
+) {
   const currentWorking = current.active.blocks.filter(
     ({ fields }) => fields.Status === "working" && fields.Pass === "false",
-  );
-  const sameActiveTags = exactTags(
-    current.active.blocks,
-    base.active.blocks.map(({ tag }) => tag),
   );
   const exactActiveBlocks = base.active.blocks.every((prior, index) => {
     const next = current.active.blocks[index];
@@ -74,10 +97,16 @@ export function isAuthorizedH1AuthorityUpdate(current, base) {
     (prior, index) => current.completed.blocks[index]?.raw === prior.raw,
   );
   return (
-    hash(current.active.prefix) === H1_FINAL_ACTIVE_PREFIX_HASH &&
-    hash(current.completed.prefix) === H1_FINAL_COMPLETED_PREFIX_HASH &&
-    sameActiveTags &&
-    current.completed.blocks.length === base.completed.blocks.length &&
+    hash(base.active.normalized) === baseActiveHash &&
+    hash(base.completed.normalized) === baseCompletedHash &&
+    hash(current.active.normalized) === currentActiveHash &&
+    hash(current.completed.normalized) === currentCompletedHash &&
+    hash(current.active.prefix) === currentActivePrefixHash &&
+    hash(current.completed.prefix) === currentCompletedPrefixHash &&
+    exactTags(base.active.blocks, activeTags) &&
+    exactTags(current.active.blocks, activeTags) &&
+    exactTags(base.completed.blocks, completedTags) &&
+    exactTags(current.completed.blocks, completedTags) &&
     exactActiveBlocks &&
     exactCompletedBlocks &&
     currentWorking.length === 1 &&
@@ -85,6 +114,19 @@ export function isAuthorizedH1AuthorityUpdate(current, base) {
     currentWorking[0].fields.Brick_id ===
       "harness/H1/provisional-closeout-completion"
   );
+}
+
+export function isAuthorizedH1AuthorityUpdate(current, base) {
+  return matchesAuthorizedH1AuthorityUpdate(current, base, {
+    baseActiveHash: H1_AUTHORITY_BASE_ACTIVE_HASH,
+    baseCompletedHash: H1_AUTHORITY_BASE_COMPLETED_HASH,
+    currentActiveHash: H1_AUTHORITY_CURRENT_ACTIVE_HASH,
+    currentCompletedHash: H1_AUTHORITY_CURRENT_COMPLETED_HASH,
+    currentActivePrefixHash: H1_FINAL_ACTIVE_PREFIX_HASH,
+    currentCompletedPrefixHash: H1_FINAL_COMPLETED_PREFIX_HASH,
+    activeTags: H1_AUTHORITY_ACTIVE_TAGS,
+    completedTags: H1_AUTHORITY_COMPLETED_TAGS,
+  });
 }
 
 function isAuthorizedBase(base, baseRevision) {
