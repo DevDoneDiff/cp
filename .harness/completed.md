@@ -616,3 +616,43 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0013.md
+
+### [T-0014] Deduplicate the MVP proof boundary
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/mvp-proof-deduplication
+Traceability: F12, F20
+Priority: P1
+Depends_on: [T-0013]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Make `docs/MVP.md` own only the current demonstration and proof boundary without duplicating durable product, architecture, or shared-design truth.
+Scope:
+- Replace duplicated durable rules and technical baseline text with exact upstream references while preserving every demo-specific narrowing and observable proof requirement.
+Non_goals:
+- Change the canonical scenario, product scope, architecture, user experience, runtime behavior, or state-contract content.
+Acceptance_criteria:
+- The canonical scenario, start, endpoint, and real, seeded, simulated, and deferred classifications are semantically unchanged.
+- Every MVP non-goal and observable proof condition remains present and testable.
+- Durable product authority, lifecycle, and trust rules are referenced from `docs/PRODUCT.md` rather than copied.
+- Durable technical baseline and system invariants are referenced from `docs/ARCHITECTURE.md` rather than copied.
+- Shared experience rules are referenced from `docs/DESIGN.md`; MVP retains only demo-specific narrowing.
+- MVP makes no independent claim that a state contract owns composition, renderer choice, exact artifact assignment, implementation mutations, or harness proof.
+- Cross-document review finds no contradictory duplicated durable rule introduced by the change.
+Indivisibility_rationale:
+- none; `docs/MVP.md` is the single owner and proof surface for this result.
+Expected_surfaces:
+- `docs/MVP.md` authority, scenario, boundary, constraint, and maintenance sections.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0014.md
