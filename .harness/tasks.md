@@ -166,7 +166,7 @@ Brick_id: harness/H1/exact-base-head-delivery
 Traceability: F5, F6, F8, F9
 Priority: P0
 Depends_on: [T-0029], [T-0030]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
