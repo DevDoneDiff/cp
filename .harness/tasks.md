@@ -151,7 +151,7 @@ Brick_id: harness/H1/forward-contract-routing
 Traceability: F14, F15, F17, F25b, F25c
 Priority: P0
 Depends_on: none
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:

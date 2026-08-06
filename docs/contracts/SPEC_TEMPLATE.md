@@ -6,32 +6,35 @@
 
 ## Identity and Ownership
 
-- **Sequence:** [SEQUENCE_OR_NONE]
+- **Spec ID:** `[state/sNN/SEQUENCE | harness/SEQUENCE | repository/SEQUENCE]`
+- **Sequence:** [SEQUENCE]
 - **Outcome:** [THE_SINGLE_COLLECTIVE_IMPLEMENTATION_OUTCOME]
 - **Owner type:** [state | harness | repository]
-- **Owning contract:** `[EXACT_CONTRACT_PATH]`
-- **Affected states:** `[EXACT_STATE_CONTRACT_PATHS_OR_NONE]`
-- **Approved dependencies:** `[SPEC_OR_RUNTIME_DEPENDENCY_PATHS_OR_NONE]`
+- **Owning authority:** `[AGENTS.md | docs/REPOSITORY_POLICY.md | docs/contracts/states/sNN-kebab-case-state-name/sNN-state.md]`
+- **Affected states:** `[EXACT_REPOSITORY_RELATIVE_STATE_CONTRACT_PATHS_OR_NONE]`
+- **Approved dependencies:** `[STABLE_SPEC_ID_AT_EXACT_CURRENT_REPOSITORY_RELATIVE_PATH_OR_EXACT_RUNTIME_PATH_OR_NONE]`
+- **Amends:** `[STABLE_SPEC_ID_OR_NONE]`
+- **Supersedes:** `[STABLE_SPEC_ID_OR_NONE]`
 
 ## Discovery Basis
 
 **Governing documents**
-- `[EXACT_PATH_AND_RELEVANT_SECTION]`
+- `[EXACT_REPOSITORY_RELATIVE_PATH_AND_RELEVANT_SECTION]`
 
-**Owning and affected contracts**
-- `[EXACT_PATH]`
+**Owning and affected authorities**
+- `[EXACT_REPOSITORY_RELATIVE_PATH]`
 
 **Relevant prior specs**
-- `[EXACT_PATH_OR_NONE]`
+- `[STABLE_SPEC_ID_AT_EXACT_CURRENT_REPOSITORY_RELATIVE_PATH_OR_NONE]`
 
 **Current implementation inspected**
-- `[ANNOTATION_HEADER_SOURCE_TEST_ROUTE_SCHEMA_OR_NONE]`
+- `[EXACT_REPOSITORY_RELATIVE_ANNOTATION_HEADER_SOURCE_TEST_ROUTE_SCHEMA_PATH_OR_NONE]`
 
 **Reference artifacts**
 
 | Path | Type | Authority | Applies to |
 |---|---|---|---|
-| `[EXACT_PATH_OR_NONE]` | [visual | technical | content | none] | [OWNED_TRUTH_OR_NONE] | [STATE_PROCESS_OR_NONE] |
+| `[EXACT_REPOSITORY_RELATIVE_PATH_OR_NONE]` | [visual | technical | none] | [OWNED_TRUTH_OR_NONE] | [STATE_PROCESS_OR_NONE] |
 
 ## Current State
 
@@ -89,8 +92,8 @@
 ## Experience and Reference Fidelity
 
 - **Required visible states:** [STATE_OR_NONE]
-- **Visual references:** `[EXACT_PATH_OR_NONE]`
-- **Technical references:** `[EXACT_PATH_OR_NONE]`
+- **Visual references:** `[EXACT_REPOSITORY_RELATIVE_PATH_OR_NONE]`
+- **Technical references:** `[EXACT_REPOSITORY_RELATIVE_PATH_OR_NONE]`
 - **Accessibility and interaction:** [REQUIREMENT_OR_NONE]
 - **Required departures:** [DEPARTURE_OR_NONE]
 
@@ -119,7 +122,7 @@
 - **Required validation categories:** [EXACT_SET_NAMES_OR_COLLECTIVE_EXPECTATION]
 - **Required fixtures or seeded data:** [FIXTURE_OR_NONE]
 - **Required browser states:** [STATE_VIEWPORT_OR_NONE]
-- **Required reference comparison:** [REFERENCE_OR_NONE]
+- **Required reference comparison:** `[EXACT_REPOSITORY_RELATIVE_REFERENCE_PATHS_OR_NONE]`
 - **Required independent review:** [REVIEW_SCOPE]
 
 ## Open Questions
