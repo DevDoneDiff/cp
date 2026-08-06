@@ -166,7 +166,7 @@ Brick_id: harness/H1/frontend-review-semantics
 Traceability: F24
 Priority: P1
 Depends_on: [T-0029]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
