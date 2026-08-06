@@ -130,7 +130,7 @@ The active artifact type vocabulary is exactly `visual`, `technical`, or `none`.
 | `references/states/s01-address-entry/visual-default.png` | `docs/contracts/states/s01-address-entry/visual-default.png` | `canonical` | exact bytes |
 | `references/states/s01-address-entry/visual-how-it-works-open.png` | `docs/contracts/states/s01-address-entry/visual-how-it-works-open.png` | `canonical` | exact bytes |
 | `references/states/s02-property-analysis/visual-property-confirmation.png` | `docs/contracts/states/s02-property-analysis/visual-property-confirmation.png` | `canonical` | exact bytes |
-| `references/states/s02-property-analysis/visual-live-roof-assembly.png` | `docs/contracts/states/s02-property-analysis/visual-live-roof-assembly.png` | `migration-pending` | exact bytes |
+| `references/states/s02-property-analysis/visual-live-roof-assembly.png` | `docs/contracts/states/s02-property-analysis/visual-live-roof-assembly.png` | `canonical` | exact bytes |
 | `references/states/s02-property-analysis/technical-persistent-project-assembly.png` | `docs/contracts/states/s02-property-analysis/technical-persistent-project-assembly.png` | `migration-pending` | exact bytes |
 
 When all five entries are `canonical`, no legacy duplicate may remain. No unnamed duplicate or unregistered legacy path is accepted.

@@ -166,7 +166,7 @@ Brick_id: harness/H1/artifact-s02-visual-live-roof-assembly
 Traceability: F18, F25g
 Priority: P1
 Depends_on: [T-0010], [T-0017]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
