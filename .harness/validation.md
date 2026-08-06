@@ -190,16 +190,29 @@ The provisional closeout commit may inherit the candidate-content review only wh
 4. create and push a candidate commit with the task still active and `Pass: false`;
 5. open or update the pull request;
 6. pass `agent-review`, `security-review` when assigned, record their exact-SHA evidence in the pull request, and pass remote CI when enabled;
-7. create one closeout commit that changes only `.harness/tasks.md` and `.harness/completed.md`:
+7. complete the pre-closeout lesson-disposition checkpoint below; any resulting tracked change returns to step 2 and requires a new candidate SHA, review, and CI before closeout;
+8. create one closeout commit that changes only `.harness/tasks.md` and `.harness/completed.md`:
    - update the full task block to `Status: passed` and `Pass: true`;
    - append that complete final task block verbatim to `.harness/completed.md`;
    - remove the same task block from `.harness/tasks.md`;
    - preserve all other active and archived entries byte-for-byte;
-8. run `CLOSEOUT_REVIEW_INHERITANCE_PROCEDURE`; inherit candidate review only on its exact successful evidence, otherwise obtain fresh review of the closeout SHA;
-9. push the closeout commit and require latest-head CI to pass when enabled;
-10. merge according to `MERGE_MODE`;
-11. pass the complete canonical completion proof for the task;
-12. delete the scratchpad and perform post-merge branch cleanup.
+9. run `CLOSEOUT_REVIEW_INHERITANCE_PROCEDURE`; inherit candidate review only on its exact successful evidence, otherwise obtain fresh review of the closeout SHA;
+10. push the closeout commit and require latest-head CI to pass when enabled;
+11. merge according to `MERGE_MODE`;
+12. pass the complete canonical completion proof for the task;
+13. delete the scratchpad and perform post-merge branch cleanup.
+
+### Pre-closeout lesson disposition
+
+While the task remains active at `working`/`Pass: false`, the primary task agent must inspect its scratchpad evidence against the existing qualification criteria in `.harness/LESSONS.md`:
+
+1. Promote every qualifying reusable lesson to `.harness/LESSONS.md` using its existing format and record the exact promoted lesson heading or headings under `Lesson disposition` in the task scratchpad.
+2. If no evidence qualifies, record `Lesson disposition: none` with one concise reason in the task scratchpad. Do not create a completed-task summary or copy debugging noise merely to avoid `none`.
+3. Re-evaluate disposition after any review finding, CI failure, recovery, or other material evidence discovered after the prior decision.
+4. Treat any tracked lesson promotion as ordinary task content: rerun affected proof and `baseline`, create a new candidate-content SHA, and repeat every required exact-SHA review and CI gate. The scratchpad-only `none` record does not change candidate content.
+5. Provisional closeout cannot begin until the latest scratchpad disposition covers all task evidence and is either the exact promoted heading list or `none`.
+
+Post-merge scratchpad deletion is cleanup only. It must never be the first or only lesson evaluation and cannot substitute for this checkpoint.
 
 The closeout archive entry is provisional until it reaches configured base-branch history.
 
