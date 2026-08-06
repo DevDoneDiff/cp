@@ -450,3 +450,42 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0009.md
+
+### [T-0010] Register legacy compatibility routes
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/legacy-compatibility-registry
+Traceability: F13, F14, F18, F25g
+Priority: P0
+Depends_on: [T-0009]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Make every supported legacy spec and artifact path resolve unambiguously without reviving superseded workflow authority.
+Scope:
+- Add the four H1 Git-only path-to-spec-ID-to-historical-locator entries, all five artifact migration pairs with explicit `migration-pending` state, and the complete legacy non-authority rule to the canonical contract routing owner.
+Non_goals:
+- Rewrite Git-preserved historical content, edit completed-task blocks, delete legacy artifacts, or implement the structural validator.
+Acceptance_criteria:
+- All four retired implementation-spec paths referenced by T-0001 through T-0007 resolve to exact stable IDs, `current path: none`, and exact transition-base Git locators.
+- Each of the five legacy artifact paths resolves to its exact canonical `docs/contracts/states/...` path and starts in a bounded `migration-pending` state that requires byte equality.
+- Legacy task counts, decomposition, placement, deleted paths, and superseded authoring, delivery, validation, closeout, lifecycle, routing, and artifact mechanics are explicitly historical only.
+- Completed outcomes, acceptance evidence, and still-valid compatibility obligations remain available without becoming current workflow authority.
+- Git-preserved historical source blobs and all completed-task blocks remain byte-for-byte unchanged.
+- A current author can distinguish a Git-only identity from a forward authoring route without scanning unrelated specs or loading deprecated bodies as examples.
+Indivisibility_rationale:
+- none; the canonical compatibility registry is one independently reviewable routing result in `docs/contracts/README.md`.
+Expected_surfaces:
+- `docs/contracts/README.md` legacy compatibility and migration sections.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0010.md
