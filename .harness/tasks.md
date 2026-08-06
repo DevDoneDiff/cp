@@ -157,46 +157,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0022] Canonicalize the S02 technical depiction
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/artifact-s02-technical-persistent-project-assembly
-Traceability: F18, F25g
-Priority: P1
-Depends_on: [T-0010], [T-0017]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Retire the legacy S02 technical-artifact copy after proving its canonical contract depiction and consumers are intact.
-Scope:
-- Hash-compare the one legacy/canonical pair, remove only the legacy copy, update that registry entry to `canonical`, and check current consumers of that path.
-Non_goals:
-- Modify image bytes, adopt new process authority, migrate another artifact, change runtime architecture, or edit historical task blocks.
-Acceptance_criteria:
-- The legacy and canonical files are byte-identical immediately before removal and the exact hash is recorded.
-- `references/states/s02-property-analysis/technical-persistent-project-assembly.png` is absent while its canonical S02 contract artifact retains the proven bytes.
-- Current consumers use only the canonical path; the historical path resolves through the migration registry and Git.
-- The registry entry changes from `migration-pending` to `canonical`, and the targeted validator check for this pair passes.
-- No other legacy/canonical artifact pair, depicted process, runtime behavior, or completed block changes.
-Indivisibility_rationale:
-- none; one artifact pair, its registry state, and its direct consumers form one independently reversible migration seam.
-Expected_surfaces:
-- `references/states/s02-property-analysis/technical-persistent-project-assembly.png`.
-- `docs/contracts/states/s02-property-analysis/technical-persistent-project-assembly.png`, whose bytes must remain unchanged.
-- Its exact entry in `docs/contracts/README.md` and narrow current consumers only if needed.
-Reference_artifacts:
-- docs/contracts/states/s02-property-analysis/technical-persistent-project-assembly.png
-Validation_sets:
-- baseline
-- agent-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0022.md
-
 ### [T-0023] Enforce harness integrity in baseline
 Type: maintenance
 Bootstrap: false
