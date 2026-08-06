@@ -20,6 +20,7 @@ EXACT_HEAD_CI_PROCEDURE: Require the configured-repository head and base identit
 PRE_MERGE_BASE_REFRESH_PROCEDURE: Immediately before either manual or autonomous merge, run git fetch --prune origin without changing the working tree or current branch; record the exact fetched origin/BASE_BRANCH as EXPECTED_BASE_SHA; require it to be an ancestor of EXPECTED_HEAD_SHA, require the exact remote task branch and sole PR headRefOid still equal EXPECTED_HEAD_SHA, require atomic server-side up-to-date and no-bypass enforcement, and repeat complete non-force redelivery if the fetched base advanced
 MERGE_COMMAND: gh pr merge <PR> --repo DevDoneDiff/cp --squash --delete-branch --match-head-commit <EXPECTED_HEAD_SHA> --subject "<TASK_TAG> <TITLE>"
 MERGE_READBACK_PROCEDURE: Fetch origin/main, reread the same PR as MERGED, bind its base/head identities and reported mergeCommit OID, require that exact OID reachable from fetched origin/main and its first parent equal EXPECTED_BASE_SHA, verify the tagged subject and exact first-parent archive introduction plus active absence, then synchronize local main by fast-forward only
+REMOTE_OUTCOME_READBACK_PROCEDURE: Before each remote mutation record its operation type, repository, exact target, expected before identity, intended after identity or payload digest, EXPECTED_HEAD_SHA and EXPECTED_BASE_SHA when applicable, and one unique non-secret operation ID; after any failure, timeout, interruption, or uncertain response perform operation-specific authenticated readback and classify only proven-applied, proven-not-applied, or unresolved before any retry, reversal, cleanup, or other mutation
 POST_MERGE_CLEANUP_PROCEDURE: After successful guarded merge, fetch and prune; check out and fast-forward BASE_BRANCH; require exact local and remote base SHA equality, clean state, task-tag history proof, merged pull-request proof, and remote task-branch absence; attempt ordinary local branch deletion; permit exact-target force deletion only when squash ancestry alone blocks ordinary deletion
 AGENT_REVIEW_PROCEDURE: dedicated read-only Codex review of the exact candidate-content SHA against BASE_BRANCH
 SECURITY_REVIEW_PROCEDURE: dedicated read-only security review of the exact security-sensitive candidate-content SHA against BASE_BRANCH
@@ -202,7 +203,7 @@ If any file other than `.harness/tasks.md` or `.harness/completed.md` must chang
 - only after that exact reversal is committed and proven, apply any required user-directed or blocker state through separate ordinary validated active-state transitions; never combine another status change with reversal;
 - rerun the complete gate.
 
-If closeout push, latest-head CI, or merge fails before base-branch proof, perform the same reversal before further implementation or redelivery.
+If closeout push, latest-head CI, or merge returns a failed, timed-out, interrupted, or otherwise uncertain result before base-branch proof, run `REMOTE_OUTCOME_READBACK_PROCEDURE` first. Perform reversal only after readback proves non-application and the canonical continuation requires withdrawal or redelivery. Unresolved readback preserves the provisional state and stops; proven merge application is durable and is never reversed.
 
 The pull request records read-only procedure evidence for any explicit pre-merge withdrawal, exact reversal, or failed closeout: task tag, candidate and closeout SHAs when present, trigger, before/after store identities, exact affected paths, harness result, resulting active status, and confirmation that unrelated blocks were preserved.
 
@@ -239,6 +240,31 @@ After provisional closeout and before either manual or autonomous merge:
 
 The pull request records the exact candidate and closeout SHAs, PR and branch identity, required check names/results/links, reviewed base SHA, `EXPECTED_BASE_SHA`, atomic up-to-date/no-bypass enforcement readback, any base-advance reversal and complete redelivery, guarded merge invocation, reported merge OID, exact merge first-parent equality, ancestry and first-parent diff results, synchronized base SHA, and remote branch absence. Include at least one read-only base-advance procedure case and one completed-merge readback case. T-0032 owns failed or ambiguous remote-command classification and retry behavior.
 
+## Remote Operation Outcome Reconciliation
+
+Use `REMOTE_OUTCOME_READBACK_PROCEDURE` for every remote mutation and for every failed, timed-out, interrupted, disconnected, cancelled, or uncertain remote result. Before an operation begins, record a non-secret intent containing its unique `OPERATION_ID`, operation type, configured repository, exact target identity, expected before state, intended after state or canonical payload digest, and applicable PR, branch, head, and base identities. Never record credentials, tokens, request headers, or secret-bearing output.
+
+After an uncertain result, make no further remote or task-store mutation. Use authenticated independent readback and assign exactly one state:
+
+- `proven-applied`: the one exact intended target has the complete intended after identity or payload and all bound repository, branch, PR, head, and base identities agree. Continue from the next lifecycle step without repeating the operation.
+- `proven-not-applied`: the one exact target remains at the complete recorded before identity, and the intended reference, payload marker, state change, or merge is absent. Recheck all current preconditions, then permit at most one bounded retry or the canonical exact provisional reversal when withdrawal or redelivery requires it. A failed retry is a new recorded operation and must be reconciled again before anything else.
+- `unresolved`: readback is unavailable, unauthenticated, partial, multiply matched, contradictory, at neither recorded identity, or disagrees across Git and GitHub. Preserve the local branch, worktree, scratchpad, remote references, PR, provisional archive, and recorded intent; record the blocker in the scratchpad and, only when the task remains active, set or retain its validated `blocked` state. Never mutate a provisional archive to record the blocker. Stop all retry, reversal, cleanup, branch deletion, evidence rewrite, and queue advancement.
+
+Operation-specific readback is mandatory:
+
+| Operation | Proven application | Proven non-application | Safe continuation |
+|---|---|---|---|
+| non-force push or remote branch create/update | the exact configured remote ref equals the intended local after SHA and its expected ancestry/identity | the exact ref equals the recorded before SHA, or remains exactly absent for a create | applied: continue to PR or CI; not applied: recheck non-force eligibility and retry once |
+| remote branch deletion or other branch mutation | only the exact intended ref has the intended after state or is absent for deletion | the exact intended ref remains at its recorded before identity | applied: continue from the branch-absence gate; not applied: retry only through the owning lifecycle procedure; T-0034 owns post-merge cleanup authorization |
+| pull-request create | exactly one configured-repository PR has the intended head repository/ref/SHA, base ref, and canonical title/body identity | authenticated all-state lookup proves zero matching PRs and the head branch remains at the recorded SHA | applied: reuse that PR; not applied: rerun conflict checks and create once |
+| pull-request update or review-evidence write | the sole exact PR retains its bound head/base identity and contains the complete intended field value or unique `OPERATION_ID` plus canonical evidence digest exactly once | the same PR retains the complete recorded prior fields and contains no intended operation marker or digest | applied: do not duplicate the update; not applied: reread head/base and retry once |
+| CI or status query | a fresh authenticated result binds the sole exact PR, unchanged `EXPECTED_HEAD_SHA`, exact configured check names, and complete states | read-only query non-application has no remote mutation; safe retry requires the same unchanged PR/head identity | continue only from a complete exact-head result; unavailable, partial, stale, or changing results are unresolved |
+| guarded merge | `MERGE_READBACK_PROCEDURE` proves the same PR merged, exact reported merge OID, `mergeCommit^ == EXPECTED_BASE_SHA`, configured-base reachability, tagged subject, exact archive/active transition, and remote branch state | the same PR is still open with no merge OID, its exact head/base/remote-branch identities are unchanged, and fetched base history contains no intended tagged archive transition | applied: never reverse and continue to canonical completion; not applied: rerun every exact-head/base/protection gate before one retry, or exactly reverse only for authorized withdrawal/redelivery |
+
+A closed-but-unmerged PR, partial evidence body, moved branch, changed PR head or base, unexpected merge OID, multiple matching PRs, or disagreement between API and Git history is unresolved rather than proven non-application.
+
+Record every case first in the task scratchpad. Once the exact PR evidence surface is writable and identity-bound, durably record the `OPERATION_ID`, operation type and target, redacted intent identities/digest, initiating result, readback sources, exact observed identities, classification, and permitted continuation. The pull request must include read-only procedure cases for proven application, proven non-application, and unavailable or contradictory readback. If an evidence write is itself uncertain, reconcile that write before attempting to append, edit, or duplicate evidence. Any exact reversal additionally records the two store identities, exact changed path set, harness result, and unrelated-block preservation proof.
+
 ## Merge Rules
 
 - never push directly to `BASE_BRANCH`;
@@ -269,6 +295,8 @@ After a successful merge:
 The force-deletion exception applies only to the exact merged local task branch after every proof above. It never authorizes force-push, shared-history rewrite, remote force deletion, or deletion of any other branch.
 
 ## Failure Loop
+
+Remote-operation failures enter `REMOTE_OUTCOME_READBACK_PROCEDURE` before this local repair loop. No generic failure step may infer non-application, reverse provisional state, or retry a remote mutation.
 
 1. keep or restore `Pass: false`;
 2. keep or restore the task in `.harness/tasks.md`;
