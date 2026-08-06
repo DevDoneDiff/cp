@@ -157,44 +157,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0038] Make frontend review read-only and registry-driven
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/frontend-review-semantics
-Traceability: F24
-Priority: P1
-Depends_on: [T-0029]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Align frontend review with read-only reviewer independence, primary-agent repair, and registered validation names.
-Scope:
-- Separate Build, Restyle, read-only Review, and primary-agent Repair behavior and remove unregistered validation vocabulary.
-Non_goals:
-- Change product UI, alter artifact authority, run visual implementation, add `frontend-unit`, or modify the canonical validation registry.
-Acceptance_criteria:
-- Read-only Review reports evidence and blocking findings without modifying the worktree.
-- Only the authorized primary task agent enters Repair, applies corrections, reruns focused proof, and requests fresh review.
-- `frontend-unit` is absent and the skill names only validation sets registered by `.harness/validation.md`.
-- Browser access remains required only for assigned frontend visual proof; documentation-only skill changes require no product browser run.
-- Review evidence follows the canonical exact-SHA and independence contract rather than defining a second one.
-Indivisibility_rationale:
-- none; reviewer mutation and validation vocabulary are one specialized frontend-review workflow correction.
-Expected_surfaces:
-- `.agents/skills/frontend-design/SKILL.md` modes, review loop, validation, and completion output.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0038.md
-
 ### [T-0039] Align frontend artifact authority
 Type: maintenance
 Bootstrap: false
