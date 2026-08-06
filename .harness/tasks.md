@@ -157,44 +157,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0026] Align spec-authoring identity and routing
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/spec-authoring-identity-routing
-Traceability: F13, F14, F15, F17
-Priority: P1
-Depends_on: [T-0010], [T-0014]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Make `$spec-authoring` consume the forward ownership, identity, lineage, legacy, and artifact-routing schema.
-Scope:
-- Align primary-outcome routing, stable identity, bounded lineage, current forward-spec routing versus Git-only legacy lookup, active artifact vocabulary, and exact paths while preserving discovery-first drafting.
-Non_goals:
-- Change durable-decision or mechanism-lock boundaries, add approval recording, decompose tasks, or define delivery mechanics.
-Acceptance_criteria:
-- The skill uses `Owning authority`, stable spec ID, bounded lineage, and the canonical primary-outcome routing test.
-- Deprecated Git-only identities remain discoverable for exact historical lookup but are never loaded as templates or forward authoring examples.
-- Git-preserved legacy outcome and acceptance evidence cannot impose superseded workflow or decomposition mechanics.
-- `content` is absent from artifact discovery and schema, leaving only visual, technical, or none with exact repository-relative paths.
-- Discovery remains bounded and task decomposition remains prohibited.
-Indivisibility_rationale:
-- none; the spec-authoring skill is the single consumer of the published forward identity and routing schema.
-Expected_surfaces:
-- `.agents/skills/spec-authoring/SKILL.md` authority, routing, identity, lineage, discovery, and artifact sections.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0026.md
-
 ### [T-0027] Guard durable authority and implementation latitude
 Type: maintenance
 Bootstrap: false
