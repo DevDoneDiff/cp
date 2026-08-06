@@ -11,7 +11,7 @@ No downstream specification may contradict this document within its scope.
 ## Authority
 This document owns product identity, user and platform value, actor authority, durable rules, lifecycle concepts, trust promises, domain language, and category boundaries.
 
-`MVP.md` narrows the current proof. `ARCHITECTURE.md` owns technical structure. `DESIGN.md` owns the shared experience system. Individual `sNN-state.md` specifications own state-level flow, composition, behavior, transitions, references, and acceptance criteria.
+`docs/MVP.md` narrows the current proof. `docs/ARCHITECTURE.md` owns durable technical structure. `docs/DESIGN.md` owns the shared experience system. An exact `sNN-state.md` contract owns durable state-specific behavior, semantic meaning, accessibility, and authority without prescribing implementation. Exact visual artifacts own approved appearance, and approved implementation specs own one collective outcome.
 
 ## Product Identity
 The product is an AI-first homeowner-to-contractor project platform, beginning with residential solar.
@@ -160,6 +160,6 @@ The product succeeds when homeowners receive value before surrendering identity,
 
 ## Change Control
 - Update only when approved product truth changes.
-- `MVP.md` may narrow the active proof and cannot weaken these invariants.
-- Architecture, design, and state specifications must preserve this authority.
+- `docs/MVP.md` may narrow the active proof and cannot weaken these invariants.
+- Architecture, design, state contracts, artifacts, and approved implementation specs must preserve this authority within their domains.
 - Git owns prior versions and change history.

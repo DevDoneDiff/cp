@@ -6,19 +6,20 @@
 - Approval scope: shared visual, interaction, content, motion, responsive, and accessibility system
 - Change frequency: slow; update only when approved shared design truth changes
 
-State-specific composition remains unresolved until its approved `sNN-state.md` specification and linked references exist.
+State-specific semantics remain unresolved until the exact `sNN-state.md` contract is approved. State-specific appearance remains unresolved until an exact visual artifact is approved and assigned by an implementation spec.
 
 ## Authority
-Apply design direction in this order:
-1. explicit user instruction
-2. active approved `sNN-state.md` specification
-3. exact approved visual reference linked by that specification
-4. this document
-5. established tokens and components
-6. approved design skills
-7. agent judgment
+Apply each source only within its domain:
 
-This document owns shared design rules. State specifications own composition, variants, flow, copy, exact references, and state-specific proof. Technical references provide guidance and cannot introduce unstated behavior, authority, or architecture.
+- explicit user instruction owns the current design decision;
+- this document owns shared experience, interaction, content, motion, responsive, and accessibility rules;
+- the exact `sNN-state.md` contract owns durable state-specific behavior, semantic content meaning, accessibility, and authority;
+- an exact approved visual artifact owns state-specific appearance;
+- an exact technical artifact owns only a process depiction explicitly adopted by governing authority or an approved implementation spec and otherwise remains guidance;
+- an approved implementation spec owns one collective outcome and any explicit appearance departure compatible with governing authority;
+- established tokens and components, approved design skills, and agent judgment provide implementation guidance.
+
+Resolve cross-domain conflicts before implementation. Incidental spec wording cannot silently override an exact visual artifact's appearance domain.
 
 ## Experience Character
 - Direction: premium cinematic contractor-project experience.
@@ -41,7 +42,7 @@ This document owns shared design rules. State specifications own composition, va
 - Keep explanations attached to the entity they describe.
 - Expose consequences, transactions, and evidence without removing project context.
 - Remain usable without high-end 3D, gesture-only input, or model latency.
-- Let the approved state reference own composition within these shared rules.
+- Let the exact approved visual artifact own state-specific appearance within these shared rules.
 
 ## Spatial Grammar
 - **Central project object:** property, system, packet, offer, or active project remains visually primary.
@@ -50,7 +51,7 @@ This document owns shared design rules. State specifications own composition, va
 - **Vertical drawer:** estimates, obligations, transactions, or evidence open without replacing context.
 - **Horizontal progression:** major phase movement may use restrained lateral motion.
 - **Compression:** completed work condenses into durable project state.
-- **Persistent shell:** adjacent states preserve scene, camera, and object continuity when the active specification requires it.
+- **Persistent shell:** adjacent states preserve scene, camera, and object continuity when durable state semantics or an approved implementation outcome requires it.
 
 Traditional navigation remains secondary.
 
@@ -151,21 +152,21 @@ Target WCAG 2.2 AA.
 
 Every control, Lens, drawer, confirmation, correction path, and transaction action works by keyboard. Focus remains visible and logical. Use semantic landmarks, labels, status announcements, and accessible names. Screen readers receive meaningful state changes without decorative narration. Touch targets remain usable on mobile.
 
-Desktop investor demonstration is primary; mobile remains fully usable. Responsive adaptation preserves project identity, action priority, source, certainty, and consequences. Complex spatial layouts may collapse into ordered vertical sections. State specifications own state-specific responsive composition.
+Desktop investor demonstration is primary; mobile remains fully usable. Responsive adaptation preserves project identity, action priority, source, certainty, and consequences. Complex spatial layouts may collapse into ordered vertical sections. State contracts own state-specific accessibility and behavioral requirements; exact visuals own approved appearance at their represented viewport or state.
 
 ## Reference Authority
-- Each state specification lists the exact approved visual and technical reference paths.
-- Tasks repeat those exact paths.
+- Approved implementation specs list every exact assigned visual and technical artifact path, and tasks repeat those exact paths.
 - Agents cannot infer authority from neighboring files or folders.
-- Visual references own state-specific appearance within prose constraints.
-- Technical references remain guidance only.
+- Visual artifacts own state-specific appearance within governing prose constraints.
+- Technical artifacts own only a depiction explicitly adopted by governing authority or an approved implementation spec and otherwise remain guidance.
+- Any appearance departure must be explicit in the approved implementation spec and compatible with governing authority.
 - Image defects, fabricated values, annotations, and malformed copy are excluded unless approved prose includes them.
 - Working references remain outside approved state-reference paths.
 
 ## Browser Validation
-Shared validation covers required viewports, keyboard and focus, reduced motion, semantic controls, status announcements, component states, and visual comparison against each exact reference linked by the active state specification.
+Shared validation covers required viewports, keyboard and focus, reduced motion, semantic controls, status announcements, component states, and visual comparison against every exact artifact assigned by the approved implementation spec.
 
-The repository harness owns commands and evidence procedures. State specifications own their state-level proof.
+The repository harness owns commands and evidence procedures. Approved implementation specs own outcome-specific validation expectations; state contracts retain durable state validity semantics.
 
 ## Explicitly Avoid
 - generic SaaS dashboard
@@ -184,7 +185,7 @@ The repository harness owns commands and evidence procedures. State specificatio
 
 ## Change Control
 - Update when the shared design system changes.
-- State-specific composition and behavior belong to state specifications and approved references.
+- State-specific durable behavior belongs to state contracts, approved appearance belongs to exact visuals, and collective implementation outcomes belong to approved specs.
 - Reuse tokens, components, and interaction grammar before adding variants.
 - New shared patterns require a product-purpose reason and approval.
 - Git owns prior versions and change history.

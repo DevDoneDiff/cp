@@ -151,7 +151,7 @@ Brick_id: harness/H1/global-state-artifact-ownership
 Traceability: F12, F18
 Priority: P1
 Depends_on: [T-0012]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
