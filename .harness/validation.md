@@ -18,8 +18,9 @@ CI_ENABLED: true
 CI_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --json name,bucket,state,link,workflow; require exact CI / baseline and CI / browser-smoke entries with bucket pass, then reread the matching headRefOid with gh pr view
 MERGE_COMMAND: gh pr merge <PR> --repo DevDoneDiff/cp --squash --delete-branch --match-head-commit <EXPECTED_HEAD_SHA> --subject "<TASK_TAG> <TITLE>"
 POST_MERGE_CLEANUP_PROCEDURE: After successful guarded merge, fetch and prune; check out and fast-forward BASE_BRANCH; require exact local and remote base SHA equality, clean state, task-tag history proof, merged pull-request proof, and remote task-branch absence; attempt ordinary local branch deletion; permit exact-target force deletion only when squash ancestry alone blocks ordinary deletion
-AGENT_REVIEW_PROCEDURE: dedicated read-only Codex review against BASE_BRANCH
-SECURITY_REVIEW_PROCEDURE: dedicated read-only security review of the task diff
+AGENT_REVIEW_PROCEDURE: dedicated read-only Codex review of the exact candidate-content SHA against BASE_BRANCH
+SECURITY_REVIEW_PROCEDURE: dedicated read-only security review of the exact security-sensitive candidate-content SHA against BASE_BRANCH
+CLOSEOUT_REVIEW_INHERITANCE_PROCEDURE: Require a clean tree at CLOSEOUT_SHA; require `git rev-parse <CLOSEOUT_SHA>^` to equal CANDIDATE_CONTENT_SHA; require `git diff --name-only --no-renames <CANDIDATE_CONTENT_SHA> <CLOSEOUT_SHA>` as a set to equal only `.harness/tasks.md` and `.harness/completed.md`; run `pnpm validate:harness` at CLOSEOUT_SHA to prove the exact two-store transform; record both SHAs, the exact path set, and the harness result in the pull request
 ```
 
 A task cannot have `Ready: true` when a required command or procedure is unset.
@@ -68,7 +69,9 @@ One compatibility path exists only for this authorized H1 batch delivery: when c
 
 Live completion proof is separate. Selection, review evidence, exact-head CI, merge readback, dependency satisfaction, and cleanup use the configured Git and GitHub procedures. Remote unavailability therefore blocks delivery operations but never changes the meaning or result of local structural proof.
 
-Every repository behavior change requires:
+The candidate-content SHA is the exact committed task head with the task still active at `Pass: false` after all applicable source, test, configuration, authority, annotation, and validation changes. Independent review evaluates that immutable commit against `BASE_BRANCH`. A worktree description, branch name, moving branch tip, local diff, or later commit is not equivalent evidence.
+
+Every implementation task requires:
 
 - task-assigned focused validation;
 - `baseline`;
@@ -107,7 +110,7 @@ MUST NOT:
 
 ## Set Selection
 
-Assign `baseline` and `agent-review` to every code task.
+Assign `baseline` and `agent-review` to every implementation task.
 
 Add:
 
@@ -128,7 +131,7 @@ Do not invent validation-set names.
 |---|---|---|
 | `bootstrap-preflight` | Inspect Git status/history/origin; verify Node `24.19.0`, pnpm `11.18.0`, and GitHub CLI; run authenticated repository, permission, visibility, exact-head branch/PR, and protection readbacks without external mutation | Historical bootstrap prerequisites and safe initial state |
 | `baseline` | `pnpm validate` | exact ordered toolchain, format, lint, strict typecheck, annotation, network-free harness-integrity, security, coverage-test, and production-build proof |
-| `agent-review` | configured dedicated read-only Codex review | correctness, acceptance, architecture, data, regression, file responsibility, and required reference review |
+| `agent-review` | configured dedicated read-only Codex review | correctness, acceptance, architecture, data, regression, file responsibility, required references, and security implications |
 | `frontend-component` | `pnpm test:component` | rendered states, interaction, accessibility, and contracts |
 | `frontend-e2e` | For one unchanged working tree, pass `pnpm test:smoke`, then run `pnpm test:e2e`; Playwright starts only the reusable production build | critical user workflows |
 | `frontend-visual` | Dedicated real-browser agent review at task-required viewports and states against every exact artifact assigned by the active spec; missing browser access or required artifact fidelity fails the procedure | responsive layout, hierarchy, states, and exact approved-reference fidelity |
@@ -138,7 +141,9 @@ Do not invent validation-set names.
 
 ## Independent Review Gate
 
-The reviewer must not modify the working tree.
+Every reviewer is independent and read-only. The reviewer must not modify the working tree, candidate branch, pull request, task stores, evidence, or any external state. Only the primary task agent repairs findings and reruns proof.
+
+Before review, resolve and record the exact candidate-content SHA. The reviewer must identify that same SHA and review its complete task diff against `BASE_BRANCH`.
 
 Review the complete task diff against `BASE_BRANCH` for:
 
@@ -157,6 +162,10 @@ Correctness, security, data-loss, architecture, acceptance, file-responsibility,
 
 The primary task agent applies fixes, reruns affected checks and `baseline`, then requests a fresh review.
 
+The pull request records durable evidence for each required review: reviewer identity or run ID, independent role, review type, exact candidate-content SHA, result, and findings or `none`. Any applicable content change after review invalidates that review, creates a new candidate-content SHA, and requires fresh review and evidence.
+
+The provisional closeout commit may inherit the candidate-content review only when `CLOSEOUT_REVIEW_INHERITANCE_PROCEDURE` binds the direct candidate parent and closeout SHA, rejects every changed path outside the two task stores, and executable harness proof establishes their exact authorized transfer. The pull request preserves those results as durable inheritance evidence. Required latest-head CI remains separate and must pass for the exact closeout SHA. Any missing, failed, or ambiguous inheritance proof, or any other post-review change, invalidates inheritance, reverses closeout when applicable, and requires a new candidate-content review.
+
 ## Pass, Archive, and Delivery Sequence
 
 1. keep `Pass: false` during implementation;
@@ -164,16 +173,17 @@ The primary task agent applies fixes, reruns affected checks and `baseline`, the
 3. remove temporary task annotations and rerun affected checks;
 4. create and push a candidate commit with the task still active and `Pass: false`;
 5. open or update the pull request;
-6. pass `agent-review`, `security-review` when assigned, and remote CI when enabled;
+6. pass `agent-review`, `security-review` when assigned, record their exact-SHA evidence in the pull request, and pass remote CI when enabled;
 7. create one closeout commit that changes only `.harness/tasks.md` and `.harness/completed.md`:
    - update the full task block to `Status: passed` and `Pass: true`;
    - append that complete final task block verbatim to `.harness/completed.md`;
    - remove the same task block from `.harness/tasks.md`;
    - preserve all other active and archived entries byte-for-byte;
-8. push the closeout commit and require latest-head CI to pass when enabled;
-9. merge according to `MERGE_MODE`;
-10. prove the task tag and archived entry exist in configured base-branch history;
-11. delete the scratchpad and perform post-merge branch cleanup.
+8. run `CLOSEOUT_REVIEW_INHERITANCE_PROCEDURE`; inherit candidate review only on its exact successful evidence, otherwise obtain fresh review of the closeout SHA;
+9. push the closeout commit and require latest-head CI to pass when enabled;
+10. merge according to `MERGE_MODE`;
+11. prove the task tag and archived entry exist in configured base-branch history;
+12. delete the scratchpad and perform post-merge branch cleanup.
 
 The closeout archive entry is provisional until it reaches configured base-branch history.
 

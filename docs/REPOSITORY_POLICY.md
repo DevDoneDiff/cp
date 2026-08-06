@@ -23,8 +23,9 @@ If the hosting plan cannot enforce a required control, the pull-request procedur
 
 ## Guarded autonomous delivery
 
-- Independent read-only correctness review, including security implications, is mandatory for the recorded reviewed-content SHA. Security-sensitive work must assign and run a dedicated security review against that same SHA under the canonical validation registry; a missing assignment is a blocking task-authoring defect.
-- Task closeout atomically transfers the final task block from the active queue to the completed archive. The metadata-only closeout commit has a separate latest-head SHA and must rerun both required checks.
+- Independent read-only correctness review, including security implications, is mandatory for every implementation task and is bound to the exact recorded candidate-content SHA. Security-sensitive work must assign and run a dedicated security review against that same SHA under the canonical validation registry; a missing assignment is a blocking task-authoring defect. Any applicable content change invalidates prior review.
+- Durable pull-request evidence records reviewer identity or run ID, independent role, review type, exact candidate-content SHA, result, and findings or `none`. Reviewers never modify the worktree or external state; only the primary task agent repairs findings and reruns proof.
+- Task closeout atomically transfers the final task block from the active queue to the completed archive. Candidate review carries forward only when executable proof binds the candidate as the closeout commit's direct parent, rejects every changed path outside the two task stores, and validates their exact authorized transform; the pull request records both SHAs, the exact path set, and the result. The closeout commit has a separate latest-head SHA and must rerun both required checks.
 - Before merge, fetch `origin/main`; a base advance requires a non-force branch update and complete redelivery.
 - Merge uses `--squash`, `--delete-branch`, and `--match-head-commit <EXPECTED_HEAD_SHA>` with no `--admin` option.
 - The squash subject starts with the task tag so base-branch history preserves execution authority.
@@ -32,6 +33,6 @@ If the hosting plan cannot enforce a required control, the pull-request procedur
 
 ## Evidence
 
-The pull request, independent review results, GitHub check runs, protection API readback, guarded merge result, and `origin/main` history are the durable evidence. Local credentials and task scratchpads remain uncommitted.
+The pull request's exact-SHA review records, GitHub check runs, protection API readback, guarded merge result, and `origin/main` history are the durable evidence. Local credentials and task scratchpads remain uncommitted.
 
 `.harness/validation.md` owns the exact review, closeout, reversal, merge, recovery, and cleanup procedures.
