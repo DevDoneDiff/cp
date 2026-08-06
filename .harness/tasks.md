@@ -76,9 +76,9 @@ A task is eligible when:
 
 `Status: blocked` is never eligible. A changed external condition does not resume a task; the same-task resumption procedure in `.harness/validation.md` must prove and explicitly transition its claim state.
 
-A dependency is satisfied when its tag exists in configured base-branch history.
+A post-H1 dependency is satisfied only by the canonical completion proof in `.harness/validation.md`: the same merged pull request and exact merge SHA must provide tagged configured-base history, introduce the task's archived block, omit it from the active store, and prove the remote task branch absent. A tag alone, archive entry alone, unmerged branch, provisional closeout, mismatched merge, or local history is insufficient.
 
-Check base-branch history rather than an unmerged task branch or the completed archive alone.
+The immutable T-0001 through T-0007 seed uses only the documented historical exception in `.harness/completed.md`. That exception cannot satisfy or redefine completion for a later task.
 
 ## Active States
 
@@ -86,7 +86,7 @@ Check base-branch history rather than an unmerged task branch or the completed a
 - `working`: the only task allowed to mutate its authorized source surfaces after its claim is published;
 - `blocked`: stopped for recorded unresolved context, access, outage, claim conflict, or missing proof and unable to self-resume.
 
-`Status: passed` and `Pass: true` exist only in the final task block transferred verbatim to `.harness/completed.md` through the closeout procedure in `.harness/validation.md`.
+Candidate delivery retains the active task at `Status: working` and `Pass: false`. `Status: passed` and `Pass: true` exist only in the final task block transferred verbatim to `.harness/completed.md` through closeout. Until canonical merged-history proof succeeds, that archived state is provisional, never active eligibility or durable completion.
 
 ## Scratchpad
 
@@ -112,7 +112,7 @@ Update after material discoveries, failures, changed hypotheses, review findings
 
 Read prior failed approaches before debugging. Do not repeat one without new evidence.
 
-Delete only after the task tag exists in configured base-branch history.
+Delete only after canonical completion proof and the post-merge cleanup procedure succeed.
 
 ## Task Template
 
@@ -190,6 +190,7 @@ Expected_surfaces:
 - `.harness/tasks.md` candidate, completion, and dependency rules.
 - `.harness/completed.md` header only.
 - `.harness/validation.md` closeout, manual-mode, proof, and reversal procedure.
+- `scripts/validation/harness-h1-batch-transition.mjs` and its task-transition integration for the exact T-0030 store-header authority update.
 Reference_artifacts:
 - none
 Validation_sets:

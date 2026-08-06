@@ -182,21 +182,40 @@ The provisional closeout commit may inherit the candidate-content review only wh
 8. run `CLOSEOUT_REVIEW_INHERITANCE_PROCEDURE`; inherit candidate review only on its exact successful evidence, otherwise obtain fresh review of the closeout SHA;
 9. push the closeout commit and require latest-head CI to pass when enabled;
 10. merge according to `MERGE_MODE`;
-11. prove the task tag and archived entry exist in configured base-branch history;
+11. pass the complete canonical completion proof for the task;
 12. delete the scratchpad and perform post-merge branch cleanup.
 
 The closeout archive entry is provisional until it reaches configured base-branch history.
 
+In manual merge mode, stop after review-clean exact closeout-head CI with the task claim, pull request, branch, provisional archive entry, and scratchpad intact while awaiting the user's guarded merge decision. Do not advance the queue. A wait is not a failure and does not trigger reversal. Explicit pre-merge withdrawal runs the exact reversal below and records the case in durable pull-request evidence.
+
 If any file other than `.harness/tasks.md` or `.harness/completed.md` must change after closeout begins:
 
-- reverse the provisional archive transfer;
-- restore the task to `.harness/tasks.md` with `Pass: false` and the appropriate active status;
-- remove only its provisional entry from `.harness/completed.md`;
-- rerun the complete gate.
+- restore only the affected complete task block to its exact prior active-queue position with `Pass: false` and the appropriate `working` or `blocked` status;
+- remove only that task's provisional archive block;
+- preserve every other active and archived byte, order, prefix, and counter;
+- run `pnpm validate:harness` to prove the exact reversal, then rerun the complete gate.
 
 If closeout push, latest-head CI, or merge fails before base-branch proof, perform the same reversal before further implementation or redelivery.
 
+The pull request records read-only procedure evidence for any explicit pre-merge withdrawal, exact reversal, or failed closeout: task tag, candidate and closeout SHAs when present, trigger, before/after store identities, exact affected paths, harness result, resulting active status, and confirmation that unrelated blocks were preserved.
+
 After the archived entry reaches configured base-branch history, it is immutable. Never edit, reorder, condense, or delete it.
+
+## Canonical Completion and Dependency Proof
+
+For every post-H1 task, completion and dependency satisfaction are the same predicate. From authenticated GitHub and fetched configured-base readback, prove all of the following refer to one identity:
+
+1. exactly one pull request for the exact configured-repository task branch is merged into `BASE_BRANCH`;
+2. its reported merge commit OID is the exact fetched configured-base commit being evaluated and is reachable from `origin/BASE_BRANCH`;
+3. that exact merge commit subject preserves the task tag;
+4. compared with its first parent, that merge introduces the task's exact final archived block with `Status: passed` and `Pass: true`;
+5. the same merge tree contains no active block for the task tag;
+6. the exact remote task branch is absent.
+
+Tag-only history, archive-only state, active/archive duplication, an unmerged or different pull request, a mismatched or unreachable merge SHA, a branch that still exists, provisional closeout, or local-only evidence fails the predicate. Queue selection evaluates every dependency through this same proof.
+
+T-0001 through T-0007 satisfy dependencies only through the immutable seed provenance and their existing tagged base-branch history. They are never represented as having executed this procedure, and the seed exception cannot apply to any later tag.
 
 ## Merge Rules
 
@@ -205,7 +224,7 @@ After the archived entry reaches configured base-branch history, it is immutable
 - merge preserves the task tag in base-branch Git history;
 - manual merge mode stops at a review-clean, CI-green pull request;
 - autonomous merge mode uses `MERGE_COMMAND` only after every gate passes;
-- queue advancement requires the task tag and completed archive entry in base-branch history.
+- queue advancement requires the complete canonical completion proof, not tag or archive presence alone.
 
 ## Post-Merge Cleanup
 

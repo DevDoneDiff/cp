@@ -13,7 +13,9 @@ Each archived task is the verbatim full task block that completed execution, inc
 - After the archive entry exists in configured base-branch history, it must never be edited, reordered, condensed, or deleted.
 - A later correction uses a new task that references the archived tag; it does not rewrite history here.
 - Normal task selection, authoring, and implementation do not load this file.
-- An archive entry on an unmerged task branch is provisional and may be reversed only when closeout, latest-head CI, or merge fails before the entry reaches base-branch history.
+- An archive entry on an unmerged task branch is provisional and may be reversed only by explicit pre-merge withdrawal or when closeout, latest-head CI, or merge fails before the entry reaches base-branch history.
+- A provisional archive entry does not satisfy completion, dependency, or queue-advancement proof.
+- A post-H1 entry becomes durable only when the canonical procedure proves one exact merged pull request and merge SHA, tagged configured-base history, introduction of this archive block by that merge, absence from the active store at that merge, and absence of the remote task branch.
 
 Git remains the detailed implementation and delivery history. This file preserves the exact task authority under which completed work ran.
 

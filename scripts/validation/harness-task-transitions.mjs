@@ -18,6 +18,7 @@ import {
 } from "./harness-task-schema.mjs";
 import {
   isAuthorizedH1BatchBaseRevision,
+  isAuthorizedH1AuthorityUpdate,
   validateAuthorizedH1BatchMerge,
 } from "./harness-h1-batch-transition.mjs";
 import {
@@ -222,6 +223,9 @@ function validateArchiveTransition(
   errors,
 ) {
   if (!base) {
+    return;
+  }
+  if (isAuthorizedH1AuthorityUpdate(current, base)) {
     return;
   }
   // @ah INV-HARNESS-TRANSFER

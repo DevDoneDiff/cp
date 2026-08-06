@@ -128,7 +128,7 @@ Selection rules:
 - a failed, unavailable, or competing claim blocks mutation;
 - one working task may use bounded read-only exploration or review subagents;
 - only the primary task agent may write;
-- do not advance the queue until the current task tag exists in configured base-branch history;
+- do not advance the queue until the canonical post-H1 completion proof, or the exact historical seed exception, satisfies the current task and every dependency;
 - `[T-0001]` consumed the one-time bootstrap authority; no future task may use `Bootstrap: true`.
 
 ## Required Skills
@@ -216,6 +216,8 @@ Correctness, security, data-loss, architecture, acceptance, file-responsibility,
 - use exact commands and procedures from `.harness/validation.md`;
 - keep `Pass: false` through implementation and candidate delivery;
 - closeout transfers the complete final task entry from `.harness/tasks.md` to `.harness/completed.md` with `Status: passed` and `Pass: true`;
+- an unmerged archive entry is provisional and never satisfies completion, dependency, or queue-advancement proof;
+- post-H1 completion and dependency satisfaction use the single exact merged-pull-request, merge-SHA, tagged-history, archive-introduction, active-absence, and remote-branch proof in `.harness/validation.md`;
 - after the archive entry reaches configured base-branch history, it is immutable;
 - if closeout, CI, or merge fails before that point, reverse the provisional transfer and restore `Pass: false`;
 - merge must preserve the task tag in base-branch history;
