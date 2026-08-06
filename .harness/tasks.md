@@ -157,52 +157,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0017] Implement network-free harness integrity validation
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/harness-integrity-validator
-Traceability: F4, F5, F14, F25d, F25g, F25h
-Priority: P0
-Depends_on: [T-0010], [T-0011], [T-0015], [T-0016]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Provide a deterministic network-free validator for active tasks, completed blocks, legacy identity, and legal provisional transfer shape.
-Scope:
-- Add a dedicated harness-integrity validation module, callable package entrypoint, focused positive and negative fixtures, and focused tests without adding the check to the complete baseline yet.
-Non_goals:
-- Query GitHub, prove a remote merge, change CI job names, or absorb repository-security or annotation-header responsibilities.
-Acceptance_criteria:
-- The validator accepts valid queued, blocked, candidate, seeded archive, reversal, and exactly one legal provisional-closeout fixture.
-- It rejects duplicate or reused tags and brick IDs, a task in both stores, invalid state or Pass combinations, counter regression, archive mutation or reordering, and non-verbatim transfer.
-- It reproduces the canonical T-0001 through T-0007 block hash and seed boundary exactly.
-- Historical stale paths resolve only through the canonical ID-bearing migration map; deprecated Git-only spec bodies and forbidden live stale paths fail when present in the current tree. A named `migration-pending` artifact duplicate is accepted only while its bytes match the canonical file exactly.
-- A concrete state-contract path containing unresolved template placeholders fails with an exact diagnostic; absence remains valid when no task or spec declares that state contract as a readiness dependency.
-- Diagnostics identify the exact file, identity, and violated invariant deterministically.
-- The validator and fixtures perform no network access or external mutation.
-- Focused tests cover every positive and negative structural invariant assigned to this brick, without absorbing remote or operational procedure cases owned by later tasks.
-Indivisibility_rationale:
-- The callable parser, invariants, fixtures, and focused tests are one executable integrity result; omitting any part would leave either an unproven checker or proof with no usable checker.
-Expected_surfaces:
-- New dedicated module under `scripts/validation/`.
-- Focused harness fixtures under `tests/fixtures/`.
-- Focused unit or integration tests.
-- A callable `package.json` validation script.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-- security
-- security-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0017.md
-
 ### [T-0018] Canonicalize the S01 default visual
 Type: maintenance
 Bootstrap: false
