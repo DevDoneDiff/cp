@@ -157,48 +157,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0029] Bind independent review to exact content
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/exact-sha-review-evidence
-Traceability: F7, F8, F9, F24
-Priority: P0
-Depends_on: [T-0008], [T-0017], [T-0028]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Make independent review durable, read-only, exact-SHA bound, and consistent with conditional dedicated security review.
-Scope:
-- Align review set selection, reviewer independence, durable PR evidence, candidate-content SHA binding, content-change invalidation, and metadata-only closeout inheritance across policy and procedure.
-Non_goals:
-- Implement the closeout transfer, merge freshness, frontend-specific review workflow, or human approval requirements.
-Acceptance_criteria:
-- `agent-review` is universal and includes correctness, acceptance, architecture, data, file responsibility, regression, and security implications.
-- Dedicated `security-review` is required only for security-sensitive scope and uses the canonical registered name.
-- Durable PR evidence records reviewer identity or run ID, independent role, review type, exact candidate-content SHA, result, and findings or `none`.
-- Any applicable content change invalidates prior review and requires fresh review of the new candidate SHA.
-- Closeout inherits content review only when executable proof shows the authorized two-store metadata-only delta; latest-head CI binds separately to closeout SHA.
-- Every independent reviewer is read-only and only the primary agent repairs findings and reruns proof.
-Indivisibility_rationale:
-- Repository policy and the canonical validation procedure must define the same review trust contract; changing only one would recreate the existing contradiction.
-Expected_surfaces:
-- `.harness/validation.md` proof model, set selection, registry, and independent-review gate.
-- `docs/REPOSITORY_POLICY.md` high-level review and evidence policy.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-- security
-- security-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0029.md
-
 ### [T-0030] Canonicalize provisional closeout and completion
 Type: maintenance
 Bootstrap: false
