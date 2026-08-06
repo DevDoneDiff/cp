@@ -10,7 +10,7 @@ Specs define collective implementation outcomes. Tasks are small, independently 
 
 - `RUN_MODE`: autonomous
 - `MERGE_MODE`: autonomous
-- `NEXT_TASK_TAG`: 0040
+- `NEXT_TASK_TAG`: 0041
 - `NEXT_REFACTOR_TAG`: 0001
 
 Only explicit user instruction may change `RUN_MODE` or `MERGE_MODE`.
@@ -156,3 +156,51 @@ Scratchpad: .harness/work/T-0001.md
 For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state the preserved behavioral contract in `Acceptance_criteria`.
 
 ## Active Queue
+
+### [T-0040] Repair ordinary task-authoring validation
+Type: bug
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/ordinary-task-authoring-transition-repair
+Traceability: 3.5, 5.7, 7.2, 7.3
+Priority: P0
+Depends_on: none
+Status: queued
+Ready: true
+Pass: false
+Objective:
+- Make ordinary non-task task-authoring queue additions executable and safely proven by baseline validation.
+Scope:
+- Accept only exact append-only queued task creation with exact monotonic counter advancement while preserving every existing task and the completed archive.
+- Validate dependency references as a unique, existing, ordered, acyclic graph across completed and active task identities.
+- Derive assignable validation-set names from the canonical registry while retaining the historical bootstrap exclusion.
+- Record the temporary immutability of completed-task source-spec paths until a validated migration mechanism exists.
+Non_goals:
+- Create or implement S3 tasks, migrate an implemented spec path, enforce spec owner or lineage metadata, or perform unrelated harness cleanup.
+Acceptance_criteria:
+- An unchanged completed archive may accompany only an active-queue tail append whose new tasks are queued, Pass-false, canonically tagged from the prior counter, and matched by the exact applicable counter advance.
+- Existing active tasks, queue order, modes, the unrelated counter, and all non-counter prefix content remain byte-identical; replacement, removal, insertion, reordering, counter drift, or invalid appended state fails closed.
+- Every dependency is unique, exists in the completed-plus-active identity set, precedes its dependent in canonical store order, and cannot form a self-reference or cycle.
+- Forward task validation-set assignments are checked against exact unique registry rows parsed from .harness/validation.md rather than a duplicated hardcoded list.
+- The historical bootstrap-preflight set remains unavailable to forward tasks even though it remains registered for T-0001 history.
+- Durable contract wording makes an implemented spec path immutable while an archived task references it, pending an explicit validated migration mechanism.
+- Focused harness fixtures cover valid and invalid authoring appends, dependency graphs, registry parsing, and the spec-path restriction, and the complete baseline passes.
+Indivisibility_rationale:
+- The append transition is the gate through which dependency and validation-set integrity are accepted; splitting would merge or use a newly executable authoring path before its closely related task-integrity inputs are hardened, leaving a knowingly incomplete authoring proof.
+Expected_surfaces:
+- scripts/validation/harness-task-transitions.mjs
+- scripts/validation/harness-task-schema.mjs
+- scripts/validation/harness-integrity.mjs
+- tests/fixtures/harness-integrity/scenarios.ts
+- tests/unit/harness-integrity.test.ts
+- docs/contracts/README.md
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0040.md
