@@ -122,6 +122,8 @@ Routine implementation choices are not material ambiguity. Leave them to impleme
 
 Do not convert assumptions into approved decisions.
 
+When discovery or the user resolves a durable product, architecture, design, state, security, schema, or compatibility decision, record it first through an explicitly authorized update to its owning authority. Resume dependent drafting only after that owner contains the decision. If authority-update permission is missing, the owner is unavailable, or the durable decision remains unresolved, report the exact blocker and stop drafting instead of copying or inferring the decision into the spec.
+
 ## Reference Artifact Gate
 
 For every required artifact:
@@ -164,13 +166,14 @@ A spec must be opinionated about the required outcome and restrained about imple
 Lock an implementation choice only when required by:
 
 - an existing durable authority;
-- security, privacy, data integrity, or compatibility;
+- safety, security, privacy, data integrity, or compatibility;
 - an external provider, credential, cost, or irreversible decision;
 - a public contract or migration boundary;
-- exact approved user-facing behavior;
-- the collective acceptance criteria.
+- exact approved user-facing behavior or another unavoidable observable result.
 
-Otherwise define the required result, constraints, exclusions, and proof while leaving algorithms, internal module shape, rendering technique, orchestration details, and other routine engineering choices to Codex's best judgment.
+Acceptance text authored in the same spec cannot bootstrap its preferred mechanism into authority. Every locked mechanism must cite an independent basis from the list above; if only the spec's own proposed acceptance wording requires it, express the observable outcome and leave the mechanism discretionary.
+
+Otherwise define the required result, constraints, exclusions, and proof while leaving algorithms, data structures, internal module boundaries, rendering and framework techniques, recovery implementation, sequencing, orchestration details, and other routine engineering choices to Codex's best judgment.
 
 Use the spec's `Implementation Latitude` section to distinguish:
 
