@@ -1,30 +1,16 @@
 /**
- * MODULE: scripts/validation/annotation-headers.mjs
- * PURPOSE: Enforce the structural annotation-header contract for meaningful repository files.
- * PUBLIC API / ENTRYPOINTS:
- *   - validateAnnotatedSource: validates one language-native header and its anchors.
- *   - validateAnnotationRepository: discovers covered files and validates task-context lifecycle.
- *   - CLI: runs working or candidate validation from the repository root.
- * CONTROL_FLOW:
- *   1. Discover tracked and non-ignored untracked files with Git.
- *   2. Parse the language-native header for each covered or annotated file.
- *   3. Reconcile fields, task context, and semantic anchor declarations with markers.
- * INVARIANTS:
- *   - [INV-CANDIDATE-CLEAN] Candidate mode rejects every ACTIVE_TASK and LOCAL_INTENT field.
- *   - [INV-ANCHOR-SYMMETRY] Every declared anchor has one marker and every marker has one declaration.
- * BOUNDARIES:
- *   - Structural validation cannot prove semantic header accuracy; independent review owns that judgment.
- * RELATED:
- *   - .agents/skills/annotation-headers/SKILL.md: owns the canonical field meanings and lifecycle.
- *   - .harness/tasks.md: owns the single working task reference.
- *   - tests/unit/annotation-headers.test.ts: exercises positive and negative rule behavior.
+ * ROLE: Enforce the minimal structural contract for useful architectural context headers.
+ * BOUNDARY: Header accuracy remains a code-review judgment; this validator checks presence, allowed fields, and optional anchor pairing only.
+ * RELATIONS: .agents/skills/annotation-headers/SKILL.md defines when a header saves enough context to be worthwhile.
+ * VALIDATION: tests/unit/annotation-headers.test.ts covers the current contract and legacy-header tolerance.
  */
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const FIELD_ORDER = [
+const CURRENT_FIELDS = new Set(["ROLE", "BOUNDARY", "RELATIONS", "VALIDATION"]);
+const LEGACY_FIELDS = new Set([
   "MODULE",
   "PURPOSE",
   "PUBLIC API / ENTRYPOINTS",
@@ -35,11 +21,10 @@ const FIELD_ORDER = [
   "SECURITY",
   "DATA",
   "EVENTS",
+]);
+const FORBIDDEN_FIELDS = new Set([
   "ACTIVE_TASK",
   "LOCAL_INTENT",
-];
-const REQUIRED_FIELDS = ["MODULE", "PURPOSE", "INVARIANTS"];
-const FORBIDDEN_FIELDS = new Set([
   "AUTHOR",
   "DATE",
   "EDIT HISTORY",
@@ -47,6 +32,7 @@ const FORBIDDEN_FIELDS = new Set([
   "COMPLETED TASK",
   "COMPLETED_TASK",
   "CLOSEOUT",
+  "TODO",
 ]);
 const EXCLUDED_SEGMENTS = new Set([
   ".git",
@@ -58,27 +44,14 @@ const EXCLUDED_SEGMENTS = new Set([
   "test-results",
   "tests",
 ]);
-const SUPPORTED_CODE_EXTENSIONS = new Set([
-  ".cjs",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".ts",
-  ".tsx",
-]);
+const CODE_EXTENSIONS = new Set([".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"]);
 
-function normalizeModulePath(filePath) {
+function normalizePath(filePath) {
   return filePath.replaceAll("\\", "/").replace(/^\.\//, "");
 }
 
-function hasExcludedSegment(modulePath) {
-  return normalizeModulePath(modulePath)
-    .split("/")
-    .some((segment) => EXCLUDED_SEGMENTS.has(segment));
-}
-
 function shouldRequireHeader(modulePath) {
-  const normalized = normalizeModulePath(modulePath);
+  const normalized = normalizePath(modulePath);
   return (
     /^src\/app\/.*(?:layout|page|route)\.[cm]?[jt]sx?$/.test(normalized) ||
     /^scripts\/.*\.mjs$/.test(normalized) ||
@@ -87,110 +60,71 @@ function shouldRequireHeader(modulePath) {
   );
 }
 
-function stripJavaScriptHeader(match) {
-  return match
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^\s*\*\s?/, ""))
-    .join("\n")
-    .trim();
-}
-
-function extractHeader(source, modulePath) {
+function extractHeaders(source, modulePath) {
   const extension = path.extname(modulePath).toLowerCase();
-
   if (extension === ".yml" || extension === ".yaml") {
-    const lines = source.split(/\r?\n/);
-    const headerLines = [];
-    for (const line of lines) {
-      if (!line.startsWith("#")) {
-        break;
-      }
-      headerLines.push(line.replace(/^#\s?/, ""));
+    const lines = [];
+    for (const line of source.split(/\r?\n/)) {
+      if (!line.startsWith("#")) break;
+      lines.push(line.replace(/^#\s?/, ""));
     }
-    const header = headerLines.join("\n").trim();
-    return header.includes("MODULE:") ? [header] : [];
+    const header = lines.join("\n").trim();
+    return /^(?:ROLE|MODULE):/m.test(header) ? [header] : [];
   }
-
-  if (!SUPPORTED_CODE_EXTENSIONS.has(extension)) {
-    return [];
-  }
-
+  if (!CODE_EXTENSIONS.has(extension)) return [];
   return [...source.matchAll(/\/\*\*([\s\S]*?)\*\//g)]
-    .map((match) => stripJavaScriptHeader(match[1]))
-    .filter((header) => header.includes("MODULE:"));
+    .map((match) =>
+      match[1]
+        .split(/\r?\n/)
+        .map((line) => line.replace(/^\s*\*\s?/, ""))
+        .join("\n")
+        .trim(),
+    )
+    .filter((header) => /^(?:ROLE|MODULE):/m.test(header));
 }
 
 function parseFields(header, errors) {
   const fields = new Map();
-  let currentField;
-
+  let current;
   for (const rawLine of header.split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (!line) {
+    if (!line) continue;
+    const match = line.match(/^([A-Z][A-Z /_]*):(?:\s*(.*))?$/);
+    if (match) {
+      current = match[1];
+      if (FORBIDDEN_FIELDS.has(current)) {
+        errors.push(`forbidden field ${current}`);
+      } else if (!CURRENT_FIELDS.has(current) && !LEGACY_FIELDS.has(current)) {
+        errors.push(`unknown field ${current}`);
+      }
+      if (fields.has(current)) errors.push(`duplicate field ${current}`);
+      fields.set(current, match[2] ? [match[2]] : []);
       continue;
     }
-
-    const fieldMatch = line.match(/^([A-Z][A-Z /_]*):(?:\s*(.*))?$/);
-    if (fieldMatch) {
-      const fieldName = fieldMatch[1];
-      if (FORBIDDEN_FIELDS.has(fieldName)) {
-        errors.push(`forbidden historical field ${fieldName}`);
-      }
-      if (!FIELD_ORDER.includes(fieldName)) {
-        errors.push(`unknown field ${fieldName}`);
-      }
-      if (fields.has(fieldName)) {
-        errors.push(`duplicate field ${fieldName}`);
-      }
-      currentField = fieldName;
-      fields.set(fieldName, fieldMatch[2] ? [fieldMatch[2]] : []);
-      continue;
-    }
-
-    if (!currentField) {
+    if (!current) {
       errors.push(`content appears before the first field: ${line}`);
       continue;
     }
-    fields.get(currentField)?.push(line);
+    fields.get(current)?.push(line);
   }
-
   return fields;
 }
 
-function fieldValue(fields, name) {
+function value(fields, name) {
   return (fields.get(name) ?? []).join("\n").trim();
 }
 
-function duplicateValues(values) {
+function duplicates(values) {
   const seen = new Set();
-  const duplicates = new Set();
-  for (const value of values) {
-    if (seen.has(value)) {
-      duplicates.add(value);
-    }
-    seen.add(value);
-  }
-  return [...duplicates];
+  return [
+    ...new Set(values.filter((item) => seen.has(item) || !seen.add(item))),
+  ];
 }
 
-/**
- * @param {{
- *   source: string;
- *   modulePath: string;
- *   mode?: "candidate" | "working";
- *   workingTaskTags?: string[];
- * }} input
- */
-export function validateAnnotatedSource({
-  source,
-  modulePath,
-  mode = "candidate",
-  workingTaskTags = [],
-}) {
-  const normalizedPath = normalizeModulePath(modulePath);
+export function validateAnnotatedSource({ source, modulePath }) {
+  const normalizedPath = normalizePath(modulePath);
   const errors = [];
-  const headers = extractHeader(source, normalizedPath);
-
+  const headers = extractHeaders(source, normalizedPath);
   if (headers.length !== 1) {
     return [
       `${normalizedPath}: expected exactly one annotation header; found ${headers.length}`,
@@ -198,180 +132,117 @@ export function validateAnnotatedSource({
   }
 
   const extension = path.extname(normalizedPath).toLowerCase();
-  const firstContent = source.trimStart();
+  const first = source.trimStart();
   if (
     ((extension === ".yml" || extension === ".yaml") &&
-      !firstContent.startsWith("# MODULE:")) ||
-    (SUPPORTED_CODE_EXTENSIONS.has(extension) &&
-      !firstContent.startsWith("/**"))
+      !/^# (?:ROLE|MODULE):/.test(first)) ||
+    (CODE_EXTENSIONS.has(extension) && !first.startsWith("/**"))
   ) {
     errors.push("annotation header must be the first language-native content");
   }
 
   const fields = parseFields(headers[0], errors);
-  const presentFields = [...fields.keys()].filter((field) =>
-    FIELD_ORDER.includes(field),
-  );
-  const orderIndexes = presentFields.map((field) => FIELD_ORDER.indexOf(field));
-  if (
-    orderIndexes.some(
-      (value, index) => index > 0 && value <= orderIndexes[index - 1],
-    )
-  ) {
-    errors.push("fields are not in canonical order");
+  const current = fields.has("ROLE");
+  if (current) {
+    if (!value(fields, "ROLE")) errors.push("ROLE must be nonempty");
+    for (const legacy of LEGACY_FIELDS) {
+      if (fields.has(legacy)) {
+        errors.push(`current ROLE header must not mix legacy field ${legacy}`);
+      }
+    }
+  } else if (!value(fields, "PURPOSE")) {
+    errors.push(
+      "ROLE is required for current headers; legacy headers need PURPOSE",
+    );
   }
 
-  for (const field of REQUIRED_FIELDS) {
-    if (!fieldValue(fields, field)) {
-      errors.push(`${field} must be present and nonempty`);
+  for (const [name, lines] of fields) {
+    if (!FORBIDDEN_FIELDS.has(name) && lines.join("\n").trim().length === 0) {
+      errors.push(`${name} must not be empty`);
     }
   }
 
-  for (const [field, lines] of fields) {
-    if (FIELD_ORDER.includes(field) && lines.join("\n").trim().length === 0) {
-      errors.push(`${field} must not be empty`);
+  const declared = [];
+  for (const name of ["BOUNDARY", "INVARIANTS", "BOUNDARIES"]) {
+    for (const line of fields.get(name) ?? []) {
+      for (const match of line.matchAll(/\[([A-Z][A-Z0-9-]*)\]/g)) {
+        declared.push(match[1]);
+      }
     }
   }
-
-  if (fieldValue(fields, "MODULE") !== normalizedPath) {
-    errors.push(`MODULE must equal ${normalizedPath}`);
-  }
-
-  const relatedCount = (fields.get("RELATED") ?? []).filter((line) =>
-    line.startsWith("-"),
-  ).length;
-  if (relatedCount > 3) {
-    errors.push("RELATED may contain at most three entries");
-  }
-
-  const hasActiveTask = fields.has("ACTIVE_TASK");
-  const hasLocalIntent = fields.has("LOCAL_INTENT");
-  if (hasActiveTask !== hasLocalIntent) {
-    errors.push("ACTIVE_TASK and LOCAL_INTENT must appear together");
-  }
-
-  if (hasActiveTask && hasLocalIntent) {
-    // @ah INV-CANDIDATE-CLEAN
-    if (mode === "candidate") {
-      errors.push("candidate mode forbids ACTIVE_TASK and LOCAL_INTENT");
-    }
-    if (workingTaskTags.length !== 1) {
-      errors.push(
-        `temporary task context requires exactly one working task; found ${workingTaskTags.length}`,
-      );
-    } else if (fieldValue(fields, "ACTIVE_TASK") !== workingTaskTags[0]) {
-      errors.push(`ACTIVE_TASK must reference ${workingTaskTags[0]}`);
-    }
-  }
-
-  const declaredAnchors = [];
-  for (const line of fields.get("INVARIANTS") ?? []) {
-    for (const match of line.matchAll(/\[([A-Z][A-Z0-9-]*)\]/g)) {
-      declaredAnchors.push(match[1]);
-    }
-  }
-  const markedAnchors = [...source.matchAll(/@ah\s+([A-Za-z0-9-]+)/g)].map(
+  const marked = [...source.matchAll(/@ah\s+([A-Za-z0-9-]+)/g)].map(
     (match) => match[1],
   );
-  const anchorPattern = /^[A-Z][A-Z0-9-]*$/;
-
-  for (const anchor of [...declaredAnchors, ...markedAnchors]) {
-    if (!anchorPattern.test(anchor) || !/^[\x00-\x7F]+$/.test(anchor)) {
+  for (const anchor of [...declared, ...marked]) {
+    if (!/^[A-Z][A-Z0-9-]*$/.test(anchor)) {
       errors.push(`invalid anchor ID ${anchor}`);
     }
   }
-  for (const duplicate of duplicateValues(declaredAnchors)) {
-    errors.push(`anchor ${duplicate} is declared more than once`);
+  for (const anchor of duplicates(declared)) {
+    errors.push(`anchor ${anchor} is declared more than once`);
   }
-  for (const duplicate of duplicateValues(markedAnchors)) {
-    errors.push(`anchor ${duplicate} is marked more than once`);
+  for (const anchor of duplicates(marked)) {
+    errors.push(`anchor ${anchor} is marked more than once`);
   }
-
-  // @ah INV-ANCHOR-SYMMETRY
-  for (const anchor of new Set(declaredAnchors)) {
-    if (!markedAnchors.includes(anchor)) {
+  for (const anchor of new Set(declared)) {
+    if (!marked.includes(anchor))
       errors.push(`anchor ${anchor} has no source marker`);
-    }
   }
-  for (const anchor of new Set(markedAnchors)) {
-    if (!declaredAnchors.includes(anchor)) {
+  for (const anchor of new Set(marked)) {
+    if (!declared.includes(anchor))
       errors.push(`source marker ${anchor} has no declaration`);
-    }
   }
 
   return errors.map((error) => `${normalizedPath}: ${error}`);
 }
 
-function listRepositoryFiles(root) {
+function repositoryFiles(root) {
   const result = spawnSync(
     "git",
     ["ls-files", "--cached", "--others", "--exclude-standard"],
-    {
-      cwd: root,
-      encoding: "utf8",
-    },
+    { cwd: root, encoding: "utf8" },
   );
   if (result.status !== 0) {
     throw new Error(
       `Unable to discover repository files: ${result.stderr.trim()}`,
     );
   }
-  return result.stdout.split(/\r?\n/).map(normalizeModulePath).filter(Boolean);
+  return result.stdout.split(/\r?\n/).map(normalizePath).filter(Boolean);
 }
 
-function findWorkingTaskTags(tasksSource) {
-  return tasksSource
-    .split(/^### /m)
-    .slice(1)
-    .filter((section) => /^Status: working$/m.test(section))
-    .map((section) => section.match(/^(\[[TR]-\d{4}\])/m)?.[1])
-    .filter(Boolean);
-}
-
-export async function validateAnnotationRepository(root, mode = "candidate") {
-  const tasksSource = await readFile(
-    path.join(root, ".harness", "tasks.md"),
-    "utf8",
-  );
-  const workingTaskTags = findWorkingTaskTags(tasksSource);
+export async function validateAnnotationRepository(root) {
   const errors = [];
-
-  for (const modulePath of listRepositoryFiles(root)) {
-    if (hasExcludedSegment(modulePath)) {
+  for (const modulePath of repositoryFiles(root)) {
+    if (
+      modulePath.split("/").some((segment) => EXCLUDED_SEGMENTS.has(segment))
+    ) {
       continue;
     }
     const extension = path.extname(modulePath).toLowerCase();
     if (
-      !SUPPORTED_CODE_EXTENSIONS.has(extension) &&
+      !CODE_EXTENSIONS.has(extension) &&
       extension !== ".yml" &&
       extension !== ".yaml"
     ) {
       continue;
     }
-
     const source = await readFile(path.join(root, modulePath), "utf8");
-    const mustHaveHeader = shouldRequireHeader(modulePath);
-    const hasHeaderClaim = source.includes("MODULE:");
-    if (!mustHaveHeader && !hasHeaderClaim) {
-      continue;
-    }
-    errors.push(
-      ...validateAnnotatedSource({ source, modulePath, mode, workingTaskTags }),
-    );
+    const claimsHeader =
+      /^(?:\s*\/\*\*[\s\S]*?|\s*#.*?)\b(?:ROLE|MODULE):/m.test(source);
+    if (!shouldRequireHeader(modulePath) && !claimsHeader) continue;
+    errors.push(...validateAnnotatedSource({ source, modulePath }));
   }
-
   return errors;
 }
 
 async function runCli() {
-  const mode = process.argv.includes("--working") ? "working" : "candidate";
-  const errors = await validateAnnotationRepository(process.cwd(), mode);
+  const errors = await validateAnnotationRepository(process.cwd());
   if (errors.length > 0) {
     console.error(errors.join("\n"));
     process.exitCode = 1;
     return;
   }
-  console.log(`Annotation headers passed in ${mode} mode.`);
+  console.log("Annotation headers passed.");
 }
 
 if (

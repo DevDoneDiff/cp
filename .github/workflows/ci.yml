@@ -1,15 +1,7 @@
-# MODULE: .github/workflows/ci.yml
-# PURPOSE: Provide the two exact foundation checks on pull requests to and pushes on main.
-# PUBLIC API / ENTRYPOINTS:
-#   - CI / baseline: runs the complete local baseline contract.
-#   - CI / browser-smoke: proves production startup and Chromium behavior from one build.
-# INVARIANTS:
-#   - Every remote action is immutable, jobs use frozen installs, and superseded commits cancel deterministically.
-# RELATED:
-#   - .harness/validation.md: owns delivery commands and required check procedures.
-#   - scripts/production-smoke.mjs: owns the single-build smoke contract.
-# SECURITY:
-#   - Workflow permission is contents read and no workflow secret is consumed.
+# ROLE: Provide the two required exact-head implementation checks on pull requests and main.
+# BOUNDARY: The workflow proves candidate behavior; guarded merge and completion are owned by .harness/validation.md.
+# RELATIONS: scripts/production-smoke.mjs owns the reusable production-build smoke contract.
+# VALIDATION: repository-security.mjs enforces immutable actions, frozen installs, least privilege, and checkout history depth.
 name: CI
 
 on:
@@ -37,6 +29,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          fetch-depth: 3
       - name: Use Node.js 24.19.0
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

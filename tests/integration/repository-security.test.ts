@@ -35,6 +35,7 @@ const requiredScripts = {
   "test:e2e": "node scripts/run-e2e.mjs",
   "validate:annotations":
     "node scripts/validation/annotation-headers.mjs --candidate",
+  "validate:harness": "node scripts/validation/harness-integrity.mjs",
   "validate:security": "node scripts/validation/repository-security.mjs",
   validate: "node scripts/run-validation.mjs",
 };
@@ -128,6 +129,47 @@ describe("repository security validation", () => {
       }),
     ).toContain(
       "workflow permissions must contain only contents: read at top level with no job-level override",
+    );
+  });
+
+  it("rejects baseline checkout without exact-head task-store history", async () => {
+    const fixture = await readFixture("positive");
+    const workflow = fixture.workflow
+      .replace(
+        "          ref: ${{ github.event.pull_request.head.sha || github.ref }}\n",
+        "",
+      )
+      .replace("          fetch-depth: 3\n", "");
+
+    expect(
+      validateSecuritySnapshot({
+        ...fixture,
+        workflow,
+        manifest: manifest(),
+      }),
+    ).toContain(
+      "baseline checkout must use the exact pull-request head or pushed ref with fetch-depth 3",
+    );
+  });
+
+  it("rejects exact-head inputs misplaced outside the checkout step", async () => {
+    const fixture = await readFixture("positive");
+    const checkoutInputs =
+      "          ref: ${{ github.event.pull_request.head.sha || github.ref }}\n          fetch-depth: 3\n";
+    const setupAction =
+      "      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0\n";
+    const workflow = fixture.workflow
+      .replace(checkoutInputs, "")
+      .replace(setupAction, `${setupAction}        with:\n${checkoutInputs}`);
+
+    expect(
+      validateSecuritySnapshot({
+        ...fixture,
+        workflow,
+        manifest: manifest(),
+      }),
+    ).toContain(
+      "baseline checkout must use the exact pull-request head or pushed ref with fetch-depth 3",
     );
   });
 

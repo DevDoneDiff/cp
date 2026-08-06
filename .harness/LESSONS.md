@@ -2,56 +2,28 @@
 
 ## Purpose
 
-Durable, evidence-backed technical lessons learned during implementation.
+Durable, evidence-backed implementation lessons likely to change future technical work.
 
-Task-local exploration and failed attempts remain in `.harness/work/<TAG>.md`.
-Promote a lesson here only when it is likely to affect future tasks.
+Task-local exploration stays in `.harness/work/<TAG>.md`. Prefer encoding recurring rules in the nearest authority, test, validator, or annotation instead of repeating them here.
 
-## Promotion Rules
-
-A lesson belongs here only when all are true:
-
-- the finding is supported by executable evidence;
-- the failed approach or constraint is likely to recur;
-- the lesson changes future implementation, debugging, validation, or integration behavior;
-- the lesson is not already sufficiently enforced by code, tests, architecture, or another authoritative document.
-
-Do not record:
-
-- one-off syntax mistakes;
-- transient tool failures;
-- speculative conclusions;
-- secrets or sensitive data;
-- full debugging transcripts;
-- completed-task summaries.
-
-When possible, convert recurring lessons into tests, validation, annotations, or a narrow `AGENTS.md` rule.
+Do not record completed-task summaries, one-time syntax errors, transient external outages, delivery transcripts, secrets, or speculative conclusions.
 
 ## Entry Template
 
+```text
 ### [L-0001] <concise title>
-
 Scope:
-- <module, provider, tool, workflow, or system boundary>
-
+- <technical boundary>
 Trigger:
-- <when a future agent should use this lesson>
-
-Failed approach:
-- <what appeared reasonable but failed>
-
+- <when this applies>
 Evidence:
-- <test, error, runtime behavior, review finding, or reproducible result>
-
+- <reproducible result>
 Durable rule:
-- <what future work should do>
-
+- <future action>
 Source task:
 - [T-####]
-
 Status:
 - active | superseded by <reference>
+```
 
 ## Active Lessons
-
-No lessons yet.

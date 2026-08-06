@@ -1,186 +1,270 @@
 # AGENTS
+
 ## Purpose
-Operating contract for Codex work in this repository.
+
+Operating contract for autonomous product and code implementation in this repository.
+
+This file governs repository-specific authority, context routing, product authoring, implementation tasks, validation gates, Git delivery, CI, merge, cleanup, and project learning.
+
+Global Codex instructions govern reasoning style, evidence handling, self-management, and judgment.
+
+## Control Plane and Implementation Plane
+
+The repository has two separate operating domains:
+
+- control plane: harness files, harness validation machinery, harness skills, and repository-governance maintenance;
+- implementation plane: product specs, implementation tasks, runtime code, tests, validation, Git delivery, pull requests, CI, merge, and implementation history.
+
+Harness construction, repair, simplification, and repository-governance maintenance are governed only by an explicitly invoked `$harness-maintenance` skill.
+
+Harness maintenance must not:
+
+- create product specs;
+- create product tasks;
+- consume implementation task identities;
+- enter the implementation task graph;
+- create implementation scratchpads;
+- use implementation task status or `Pass`;
+- enter implementation closeout or archive procedures;
+- create independent harness delivery.
+
+Product implementation must not route harness maintenance through its task lifecycle.
+
+`$harness-maintenance` leaves harness changes local and uncommitted. Existing local harness changes may later be included naturally in a normal product implementation commit without requiring separate harness delivery.
+
+Existing uncommitted harness-maintenance changes are not an implementation claim and must be preserved.
+
+External service failure may pause implementation delivery. It must never cause creation of harness recovery machinery, task-specific recovery logic, or repository exceptions.
+
 ## Authority and Source Ownership
-Apply authority in this order within the domain being changed:
 
-1. explicit user instruction
-2. approved active spec under `docs/specs/`
-3. `docs/PRODUCT.md` for approved product truth
-4. `docs/ARCHITECTURE.md` for approved technical truth
-5. `docs/DESIGN.md` for approved shared visual truth when UI is affected
-6. applicable approved decisions under `docs/decisions/`
-7. current code and tests as behavioral reality
+Use each source only for the domain it owns:
 
-Project-specific upstream source material lives under `docs/source/`. The operational project documents and active source brief identify the exact applicable files.
+- explicit user instruction owns the current requested decision;
+- `docs/PRODUCT.md` owns durable product truth;
+- `docs/ARCHITECTURE.md` owns durable technical and system truth;
+- `docs/DESIGN.md` owns durable experience and interaction truth;
+- `docs/MVP.md` owns current demo scope and proof boundaries;
+- `docs/REPOSITORY_POLICY.md` owns repository-specific implementation policy;
+- `docs/contracts/states/<state>/sNN-state.md` owns durable state-specific behavior;
+- exact linked `visual-*.png` files own approved state-specific appearance;
+- exact linked `technical-*.png` files own only the process depiction explicitly adopted by governing prose;
+- an approved product spec owns one collective implementation outcome;
+- `docs/contracts/README.md` owns product spec classification and routing;
+- `.harness/tasks.md` owns active implementation-task state, counters, modes, and execution order;
+- `.harness/completed.md` owns completed implementation-task entries;
+- `.harness/validation.md` owns implementation validation sets and delivery procedures;
+- `.harness/work/<TAG>.md` owns ephemeral implementation-task rehydration;
+- current code is current implementation reality;
+- tests are executable expectations and evidence;
+- annotation headers provide compact local architectural context and never overrule code or durable authority;
+- Git owns implementation history and durable delivery evidence.
 
-`$spec-authoring` must read the applicable upstream sources. Ordinary implementation must not load all upstream files by default unless the approved active spec links them or a conflict requires resolution.
+A narrower source may constrain a broader source within its domain. It may not contradict it.
 
-A narrower approved operational document or spec is allowed. A contradiction is not. When authoritative sources conflict, stop mutation, identify the exact conflict, and request resolution.
+When durable authorities materially conflict, stop the affected implementation mutation, identify the exact conflict, and request resolution.
 
-Additional ownership:
-
-- active work and execution state: `.harness/tasks.md`
-- proof and delivery commands: `.harness/validation.md`
-- ephemeral task rehydration: `.harness/work/<TAG>.md`
-- local architectural context: annotation headers in meaningful source files
-- approved state-specific appearance: exact reference artifacts linked by the active spec and task
-- history: Git
 ## Modes
-- `RUN_MODE`: `manual` or `autonomous`
-- `MERGE_MODE`: `manual` or `autonomous`
-- only explicit user instruction may change either mode
-- manual run mode works only the task explicitly selected by the user
-- autonomous run mode selects the first eligible task in queue order
-- manual merge mode stops at a review-clean, CI-green pull request
-- autonomous merge mode merges only after every configured gate passes
 
-The current values live in `.harness/tasks.md`.
-An approved source spec with `Open Questions: none` authorizes its correctly derived tasks; no separate task-set approval is required. In autonomous modes, Codex owns task readiness, selection, implementation, proof, review fixes, delivery, guarded merge, cleanup, and queue advancement within approved authority. User authority remains required for unresolved product or material architecture decisions, new external cost, credential-dependent setup requiring user action, destructive or irreversible operations, inaccessible infrastructure, unsafe overlap with user work, or proof that cannot be established. Autonomy never weakens validation, review, security, CI, protected-head, no-force-push, no-bypass, or tagged-history gates.
+- `RUN_MODE`: `manual` or `autonomous`;
+- `MERGE_MODE`: `manual` or `autonomous`;
+- only explicit user instruction may change either mode;
+- manual run mode works only the implementation task explicitly selected by the user;
+- autonomous run mode selects the first eligible implementation task in active queue order;
+- manual merge mode stops at a review-ready, CI-green pull request;
+- autonomous merge mode merges after configured implementation gates pass.
+
+Current values live in `.harness/tasks.md`.
+
+## Product Authoring
+
+Product spec and task authoring exist only to define and queue product or code implementation work.
+
+Invoke `$spec-authoring` for product implementation specs.
+
+Invoke `$task-authoring` for implementation-task decomposition.
+
+Product authoring must not be used for:
+
+- harness construction or repair;
+- harness validators or skills;
+- repository-governance maintenance;
+- harness migrations;
+- harness cleanup.
+
+Product authoring may use a descriptive `codex/authoring-<slug>` branch and descriptive commit and pull-request titles without consuming an implementation task identity.
+
+Authoring that mutates the active implementation queue must not race a live implementation claim.
+
 ## Context Routing
-For the selected task:
 
-1. read its full entry in `.harness/tasks.md`
-2. read the linked approved spec
-3. read every exact reference artifact linked by the spec or task
-4. read only relevant sections of product, architecture, design, and decisions
-5. read or create `.harness/work/<TAG>.md`
-6. inspect relevant annotation headers, code, tests, and direct relationships
+For a selected implementation task, read in this order:
 
-Do not load every spec, upstream source document, reference folder, or repository file by default.
-## Artifact Gate
-For UI-bearing work, the implementation source bundle is:
+1. the full active task entry;
+2. the linked approved product spec;
+3. the owning product, architecture, design, MVP, and affected state authority required by that spec;
+4. exact assigned reference artifacts;
+5. only relevant sections of broader repository authority;
+6. the task scratchpad and relevant reusable lessons;
+7. applicable annotation headers, code, tests, and direct relationships.
 
-```text
-approved written spec
-+ exact approved visual references
-+ exact approved technical or content references when required
-```
+Do not load every spec, completed task, state package, reference folder, global document, or repository file by default.
 
-Rules:
+Completed task content is historical evidence and is not ordinary implementation context.
 
-- visual artifacts own approved state-specific appearance within prose constraints
-- technical infographics are guidance only and cannot introduce unstated architecture or behavior
-- generated-image defects, fabricated values, and annotation labels are not requirements unless the spec says they are
-- the active spec and task must list exact repository-relative artifact paths
-- Codex must not infer authority from other files in the same folder
-- a task cannot become ready while a required artifact is missing or unapproved
-## Ambiguity and Readiness Gate
-Read-only investigation and spec authoring are allowed to discover missing context.
+## Decision Boundary
 
-Do not mutate runtime code, configuration, schemas, dependencies, generated application artifacts, or external systems until:
+Repository authority determines which decisions are already resolved and which remain user-owned.
 
-- the source spec is approved
-- the task has `Ready: true`
-- `Open_questions: none`
-- dependencies are satisfied
-- required reference artifacts exist
-- required validation and delivery procedures are configured, except for the one bootstrap task below
+Resolve routine implementation choices from the approved outcome, current repository conventions, framework-native capabilities, and existing architecture.
 
-Ask targeted questions for material ambiguity involving behavior, scope, acceptance, architecture, data, migrations, security, permissions, dependencies, external cost, destructive actions, public contracts, visual authority, or proof.
+User resolution is required when implementation would change:
 
-Routine implementation choices may follow approved architecture, current conventions, framework-native patterns, and tests.
+- product meaning or customer-visible behavior;
+- durable architecture or public contracts;
+- schema ownership, migration semantics, retention, or compatibility;
+- authentication, authorization, privacy, or trust boundaries;
+- external cost, credentials, provider commitment, or hosted infrastructure;
+- destructive or irreversible behavior;
+- approved acceptance meaning or reference authority.
 
-If material ambiguity appears during work, set the task to `blocked`, keep `Pass: false`, record the blocker, and stop mutation.
-## One-Time Repository Bootstrap
-Exactly one task may use `Bootstrap: true`:
+If one of these decisions is unresolved, mark the implementation task blocked, record the blocker, and stop the affected mutation.
 
-```text
-[T-0001] Repository foundation
-Source_spec: docs/specs/A-repository-foundation.md
-```
+## Task Readiness and Selection
 
-The bootstrap task may become ready while validation commands are still unset only when its approved spec explicitly requires it to establish every missing validation and delivery command.
+An implementation task is eligible only when:
 
-When Git is not initialized, the bootstrap task may:
+- `Status: queued`;
+- `Ready: true`;
+- `Pass: false`;
+- `Blocker: none`;
+- `Open_questions: none`;
+- required dependencies are complete;
+- required references exist;
+- required validation sets are configured.
 
-1. initialize the configured base branch
-2. create one baseline commit containing only the preexisting harness, approved project documents, approved source specifications, approved reference artifacts, the approved foundation spec, and the approved task queue
-3. create or connect the empty remote when the approved spec contains repository name, owner, and visibility authority
-4. push that baseline branch once so a pull request base exists
-5. create `codex/T-0001-repository-foundation` before adding application code or foundation implementation
+Exactly one implementation task may be `working`.
 
-This is the only direct base-branch bootstrap exception. It cannot contain application implementation. Before candidate delivery, every required `<unset>` field in `.harness/validation.md` must be replaced and all normal assigned validation, review, PR, and CI gates must pass.
-## Task Selection
-- exactly one task may have `Status: working`
-- a task is eligible when `Ready: true`, `Pass: false`, and dependencies are satisfied
-- one working task may use bounded read-only exploration or review subagents
-- only the primary task agent may write
-- do not advance the queue until the current task tag exists in configured base-branch history
+Autonomous execution selects the first eligible task in queue order.
+
+Perform the configured claim check once before implementation mutation.
+
+A failed or competing claim blocks implementation mutation.
+
+Do not treat unrelated local authoring branches or uncommitted harness-maintenance changes as implementation claims.
+
 ## Required Skills
-- invoke `$spec-authoring` explicitly to convert a phase brief or source bundle into draft specs
-- invoke `$task-authoring` explicitly to convert one approved spec into tasks
-- use `$annotation-headers` when covered source files are created or changed
-- use `$frontend-design` for new UI, visual restyling, or visual review
-- use `$code-change-verification` for every code, configuration, schema, migration, test, build-system, or runtime behavior change
 
-Do not create generic planning, coding, debugging, or refactor skills without repeated evidence that a specialized reusable workflow is needed.
-## Working Loop
-1. confirm task readiness, dependency state, artifact availability, and branch state
-2. inspect only relevant context and implementation
-3. record a bounded plan in the scratchpad
-4. implement the smallest coherent result
-5. run the narrowest assigned validation after each material increment
-6. record failures, evidence, and changed hypotheses
-7. do not repeat a failed method without new evidence
-8. reconcile tests, annotations, and current project documents
-9. run the complete verification, review, Git, pull-request, and CI procedure
+- invoke `$spec-authoring` explicitly for product implementation specs;
+- invoke `$task-authoring` explicitly for product implementation-task decomposition;
+- use `$annotation-headers` when covered source files are created or materially changed;
+- use `$frontend-design` for new UI, visual restyling, or required visual review;
+- use `$code-change-verification` for code, configuration, schema, migration, test, build-system, or runtime behavior changes;
+- use `$harness-maintenance` only when explicitly invoked for control-plane maintenance and never as part of the implementation lifecycle.
+
+Do not invent new generic process skills without repeated evidence that a reusable specialized workflow is necessary.
+
+## Implementation Loop
+
+1. Claim the selected implementation task.
+2. Inspect only the context required for that task.
+3. Record a bounded implementation plan when useful for rehydration.
+4. Implement the smallest coherent result authorized by the task.
+5. Run focused checks against changed behavior during implementation.
+6. Reconcile affected tests, annotations, and durable product documentation.
+7. When the candidate is stable, run the configured complete implementation validation once.
+8. If validation passes, perform the configured Git, pull-request, CI, closeout, and merge procedure.
+9. If a concrete check fails, fix the directly implicated defect and rerun the affected check.
+10. Rerun complete validation only when subsequent changes could invalidate the prior complete result.
+11. Complete merge and cleanup, then advance to the next eligible implementation task.
+
 ## Scope Control
-- file-level expansion may proceed when required for the approved outcome; update `Expected_surfaces`
-- outcome-level expansion requires user resolution before implementation
-- do not add unrelated cleanup, speculative abstractions, or future features
+
+- implementation may expand to additional files when required for the active task;
+- outcome-level expansion requires user resolution;
+- do not add adjacent features, unrelated cleanup, speculative abstractions, or future infrastructure;
+- preserve unrelated local work;
+- a task may cross layers only when required to make its authorized result usable and verifiable.
+
 ## Engineering Rules
+
 MUST:
 
-- prefer KISS and framework-native patterns
-- apply SOLID where it clarifies responsibilities and dependency direction
-- keep domain logic DRY without premature abstraction
-- validate untrusted input and apply relevant OWASP-aligned controls
-- preserve authentication, authorization, least privilege, and secure failure behavior
-- keep secrets and sensitive data out of code, logs, fixtures, references, and commits
-- add or update tests for changed behavior and regressions
-- keep changes scoped to the active task
+- give hand-authored source files a clear primary responsibility;
+- preserve cohesive code when splitting would make behavior harder to understand or verify;
+- prefer framework-native and repository-native patterns before new abstractions or dependencies;
+- validate untrusted input and preserve secure failure behavior;
+- preserve authentication, authorization, least privilege, and data integrity;
+- keep secrets and sensitive data out of code, logs, fixtures, references, and commits;
+- add or update focused tests for changed behavior and regressions;
+- keep changes scoped to the active implementation task.
+
+File size is an architectural signal, not a completion gate.
+
+Split files when responsibilities or change boundaries justify it, not because a line threshold was crossed.
 
 MUST NOT:
 
-- weaken tests, types, lint, security, validation, or error handling to force a pass
-- add or replace production dependencies without resolved authority
-- change approved architecture, public contracts, or schemas outside task scope
-- force-push or rewrite shared history
-- perform destructive Git operations except the exact post-merge local task-branch cleanup procedure owned by `.harness/validation.md`
-- push directly to the configured base branch outside the one-time bootstrap exception
+- weaken tests, types, lint, security, validation, or error handling to force a pass;
+- add or replace production dependencies without resolved authority;
+- change approved architecture, public contracts, or schemas outside task scope;
+- create abstractions without a concrete stable responsibility;
+- push directly to the configured base branch;
+- force-push or rewrite shared history during normal product implementation;
+- create harness exceptions, recovery validators, compatibility bridges, or new lifecycle machinery to overcome implementation or delivery failures.
+
+## Annotation Headers
+
+Annotation headers are context compression, not duplicate documentation.
+
+Use the repository annotation skill and contract when covered source files are created or materially changed.
+
+Headers should communicate only non-obvious information that materially reduces future repository reading, such as:
+
+- primary responsibility;
+- important ownership or boundary information;
+- non-obvious architectural relationships;
+- non-obvious validation requirements.
+
+Do not treat annotation headers as authority over code or durable project documents.
+
 ## Review Guidelines
-A dedicated read-only Codex review is required before closeout.
 
-Review for:
+Routine implementation completion requires:
 
-- acceptance and behavioral correctness
-- security, privacy, authorization, and trust-boundary regressions
-- data integrity, migrations, rollback, and compatibility
-- architectural boundary violations and unnecessary complexity
-- error handling, recovery, observability, and concurrency risk
-- missing or weakened tests
-- reference fidelity for visible UI work
+- focused review of the actual diff;
+- configured deterministic validation;
+- resolution of concrete correctness, security, data-integrity, architecture, acceptance, and test failures.
 
-Correctness, security, data-loss, architecture, acceptance, and required visual-fidelity findings block completion.
+Independent read-only review is required only when:
+
+- an assigned validation set explicitly requires it;
+- the change affects a high-risk security or authorization boundary;
+- the change performs a destructive or difficult-to-reverse data migration;
+- deterministic evidence cannot establish a material correctness property.
+
+File length alone never requires independent review.
+
 ## Git and Completion
-- one working task uses one branch: `codex/<TAG>-<slug>`
-- commit and pull-request titles begin with `[T-####]` or `[R-####]`
-- use exact commands and procedures from `.harness/validation.md`
-- keep `Pass: false` through candidate delivery, review, and the first green CI result
-- set `Pass: true` only through the closeout procedure in `$code-change-verification`
-- if push, review, CI, or merge fails, restore or keep `Pass: false` and troubleshoot
-- merge must preserve the task tag in base-branch history
-- delete the scratchpad only after the task is merged or base-branch history proves the tag is present
-- do not create a closeout log
-- after merged-history proof, follow the exact post-merge local task-branch cleanup procedure in `.harness/validation.md`; no other destructive Git exception exists
+
+- one working implementation task uses one branch: `codex/<TAG>-<slug>`;
+- commit and pull-request titles begin with the implementation task tag;
+- use `.harness/validation.md` for the implementation delivery sequence;
+- keep `Pass: false` through implementation and candidate validation;
+- a candidate closeout stored on an unmerged task branch is provisional and cannot satisfy dependencies;
+- completion becomes authoritative only when the configured base branch contains the merged implementation and its completed task entry;
+- after confirmed merge, perform branch and scratchpad cleanup once;
+- use one confirmation readback when a remote mutation result is ambiguous;
+- when a remote failure is plausibly transient, retry that operation at most once;
+- if GitHub, CI, or another required external service remains unavailable, preserve the implementation state, report the blocker, and stop;
+- never change the harness merely to work around an external service outage.
+
+Do not create task-specific remote recovery logic or permanent repository exceptions for temporary delivery failures.
 
 ## Project Learning
 
-- `.harness/work/<TAG>.md` stores complete task-local attempts, failures, hypotheses, and debugging state.
-- `.harness/LESSONS.md` stores only reusable, evidence-backed lessons likely to affect future tasks.
-- Before planning a task, read only lessons relevant to its expected surfaces, tools, providers, or validation.
-- Before task closeout, evaluate whether any scratchpad finding satisfies the lesson-promotion rules.
-- Promote qualifying lessons before deleting the scratchpad.
-- When a lesson represents a recurring enforceable rule, prefer encoding it in tests, validation, annotations, or the nearest applicable `AGENTS.md`.
-- Do not preserve debugging noise merely because an approach failed once.
+- `.harness/work/<TAG>.md` stores task-local implementation attempts, failures, hypotheses, and debugging state;
+- `.harness/LESSONS.md` stores only reusable, evidence-backed lessons likely to affect future implementation tasks;
+- read only lessons relevant to the active implementation task;
+- do not preserve debugging noise, completed-task summaries, one-time external outages, or harness-maintenance history as permanent lessons;
+- encode recurring implementation rules in the nearest durable authority, test, or deterministic validator.

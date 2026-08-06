@@ -1,188 +1,111 @@
-# Validation
+# Implementation Validation and Delivery
 
 ## Purpose
 
-Canonical registry for executable proof, independent review, Git delivery, and CI. Tasks reference sets by exact name.
+Canonical validation registry and delivery procedure for product/code implementation tasks.
 
-## Repository Delivery Configuration
+A deterministic validator is authoritative for the invariants it owns. Use focused checks while a candidate is changing, one complete configured validation run after it stabilizes, and targeted reruns after a concrete failure. Repeat the complete run only when a later change could invalidate it.
 
-The repository-foundation task replaces every required `<unset>` value.
+Harness maintenance is outside this lifecycle. An explicitly invoked `$harness-maintenance` run edits tracked harness files in the local working tree and leaves them uncommitted and unpushed; it does not create a task, branch, commit, pull request, CI run, review, merge, closeout, or archive entry.
+
+## Configuration
 
 ```text
 BASE_BRANCH: main
 BRANCH_PATTERN: codex/<TAG>-<slug>
 PUSH_COMMAND: git push -u origin HEAD
-PR_CREATE_OR_UPDATE_COMMAND: Run gh pr view <HEAD_BRANCH> --repo DevDoneDiff/cp, then an all-state exact-head gh pr list; edit the sole matching open PR with gh pr edit, or create with gh pr create only after authenticated zero-result proof
 PR_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --watch --required
 CI_ENABLED: true
-CI_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --json name,bucket,state,link,workflow; require exact CI / baseline and CI / browser-smoke entries with bucket pass, then reread the matching headRefOid with gh pr view
+REQUIRED_CHECKS: CI / baseline, CI / browser-smoke
 MERGE_COMMAND: gh pr merge <PR> --repo DevDoneDiff/cp --squash --delete-branch --match-head-commit <EXPECTED_HEAD_SHA> --subject "<TASK_TAG> <TITLE>"
-POST_MERGE_CLEANUP_PROCEDURE: After successful guarded merge, fetch and prune; check out and fast-forward BASE_BRANCH; require exact local and remote base SHA equality, clean state, task-tag history proof, merged pull-request proof, and remote task-branch absence; attempt ordinary local branch deletion; permit exact-target force deletion only when squash ancestry alone blocks ordinary deletion
-AGENT_REVIEW_PROCEDURE: dedicated read-only Codex review against BASE_BRANCH
-SECURITY_REVIEW_PROCEDURE: dedicated read-only security review of the task diff
 ```
 
-A normal task cannot have `Ready: true` when a required command or procedure is unset.
+A task cannot be `Ready: true` when an assigned validation set or required delivery command is unavailable.
 
-## One-Time Bootstrap Exception
+## Local Harness-Maintenance Coexistence
 
-`[T-0001]` may be ready with `Bootstrap: true` while the registry is unset only when its approved source spec requires it to configure this file completely.
+Uncommitted harness-maintenance changes are legitimate local control-plane state. Claim, validation, cleanup, and delivery automation must inventory and preserve them; they are not a competing implementation claim and must not be stashed, reset, restored, deleted, or rejected merely because they are dirty.
 
-Bootstrap sequence when Git is absent:
+Create the implementation branch with those changes in place. If they are naturally included in the implementation task's eventual diff, they travel through that task's ordinary validation and delivery without a separate harness identity or proof lifecycle.
 
-1. run `bootstrap-preflight`
-2. initialize the approved base branch
-3. create one baseline commit containing only preexisting harness, approved documents, approved source specifications, approved references, the approved foundation spec, and approved task queue
-4. create or connect the approved empty remote and push the base branch once
-5. create `codex/T-0001-repository-foundation`
-6. perform foundation implementation only on that task branch
+Ephemeral task scratchpads remain ignored. Disposable diagnostic or transition scripts belong only in `scripts/validation/tmp/`, which is covered by the repository's existing `tmp/` ignore rule. Durable validators, package scripts, and CI must never import or invoke that workspace.
 
-Before candidate delivery, the bootstrap task must:
+## Task Claim and Resumption
 
-- replace every required `<unset>` value
-- set `CI_ENABLED: true` when the approved foundation spec includes GitHub Actions
-- execute all assigned normal validation sets using the newly configured commands
-- open or update the pull request
-- pass read-only review and remote CI
+Before implementation mutation:
 
-No later task receives this exception.
+1. Read the active queue and select the explicit task in manual mode or the first eligible task in autonomous mode.
+2. Verify one unique identity, satisfied dependencies, required references, registered validation sets, and no other working task.
+3. Inventory the working tree and local branches. Preserve unrelated work and local harness changes.
+4. Fetch the configured remote once when available and prove the selected task has no competing active branch or pull request.
+5. Change only the selected task from `queued` to `working`, create its ignored scratchpad, and create `codex/<TAG>-<slug>` without discarding the inventoried working tree.
+6. Publish the claim only when normal task delivery requires it. A failed remote operation follows [External-Service Failure](#external-service-failure).
+
+Resume a working task only when its local task, branch, remote branch, and pull request identities are absent or resolve to the same task. Rehydrate from the scratchpad and current diff; do not rebuild established context without evidence it is stale.
 
 ## Proof Model
 
-Every repository behavior change requires:
-
-- task-assigned focused validation
-- `baseline`
-- `agent-review`
-- final diff inspection
-- task branch push and pull request
-- remote CI when enabled
-
-Security-sensitive work also requires `security` and `security-review`.
-
-Visible product UI or exact-reference work also requires browser comparison through `frontend-visual`. The approved non-product foundation smoke shell is explicitly excluded.
-
-Missing required proof blocks the task. It never produces `Pass: true`.
-
-## Execution Rules
-
-MUST:
-
-- run the narrowest assigned check after each material increment
-- record command, result, evidence, hypothesis, and attempted fix in the scratchpad
-- read prior failed approaches before selecting another fix
-- rerun the failed focused set after a fix
-- rerun every assigned set and `baseline` before candidate delivery
-- use exact configured commands and procedures
-- preserve test strength, security boundaries, approved reference fidelity, and production behavior
-- when `.gitattributes` changes, run one controlled `git add --renormalize .`, inspect the complete staged diff, and reject any semantic change outside the active task
-
-MUST NOT:
-
-- skip a set because another passed
-- change tests only to match incorrect behavior
-- suppress errors, disable rules, or reduce coverage to force success
-- retry the same method without new evidence
-- treat commit, push, review, or CI success alone as complete proof
-
-## Set Selection
-
-Assign `baseline` and `agent-review` to every code task.
-
-Add:
-
-- `bootstrap-preflight`: one-time local and remote prerequisite inspection for `[T-0001]`
-- `frontend-component`: rendered behavior, interaction, and accessibility
-- `frontend-e2e`: user workflows across boundaries
-- `frontend-visual`: visual or responsive UI behavior in a real browser
-- `security`: auth, permissions, secrets, trust boundaries, or sensitive data
-- `security-review`: security-sensitive change review
-- `smoke`: startup and critical route or service availability
-
-Delete unused normal sets after the stack is established. Do not delete `baseline`, `agent-review`, or `bootstrap-preflight` while `[T-0001]` is active.
+- Focused checks own the changed behavior while implementation is in motion.
+- `baseline` is the single complete local candidate gate.
+- Required browser, security, smoke, or visual sets remain separate when they exercise behavior outside baseline.
+- Ordinary completion uses focused diff review plus deterministic validation.
+- Independent read-only review is required only when the active task assigns `agent-review`, when an assigned set explicitly requires it, for a high-risk security/authorization boundary, for a destructive or difficult-to-reverse data migration, or when deterministic evidence cannot establish a material property.
+- File length, line count, formatting preference, or ordinary complexity never triggers review by itself.
 
 ## Registry
 
 | Set | Command or procedure | Proves |
 |---|---|---|
-| `bootstrap-preflight` | Inspect Git status/history/origin; verify Node `24.19.0`, pnpm `11.18.0`, and GitHub CLI; run authenticated repository, permission, visibility, exact-head branch/PR, and protection readbacks without external mutation | Bootstrap prerequisites and safe initial state |
-| `baseline` | `pnpm validate` | format, lint, strict typecheck, required tests, and production build |
-| `agent-review` | configured dedicated read-only Codex review | correctness, acceptance, architecture, data, regression, and required reference review |
-| `frontend-component` | `pnpm test:component` | rendered states, interaction, accessibility, and contracts |
-| `frontend-e2e` | For one unchanged working tree, pass `pnpm test:smoke`, then run `pnpm test:e2e`; Playwright starts only the reusable production build | critical user workflows |
-| `frontend-visual` | Dedicated real-browser agent review at task-required viewports and states against every exact artifact assigned by the active spec; missing browser access or required artifact fidelity fails the procedure | responsive layout, hierarchy, states, and exact approved-reference fidelity |
-| `security` | `pnpm validate:security` | deterministic security checks, trust-boundary tests, and a production dependency audit at moderate severity or above |
-| `security-review` | configured read-only security review | change-specific security regressions and attack paths |
-| `smoke` | `pnpm test:smoke` | startup and critical route or service availability |
+| `baseline` | `pnpm validate` | toolchain, formatting, lint, types, annotations, harness integrity, security policy, tests, coverage, and build |
+| `agent-review` | independent read-only review of the stable candidate | configured correctness properties not fully established by deterministic checks |
+| `frontend-component` | `pnpm test:component` | component behavior and accessibility |
+| `frontend-e2e` | `pnpm test:e2e` | required browser flows |
+| `frontend-visual` | real-browser inspection of assigned states and viewports | assigned visual and responsive acceptance |
+| `security` | `pnpm validate:security` | repository and runtime security contracts |
+| `security-review` | independent read-only security review | configured high-risk trust-boundary properties |
+| `smoke` | `pnpm test:smoke` | production build and startup behavior |
 
-## Independent Review Gate
+Registry parsing is semantic: unique set names and nonempty meanings matter; exact prose, cell widths, field order, and byte layout do not.
 
-The reviewer must not modify the working tree.
+## Candidate Validation
 
-Review the complete task diff against `BASE_BRANCH` for:
+1. Implement the smallest coherent task result and run the narrowest relevant checks as behavior changes.
+2. Reconcile affected tests, annotations, and durable product documentation.
+3. After the candidate stabilizes, run every assigned set and `baseline` once after the final candidate-content change.
+4. Inspect the complete diff for task scope, unrelated files, secrets, generated debris, and preservation of pre-existing harness maintenance.
+5. Run any conditionally required independent review against the stable candidate content. Only concrete blocking findings require repair and fresh affected proof; a repair invalidates only evidence it could affect.
 
-- acceptance and behavioral correctness
-- security, privacy, auth, and trust boundaries
-- data integrity, migration, rollback, and compatibility
-- architectural boundaries and unnecessary complexity
-- error handling, recovery, observability, and concurrency
-- missing or weakened tests
-- required visual fidelity when references are assigned
+Keep `Pass: false` through this gate.
 
-Correctness, security, data-loss, architecture, acceptance, and required visual findings block completion. The primary task agent applies fixes, reruns affected checks and `baseline`, then requests a fresh review.
+## Commit, Pull Request, and Closeout
 
-## Pass and Delivery Sequence
+1. Commit the validated candidate on `codex/<TAG>-<slug>` with a title beginning with the task tag.
+2. Push without force and create or update the sole matching pull request. Record the candidate SHA and concise validation evidence.
+3. Apply the provisional closeout as one later commit: remove the task from `.harness/tasks.md`, append its semantically unchanged block to `.harness/completed.md`, and change only `Status: passed` and `Pass: true` within that block.
+4. Run the focused harness-integrity check for the store transition. Other candidate evidence carries forward because closeout changes no implementation content.
+5. Push the closeout commit without force and bind `EXPECTED_HEAD_SHA` to that exact remote branch and pull-request head.
+6. Require the configured CI checks once for `EXPECTED_HEAD_SHA`. Missing, stale, duplicated, or failing required checks block merge.
 
-1. keep `Pass: false` during implementation
-2. pass all assigned focused sets and `baseline`
-3. remove temporary task annotations and rerun affected checks
-4. create and push a candidate commit with `Pass: false`
-5. open or update the pull request
-6. pass `agent-review`, `security-review` when assigned, and remote CI when enabled
-7. create a closeout commit changing only `.harness/tasks.md` to `Status: passed` and `Pass: true`
-8. push the closeout commit and require latest CI to pass when enabled
-9. merge according to `MERGE_MODE`
-10. delete the scratchpad only after configured base-branch history contains the task tag
+If implementation content changes after closeout, reverse the closeout, restore `Status: working` and `Pass: false`, repair the candidate, and rerun only invalidated proof before producing a new closeout head.
 
-If any file other than `.harness/tasks.md` must change after closeout begins, restore `Pass: false` and rerun the full gate.
+## Merge and Completion
 
-If closeout push, latest CI, or autonomous merge fails, restore `Pass: false`, record evidence, and troubleshoot.
+Immediately before merge, fetch `origin/main` once and record `EXPECTED_BASE_SHA`. Require it to be an ancestor of the unchanged `EXPECTED_HEAD_SHA`, and confirm the remote task branch and pull-request head still equal that SHA. If the base advanced incompatibly, merge the fetched base without rewriting published history, reverse closeout if implementation repair is needed, and rerun proof invalidated by the merge.
 
-## Merge Rules
+In manual merge mode, stop at the review-ready CI-green pull request. In autonomous merge mode, use the configured guarded squash command without administrator bypass.
 
-- never push directly to `BASE_BRANCH` outside the one-time empty-repository bootstrap
-- pull-request and commit titles begin with the task tag
-- merge preserves the task tag in base-branch Git history
-- manual merge mode stops at a review-clean, CI-green pull request
-- autonomous merge mode uses `MERGE_COMMAND` only after every gate passes
-- queue advancement requires the task tag in base-branch history
+One readback of the same pull request must establish `MERGED`, its merge commit reachable from fetched `origin/main`, the tagged subject, task presence in the completed store, task absence from the active store, and remote task-branch absence. Then fast-forward local `main`, verify a clean synchronized implementation state apart from preserved local harness-maintenance changes, delete the exact local task branch, and delete the task scratchpad.
 
-## Post-Merge Cleanup
+Completion and dependency satisfaction come only from that merged base-branch history, not from a local archive entry, an unmerged branch, a tag-like subject alone, or a provisional closeout.
 
-After a successful merge:
+## External-Service Failure
 
-1. run `git fetch --prune origin`
-2. check out `BASE_BRANCH`
-3. fast-forward only from `origin/BASE_BRANCH`
-4. require local `BASE_BRANCH` and `origin/BASE_BRANCH` to resolve to the same exact SHA
-5. require a clean working tree
-6. prove `BASE_BRANCH` history contains `TASK_TAG`
-7. prove the pull request is merged and the remote task branch is absent
-8. attempt `git branch -d <TASK_BRANCH>`
-9. if and only if step 8 fails because squash merge left the original task commit outside `BASE_BRANCH` ancestry, run `git branch -D <TASK_BRANCH>`
-10. verify the exact local task branch is absent
+A plausibly transient remote operation may be retried once. If its result is ambiguous, perform one operation-specific readback to classify whether that mutation applied before retrying. Do not poll or re-prove unrelated remote state.
 
-This exception applies only to the exact merged local task branch after every proof above. It never authorizes force-push, shared-history rewrite, remote force deletion, or deletion of any other branch.
+If GitHub, CI, or another required external service remains unavailable, preserve the task, branch, scratchpad, commits, and established evidence; record the blocker and stop delivery. An outage never authorizes a validator, recovery transition, compatibility bridge, task-specific exception, permanent lesson, alternate lifecycle, or weaker validation semantics.
 
-## Failure Loop
+## Product Authoring
 
-1. keep `Pass: false`
-2. capture the failing command or review finding
-3. record evidence and the current hypothesis
-4. compare against prior failed approaches
-5. apply one bounded evidence-based correction
-6. rerun the focused failure
-7. rerun all assigned sets and `baseline`
-8. redeliver the candidate and recheck review and CI
+Product spec and task authoring remain separate from implementation. When explicit user instruction requests delivery, use a descriptive `codex/authoring-<slug>` branch and pull request without task status, `Pass`, implementation scratchpad, closeout, archive mutation, dependency proof, or completion identity. Authoring that changes the active queue must not race a live implementation claim.
 
-Set `Status: blocked` only for unresolved user context, unavailable credentials, external outage, or missing validation capability.
+Harness or repository-governance maintenance never uses this authoring path.

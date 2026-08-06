@@ -1,4 +1,0 @@
-{
-  "modulePath": "src/example.ts",
-  "source": "/**\n * MODULE: src/example.ts\n * PURPOSE: Own a meaningful example contract.\n * PUBLIC API / ENTRYPOINTS:\n *   - example: returns the stable example value.\n * INVARIANTS:\n *   - [INV-STABLE-EXAMPLE] The exported value remains stable.\n * BOUNDARIES:\n *   - The example has no external side effects.\n */\nexport function example() {\n  // @ah INV-STABLE-EXAMPLE\n  return \"example\";\n}\n"
-}

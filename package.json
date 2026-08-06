@@ -25,8 +25,8 @@
     "test:smoke": "node scripts/production-smoke.mjs",
     "test:e2e": "node scripts/run-e2e.mjs",
     "validate:toolchain": "node scripts/enforce-toolchain.mjs",
-    "validate:annotations": "node scripts/validation/annotation-headers.mjs --candidate",
-    "validate:annotations:working": "node scripts/validation/annotation-headers.mjs --working",
+    "validate:annotations": "node scripts/validation/annotation-headers.mjs",
+    "validate:harness": "node scripts/validation/harness-integrity.mjs",
     "validate:security": "node scripts/validation/repository-security.mjs",
     "validate": "node scripts/run-validation.mjs"
   },

@@ -1,27 +1,8 @@
 /**
- * MODULE: scripts/validation/repository-security.mjs
- * PURPOSE: Prove repository policy, production dependency security, and the pre-account runtime trust boundary.
- * PUBLIC API / ENTRYPOINTS:
- *   - readSecuritySnapshot: reads the repository surfaces governed by the foundation security contract.
- *   - validateSecuritySnapshot: applies deterministic positive and negative policy checks.
- *   - CLI: validates repository policy and audits the production graph at moderate severity or above.
- * CONTROL_FLOW:
- *   1. Read the manifest, machine pins, lockfile, workflow, environment example, policy, and non-ignored file list.
- *   2. Compare direct dependencies and tooling with the exact approved allowlist.
- *   3. Enforce workflow immutability, least privilege, deterministic CI, and repository hygiene.
- *   4. Run focused malicious-storage and event-ingestion runtime proof.
- *   5. Query the package advisory registry and fail on any moderate, high, or critical production finding.
- * INVARIANTS:
- *   - Every direct package and machine runtime uses one exact approved version.
- *   - Next.js resolves patched PostCSS and Sharp versions without changing its approved direct pin.
- *   - CI uses immutable actions, frozen installs, no secrets, and only contents read permission.
- * RELATED:
- *   - package.json: owns exact direct dependencies and cross-platform scripts.
- *   - .github/workflows/ci.yml: owns remote foundation proof.
- *   - docs/REPOSITORY_POLICY.md: records remote protection and guarded-delivery requirements.
- * SECURITY:
- *   - Product/provider SDKs, vulnerable production packages, untrusted actions, local environment files, and likely secret-bearing files fail closed.
- *   - Untrusted session and event data must pass the focused runtime security suite before dependency audit success.
+ * ROLE: Prove pinned dependency, workflow, repository-policy, secret-hygiene, and runtime trust-boundary security.
+ * BOUNDARY: Live hosting protection and merge state are read through the delivery procedure, not this local validator.
+ * RELATIONS: package.json owns direct pins; .github/workflows/ci.yml owns remote checks; docs/REPOSITORY_POLICY.md owns delivery security.
+ * VALIDATION: tests/integration/repository-security.test.ts and runtime-security.test.ts exercise policy and hostile input.
  */
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -64,6 +45,7 @@ const REQUIRED_SCRIPTS = [
   "test:smoke",
   "test:e2e",
   "validate:annotations",
+  "validate:harness",
   "validate:security",
   "validate",
 ];
@@ -343,6 +325,17 @@ function validateWorkflow(snapshot, errors) {
     2
   ) {
     errors.push("both checkout steps must disable persisted credentials");
+  }
+
+  const baselineJob = workflow
+    .split(/^  baseline:\s*$/m)[1]
+    ?.split(/^  browser-smoke:\s*$/m)[0];
+  const exactBaselineCheckout =
+    /^\s+- (?:name:[^\r\n]+\r?\n\s+)?uses: actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1\r?\n\s+with:\r?\n\s+persist-credentials:\s*false\r?\n\s+ref:\s*\$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.ref \}\}\r?\n\s+fetch-depth:\s*3\s*$/m;
+  if (!baselineJob || !exactBaselineCheckout.test(baselineJob)) {
+    errors.push(
+      "baseline checkout must use the exact pull-request head or pushed ref with fetch-depth 3",
+    );
   }
 
   const browserJob = workflow.split(/^  browser-smoke:\s*$/m)[1] ?? "";
