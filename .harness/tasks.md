@@ -166,7 +166,7 @@ Brick_id: harness/H1/non-task-authoring-identity
 Traceability: F2, F11
 Priority: P0
 Depends_on: [T-0016], [T-0026]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
