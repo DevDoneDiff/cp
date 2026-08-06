@@ -526,6 +526,22 @@ describe("harness integrity validation", () => {
       ".harness/validation.md: validation registry contains a malformed or unconsumed row",
     );
 
+    for (const rawPipeRow of [
+      "| `baseline` | command|extra | proof |",
+      "| `baseline` | command | pro|of |",
+    ]) {
+      const rawPipe = queued.validationText.replace(baselineRow!, rawPipeRow);
+      expect(errors(withValidationText(queued, rawPipe))).toContain(
+        ".harness/validation.md: validation registry contains a malformed or unconsumed row",
+      );
+    }
+
+    const escapedPipe = queued.validationText.replace(
+      baselineRow!,
+      "| `baseline` | command\\|continued | proof |",
+    );
+    expect(errors(withValidationText(queued, escapedPipe))).toEqual([]);
+
     const unconsumed = queued.validationText.replace(
       "\n## Independent Review Gate",
       "\nattacker-controlled registry content\n\n## Independent Review Gate",

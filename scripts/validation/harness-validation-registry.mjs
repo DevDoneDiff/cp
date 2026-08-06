@@ -34,6 +34,21 @@ function registrySection(source) {
   return lines.slice(starts[0] + 1, ends[0]);
 }
 
+function hasUnescapedPipe(value) {
+  let backslashes = 0;
+  for (const character of value) {
+    if (character === "\\") {
+      backslashes += 1;
+      continue;
+    }
+    if (character === "|" && backslashes % 2 === 0) {
+      return true;
+    }
+    backslashes = 0;
+  }
+  return false;
+}
+
 export function parseValidationRegistry(validationText) {
   // @ah INV-VALIDATION-REGISTRY
   const errors = [];
@@ -80,7 +95,8 @@ export function parseValidationRegistry(validationText) {
       cells[1]?.trim() !== cells[1] ||
       cells[2]?.trim() !== cells[2] ||
       cells[1]?.length === 0 ||
-      cells[2]?.length === 0
+      cells[2]?.length === 0 ||
+      cells.some(hasUnescapedPipe)
     ) {
       errors.push(
         ".harness/validation.md: validation registry contains a malformed or unconsumed row",
