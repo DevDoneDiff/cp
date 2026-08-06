@@ -166,7 +166,7 @@ Brick_id: harness/H1/provisional-closeout-completion
 Traceability: F3, F5, F9, F25d
 Priority: P0
 Depends_on: [T-0011], [T-0016], [T-0017], [T-0029]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
