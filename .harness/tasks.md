@@ -153,45 +153,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0015] Add stable active-task identity fields
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/active-task-identity-schema
-Traceability: F14, F21, F25h
-Priority: P0
-Depends_on: [T-0010]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Define a durable active-task schema that supports relocation-safe source identity, idempotent bricks, traceability, and committed cross-seam rationale.
-Scope:
-- Add `Source_spec_id`, canonical `Source_spec`, stable source-scoped `Brick_id`, traceability, and indivisibility-rationale fields and invariants to the active queue template.
-Non_goals:
-- Change task selection, implement the validator, rewrite completed blocks, or alter task-authoring workflow.
-Acceptance_criteria:
-- Every new task requires both a stable source spec ID and the current canonical spec path.
-- Every new task requires a unique stable `Brick_id` scoped to its source spec.
-- Every new task records the specification findings or acceptance areas it implements.
-- Any task crossing independently provable seams stores a concise rationale in its committed block; single-seam tasks record `none` with a reason.
-- Queue invariants prohibit duplicate task tags or brick IDs and keep existing tag counters monotonic.
-- The active task template remains concise and contains no implementation tutorial.
-Indivisibility_rationale:
-- none; `.harness/tasks.md` is the single active-schema owner and this task does not yet change its producers or validators.
-Expected_surfaces:
-- `.harness/tasks.md` queue invariants and task template.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0015.md
-
 ### [T-0016] Harden task claim and blocked resumption
 Type: maintenance
 Bootstrap: false
