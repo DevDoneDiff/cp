@@ -166,7 +166,7 @@ Brick_id: harness/H1/spec-authoring-identity-routing
 Traceability: F13, F14, F15, F17
 Priority: P1
 Depends_on: [T-0010], [T-0014]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
