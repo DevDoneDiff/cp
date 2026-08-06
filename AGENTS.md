@@ -58,7 +58,7 @@ For the selected task, read in this order:
 
 Do not load every spec, state package, reference folder, global document, or repository file by default.
 
-Do not load `.harness/completed.md` during ordinary task selection or implementation. Use it only for explicit historical investigation.
+Do not load archived task blocks from `.harness/completed.md` into ordinary selection or implementation context. The canonical claim procedure may make a narrow read-only lookup of archive identity and its terminal boundary solely to detect duplicate representation or provisional closeout. Full archived content is reserved for explicit historical investigation.
 
 ## Artifact Gate
 
@@ -104,19 +104,28 @@ If material ambiguity appears during work, set the task to `blocked`, keep `Pass
 
 ## Readiness and Task Selection
 
-Do not mutate runtime code, configuration, schemas, dependencies, generated application artifacts, or external systems until:
+Do not begin a new task claim until:
 
 - the source spec is approved;
+- the task has `Status: queued`;
 - the task has `Ready: true`;
+- the task has `Pass: false` and `Blocker: none`;
 - `Open_questions: none`;
 - dependencies are satisfied;
 - required artifacts exist;
 - required validation and delivery procedures are configured.
 
+Do not mutate runtime code, configuration, schemas, dependencies, generated application artifacts, or other authorized source surfaces until the canonical claim has been published and the task has `Status: working`. Same-task resumption must re-establish that state through the canonical procedure.
+
 Selection rules:
 
+- autonomous primary invocations must be externally serialized before repository claim checks begin;
+- repository and GitHub claim checks detect stale or competing work; they are not a distributed lock and cannot make improperly concurrent invocations safe;
 - exactly one task may have `Status: working`;
-- a task is eligible when `Ready: true`, `Pass: false`, and dependencies are satisfied;
+- a task is eligible only when `Status: queued`, `Ready: true`, `Pass: false`, `Blocker: none`, and canonical dependencies are satisfied;
+- a blocked task is never eligible and may resume only through the same-task procedure in `.harness/validation.md`;
+- before source edits, use the canonical claim procedure to inspect base state, live task branches and pull requests, provisional closeout, and conflicting queue-authoring work, then publish the deterministic task claim;
+- a failed, unavailable, or competing claim blocks mutation;
 - one working task may use bounded read-only exploration or review subagents;
 - only the primary task agent may write;
 - do not advance the queue until the current task tag exists in configured base-branch history;

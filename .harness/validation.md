@@ -26,6 +26,38 @@ A task cannot have `Ready: true` when a required command or procedure is unset.
 
 Historical `[T-0001]` consumed the one-time bootstrap exception. No future task may use `Bootstrap: true`.
 
+## Task Claim and Same-Task Resumption
+
+The invocation environment must serialize autonomous primary executors before this procedure begins. The checks below detect stale or competing repository state. They are not a distributed lock and do not protect against improperly simultaneous invocations.
+
+### New task claim
+
+Before any authorized source edit:
+
+1. Inventory the complete current branch, HEAD, index, worktree, active queue, counters, and task scratchpads. Use a narrow read-only lookup that returns only archive identities and the terminal boundary needed to detect duplicate representation or provisional closeout; do not load archived task blocks into ordinary context. Preserve every pre-existing change. An unexplained staged change or overlap with the selected task blocks the claim.
+2. Fetch and prune the configured remote, require authenticated GitHub readback, and prove the local configured base is the exact fetched base. An unavailable or ambiguous remote read blocks autonomous claiming.
+3. Select the first task in active queue order satisfying `Status: queued`, `Ready: true`, `Pass: false`, `Blocker: none`, and the canonical dependency procedure. Prove no other active task is `working` and no provisional closeout is awaiting delivery.
+4. Enumerate and classify every local and remote branch matching `BRANCH_PATTERN` and every open pull request. Separately inspect the current non-task branch and every open non-task pull request for changes to `.harness/tasks.md`, its counters, `.harness/validation.md`, or task-execution authority in `AGENTS.md`. Any different live task claim, same-tag reference, provisional closeout, or active conflicting queue-authoring work blocks selection; an inactive unrelated local non-task branch is preserved but is not a claim.
+5. Derive the one branch named by `BRANCH_PATTERN`. A pre-existing local branch, remote branch, or pull request with that identity is a conflict unless the same-task resumption procedure has just proved its exact identity and explicitly authorized local-branch reuse for a fresh claim. Never overwrite, force-update, or reinterpret a reference.
+6. Create the task branch from the proven base or reuse only the exact local branch authorized by the immediately preceding same-task resumption proof, while preserving inventoried non-overlapping local changes. Change only the selected task from `Status: queued` to `Status: working`, create its ignored scratchpad, and commit a claim whose subject begins with the exact task tag. Do not edit an authorized source surface in the claim commit.
+7. Publish the branch with the configured non-force push, then read back the exact remote branch SHA and require it to equal the local claim SHA. Only that successful readback establishes the repository claim and permits source mutation.
+
+A failed push, conflicting reference, changed base, or unavailable readback leaves `Pass: false`, creates or retains the scratchpad, records the exact evidence there and in `Blocker`, sets `Status: blocked`, and stops before source mutation. Preserve the branch, worktree, and remote state for resolution; do not retry without new evidence.
+
+### Same-task resumption
+
+A blocked task resumes only through an explicit primary-agent transition:
+
+1. Rehydrate its scratchpad and recorded blocker, fetch and prune the remote, and repeat the base, active-store, narrow archive-boundary, all-local-branch, all-remote-branch, pull-request, and conflicting-authoring reads from the claim procedure.
+2. Prove any retained local branch uses the exact configured branch identity and contains the exact task tag, `Source_spec_id`, and `Brick_id`. Authenticated remote readback must establish exactly one of two states: the exact remote branch exists and contains the published claim, or that exact remote branch is absent. Ambiguous or contradictory readback remains blocking.
+3. When a pull request exists, require exactly one open pull request in the configured repository whose head repository is that same configured repository, whose head ref and head SHA equal the proven exact remote branch and its tip, and whose base ref equals `BASE_BRANCH`. A fork, wrong base, duplicate pull request, mismatched tip, or pull request with no exact remote branch remains blocking.
+4. A proven-remote-absence path is valid only when no open pull request exists and the retained exact local task branch differs from the proven base solely by task claim or blocker-state commits, with no authorized source change. That path authorizes reuse of only that local branch for a queued fresh claim. Any source change without a provable published claim remains blocked.
+5. Only after the applicable identity proof, exclude those exact same-task references from competing-claim results. Every other local or remote task branch, task claim, same-tag reference, provisional closeout, or conflicting authoring change remains a conflict.
+6. Record evidence that the original blocker is resolved, clear `Blocker`, and explicitly return the task to `working` when its published remote claim remains valid, or to `queued` only under the proven-remote-absence fresh-claim path. Rerun readiness, artifacts, validation configuration, canonical dependencies, and all claim checks.
+7. Publish and read back any blocked-to-working task-state transition before source mutation. A queued transition must complete the new-task claim procedure using only the explicitly authorized local branch instead.
+
+The eventual pull request records a read-only resumption procedure case with the exact task, branch, pull-request, blocker, competing-reference, and self-claim-exclusion results. A changed external condition alone never clears or resumes a blocked task.
+
 ## Proof Model
 
 Every repository behavior change requires:

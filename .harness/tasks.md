@@ -21,7 +21,7 @@ Only explicit user instruction may change `RUN_MODE` or `MERGE_MODE`.
 - `.harness/completed.md` contains immutable completed task entries.
 - `.harness/work/<TAG>.md` contains ephemeral task-local rehydration state.
 
-Normal task selection and implementation must not load `.harness/completed.md`.
+Normal task selection and implementation must not load archived task blocks from `.harness/completed.md` into context. The canonical claim procedure may return only the narrow archive identity and terminal-boundary evidence required to detect duplicate representation or provisional closeout.
 
 ## Queue Invariants
 
@@ -68,9 +68,13 @@ Dependencies need not be complete for readiness.
 
 A task is eligible when:
 
+- `Status: queued`;
 - `Ready: true`;
 - `Pass: false`;
+- `Blocker: none`;
 - all dependencies are satisfied.
+
+`Status: blocked` is never eligible. A changed external condition does not resume a task; the same-task resumption procedure in `.harness/validation.md` must prove and explicitly transition its claim state.
 
 A dependency is satisfied when its tag exists in configured base-branch history.
 
@@ -78,9 +82,9 @@ Check base-branch history rather than an unmerged task branch or the completed a
 
 ## Active States
 
-- `queued`: approved and waiting;
-- `working`: the only task allowed to mutate runtime behavior;
-- `blocked`: stopped for unresolved context, access, outage, or missing proof.
+- `queued`: approved, unblocked, and waiting for deterministic claim publication;
+- `working`: the only task allowed to mutate its authorized source surfaces after its claim is published;
+- `blocked`: stopped for recorded unresolved context, access, outage, claim conflict, or missing proof and unable to self-resume.
 
 `Status: passed` and `Pass: true` exist only in the final task block transferred verbatim to `.harness/completed.md` through the closeout procedure in `.harness/validation.md`.
 
@@ -162,7 +166,7 @@ Brick_id: harness/H1/task-claim-resumption
 Traceability: F2, F10, F11
 Priority: P0
 Depends_on: [T-0015]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
