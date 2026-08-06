@@ -1439,3 +1439,44 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0033.md
+
+### [T-0034] Make post-merge cleanup retry-safe
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/retry-safe-cleanup
+Traceability: F6, F25e
+Priority: P0
+Depends_on: [T-0031], [T-0032], [T-0033]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Make cleanup idempotent and prevent a local cleanup failure from undoing durable task completion.
+Scope:
+- Define already-absent branch success, exact merged-identity gates, ordinary and exceptional local deletion, post-merge failure evidence, scratchpad preservation, queue blocking, and cleanup-only retry.
+Non_goals:
+- Reverse a durably merged task, edit the archive after merge, force-push, or add a distributed cleanup service.
+Acceptance_criteria:
+- Already-absent remote or local task branches are accepted only after exact merged task and branch identity proof.
+- Ordinary local branch deletion is attempted before the narrow squash-ancestry force-deletion exception.
+- After durable merge, cleanup failure never reverses `Pass`, reactivates the task, or edits any completed block.
+- A failed cleanup preserves the exact local task branch and scratchpad, records durable PR and local evidence, and stops queue advancement.
+- Retry executes only the incomplete cleanup proof and does not rerun or reopen implementation closeout.
+- Durable PR evidence records a read-only cleanup-failure and retry case; scratchpad deletion occurs only after base synchronization, branch absence, archive proof, and complete cleanup success.
+Indivisibility_rationale:
+- none; post-merge cleanup has its own failure and retry boundary after durable completion.
+Expected_surfaces:
+- `.harness/validation.md` post-merge cleanup and failure behavior.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+- security
+- security-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0034.md
