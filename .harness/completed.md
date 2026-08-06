@@ -17,6 +17,14 @@ Each archived task is the verbatim full task block that completed execution, inc
 
 Git remains the detailed implementation and delivery history. This file preserves the exact task authority under which completed work ran.
 
+## Historical Seed Provenance
+
+- During the H1 transition, the seven historical blocks `T-0001, T-0002, T-0003, T-0004, T-0006, T-0005, T-0007` were seeded here verbatim in that order.
+- Those tasks did not originally execute the current active-to-archive transfer procedure. Their compatibility proof is the existing tagged base-branch history plus the exact seeded blocks and this provenance; it does not imply post-H1 completion mechanics.
+- The canonical seed-hash input is UTF-8 text from the first `### [T-0001]` heading through the terminal newline immediately after the `T-0007` block and before any later archive entry. Normalize CRLF to LF, with no trimming or other transformation.
+- The canonical combined seed-block SHA-256 is `2B07112D32C5401991C2224A83E7C53BB36415842C599BAB900F17135F460C1F`.
+- Tasks completed after this seed require the canonical post-H1 completion proof; seed compatibility is not reusable for later tasks.
+
 ## Completed
 
 ### [T-0001] Repository foundation

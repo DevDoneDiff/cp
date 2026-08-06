@@ -151,7 +151,7 @@ Brick_id: harness/H1/archive-seed-provenance
 Traceability: F5, F25d
 Priority: P0
 Depends_on: none
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
