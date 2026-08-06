@@ -157,46 +157,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0028] Make large-file review responsibility-based
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/responsibility-based-file-review
-Traceability: F23
-Priority: P1
-Depends_on: [T-0012]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Make file-size thresholds trigger responsibility analysis and review escalation without forcing harmful fragmentation.
-Scope:
-- Correct the 250- and 350-nonblank-line rules in the owning engineering guidance and reconcile validation wording only if required.
-Non_goals:
-- Split existing runtime files, set arbitrary hard size limits, or weaken responsibility and cohesion review.
-Acceptance_criteria:
-- More than 250 nonblank lines triggers documented primary-responsibility and reason-to-change evaluation.
-- More than 350 nonblank lines triggers explicit independent review escalation.
-- A cohesive hand-authored imperative file may remain large when an accepted analysis shows splitting would reduce cohesion or proof quality.
-- Declarative or generated content is supporting evidence rather than a prerequisite for an exception.
-- Review checks mixed layers, independent change reasons, dependency direction, and proof boundaries rather than line count alone.
-- No rule encourages meaningless fragmentation or unrelated responsibility accumulation.
-Indivisibility_rationale:
-- none; the current validation wording already accepts a cohesion rationale, so the owning `AGENTS.md` rule can be corrected independently unless live inspection proves reconciliation is necessary.
-Expected_surfaces:
-- `AGENTS.md` engineering and file-responsibility rules.
-- `.harness/validation.md` independent-review wording only if needed for exact agreement.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0028.md
-
 ### [T-0029] Bind independent review to exact content
 Type: maintenance
 Bootstrap: false
