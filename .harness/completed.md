@@ -904,3 +904,43 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0020.md
+
+### [T-0021] Canonicalize the S02 live-roof visual
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/artifact-s02-visual-live-roof-assembly
+Traceability: F18, F25g
+Priority: P1
+Depends_on: [T-0010], [T-0017]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Retire the legacy S02 live-roof visual copy after proving its canonical contract artifact and consumers are intact.
+Scope:
+- Hash-compare the one legacy/canonical pair, remove only the legacy copy, update that registry entry to `canonical`, and check current consumers of that path.
+Non_goals:
+- Modify image bytes, migrate another artifact, change product UI, or edit historical task blocks.
+Acceptance_criteria:
+- The legacy and canonical files are byte-identical immediately before removal and the exact hash is recorded.
+- `references/states/s02-property-analysis/visual-live-roof-assembly.png` is absent while its canonical S02 contract artifact retains the proven bytes.
+- Current consumers use only the canonical path; the historical path resolves through the migration registry and Git.
+- The registry entry changes from `migration-pending` to `canonical`, and the targeted validator check for this pair passes.
+- No other legacy/canonical artifact pair, runtime asset, visual behavior, or completed block changes.
+Indivisibility_rationale:
+- none; one artifact pair, its registry state, and its direct consumers form one independently reversible migration seam.
+Expected_surfaces:
+- `references/states/s02-property-analysis/visual-live-roof-assembly.png`.
+- `docs/contracts/states/s02-property-analysis/visual-live-roof-assembly.png`, whose bytes must remain unchanged.
+- Its exact entry in `docs/contracts/README.md` and narrow current consumers only if needed.
+Reference_artifacts:
+- docs/contracts/states/s02-property-analysis/visual-live-roof-assembly.png
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0021.md
