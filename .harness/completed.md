@@ -1360,3 +1360,44 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0031.md
+
+### [T-0032] Reconcile ambiguous remote outcomes safely
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/ambiguous-remote-recovery
+Traceability: F6
+Priority: P0
+Depends_on: [T-0031]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Make every interrupted or uncertain remote operation reconcile actual remote state before retry, reversal, or cleanup.
+Scope:
+- Cover PR create or update, review-evidence write, push and branch mutation, CI or status query, and merge outcomes with readback-driven continuation, retry, reversal, or stop behavior.
+Non_goals:
+- Change credentials, add hosted coordination, weaken guarded merge, or reinterpret an unresolved result optimistically.
+Acceptance_criteria:
+- A failed, timed-out, or interrupted remote operation always triggers operation-specific readback before another mutation.
+- Proven application continues from the actual remote state without duplicating the operation.
+- Proven non-application permits a safe bounded retry or provisional reversal as appropriate.
+- Unresolved or contradictory readback stops mutation with the local branch, provisional state, and evidence intact.
+- A merge that succeeded despite a client error is never reversed after remote proof.
+- Durable PR evidence records read-only cases for proven application, proven non-application, and unavailable or contradictory readback; any reversal preserves unrelated blocks byte-for-byte.
+Indivisibility_rationale:
+- none; ambiguous-result interpretation is one independent remote failure boundary in `.harness/validation.md`.
+Expected_surfaces:
+- `.harness/validation.md` remote failure and readback procedures.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+- security
+- security-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0032.md
