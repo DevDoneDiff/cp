@@ -27,12 +27,14 @@ Apply:
 
 1. explicit user instruction;
 2. the approved source spec;
-3. its owning contract and every affected state contract;
-4. its exact visual, technical, and content artifacts;
-5. applicable sections of `PRODUCT.md`, `ARCHITECTURE.md`, `DESIGN.md`, `MVP.md`, and `REPOSITORY_POLICY.md`;
-6. approved dependencies and prior specs;
-7. current annotation headers, code, tests, and repository structure;
-8. `.harness/validation.md` for available proof sets and delivery requirements.
+3. `docs/contracts/README.md` for primary-outcome classification, canonical owner and path routing, stable identity, legacy compatibility, and artifact vocabulary;
+4. its owning contract and every affected state contract;
+5. its exact `visual` or `technical` artifacts, or `none`;
+6. applicable sections of `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN.md`, `docs/MVP.md`, and `docs/REPOSITORY_POLICY.md`;
+7. approved dependencies and relevant prior spec identities;
+8. current annotation headers, code, tests, and repository structure;
+9. `.harness/tasks.md` for the forward task schema, active queue, and counters;
+10. `.harness/validation.md` for registered proof sets and delivery requirements.
 
 A task may narrow the source spec to one implementation brick. It may not expand or contradict the approved collective outcome.
 
@@ -44,13 +46,36 @@ Before writing tasks:
 
 - the source spec has `State: approved` and `Approved: true`;
 - `Open Questions` is `none`;
+- its `Spec ID`, owner type, `Owning authority`, canonical path, and affected-state routing agree with `docs/contracts/README.md`;
 - the owning contract and affected contracts exist;
 - every required reference artifact exists at the exact path;
 - required validation set names exist;
 - the active queue and tag counters are readable;
+- every proposed brick has passed the targeted active/archive identity lookup below;
 - no existing working task would be modified or displaced.
 
 Read-only inspection is allowed to determine real implementation seams.
+
+## Routing and Identity Gate
+
+Classify the spec from its primary accepted outcome before decomposition:
+
+- customer-visible state behavior routes to that state contract and its canonical state-spec directory;
+- Codex authoring, queue, validation, review, delivery, or lifecycle behavior routes to `AGENTS.md` and `docs/contracts/harness/specs/`;
+- repository or hosting behavior that remains independently meaningful routes to `docs/REPOSITORY_POLICY.md` and `docs/contracts/repository/specs/`.
+
+A supporting change follows the outcome it enables. If two outcomes remain independently acceptable, stop and decompose separate specs rather than choosing from old file placement.
+
+For every proposed task:
+
+- copy the approved spec's stable `Spec ID` verbatim into `Source_spec_id`;
+- copy its exact current canonical repository-relative path into `Source_spec`;
+- form `Brick_id` as `<Source_spec_id>/<kebab-case-brick>` from the brick's durable result, independent of tag, task title, order, or current spec path;
+- retain the same candidate `Brick_id` across reruns and partial decomposition.
+
+Before allocating a tag, run an exact fixed-string lookup for each candidate identity across `.harness/tasks.md` and `.harness/completed.md`, returning only matching `Brick_id` lines with their file and line location. Do not load completed task blocks into ordinary authoring context. Any exact match means the brick is already represented: do not recreate it, do not alter that entry, and do not consume a counter. This targeted lookup is the only ordinary archive access needed for idempotency.
+
+Resolve a legacy spec path through the exact migration table in `docs/contracts/README.md`. Match historical work by stable spec ID. A `Current path` of `none` is Git-only evidence, never a forward `Source_spec` route or authoring example. Inspect a historical blob only for one named compatibility or acceptance question; ignore its task count, proposed tasks, fixed decomposition, `do not split` language, and superseded workflow mechanics.
 
 ## Decomposition Discovery
 
@@ -169,6 +194,7 @@ For each task:
 
 - copy only exact artifact paths the task must consume;
 - use `Reference_artifacts: - none` when none apply;
+- accept only the active artifact types `visual`, `technical`, or `none` from `docs/contracts/README.md`;
 - do not infer authority from neighboring files;
 - pair technical artifacts with the prose authority that constrains them;
 - block readiness when a required artifact is missing.
@@ -181,7 +207,7 @@ Every code task receives:
 - `agent-review`;
 - every applicable surface-specific set from `.harness/validation.md`.
 
-Add security, visual, browser, smoke, or other registered sets only when the task's local result requires them.
+Add `frontend-component`, `frontend-e2e`, `frontend-visual`, `security`, `security-review`, or `smoke` only when the task's local result requires them. Read exact keys from the current `.harness/validation.md` registry, not from a legacy spec or prior task.
 
 Do not invent validation names and do not assign every set merely because the source spec uses them collectively.
 
@@ -189,20 +215,25 @@ Do not invent validation names and do not assign every set merely because the so
 
 For each task:
 
-1. allocate the tag;
-2. link the approved source spec;
-3. set type, priority, and dependencies;
-4. define one observable objective;
-5. define bounded scope and local non-goals;
-6. write task-local acceptance criteria;
-7. list expected surfaces;
-8. assign exact reference artifacts;
-9. assign validation sets;
-10. set `Status: queued`;
-11. set `Ready: true` only when the readiness gate passes;
-12. set `Pass: false`;
-13. set `Open_questions: none` or record the blocker;
-14. set the scratchpad path under `.harness/work/`.
+1. derive the stable candidate `Brick_id` and complete its targeted identity lookup;
+2. skip every represented brick without mutating its task entry or a counter;
+3. allocate one monotonic tag only for each missing brick;
+4. copy `Source_spec_id`, exact canonical `Source_spec`, and the unique `Brick_id` into the forward task schema;
+5. set type, traceability, priority, and dependencies;
+6. define one observable objective;
+7. define bounded scope and local non-goals;
+8. write task-local acceptance criteria;
+9. record the required `Indivisibility_rationale`;
+10. list expected surfaces;
+11. assign exact reference artifacts;
+12. assign only registered validation sets;
+13. set `Status: queued`;
+14. set `Ready: true` only when the readiness gate passes;
+15. set `Pass: false`;
+16. set `Open_questions: none` or record the blocker;
+17. set the scratchpad path under `.harness/work/`.
+
+Build the complete missing-task append before mutation. Preserve every existing active entry byte-for-byte and in order, append only the new task blocks in dependency order, and advance only the matching counter by the exact number of newly allocated tags. If every proposed brick is already represented, leave the queue and counters unchanged.
 
 Expected surfaces are planning context, not a closed file allowlist.
 
