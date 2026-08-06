@@ -65,6 +65,23 @@ Within the canonical owner directory, the filename is `<SEQUENCE>-<kebab-case-ou
 
 Forward task entries retain both `Source_spec_id` and the exact current repository-relative `Source_spec` path. Templates define structure only; authoring, approval, decomposition, and queue mutation remain with their explicit workflow owners.
 
+## Legacy Spec Compatibility
+
+A legacy implementation-spec route preserves historical identity and evidence; it is never a forward authoring route. `Current path: none` means the body is Git-only and must not be loaded as a current template or authority.
+
+| Legacy path | Stable spec ID | Current path | Exact historical locator |
+|---|---|---|---|
+| `docs/specs/A-repository-foundation.md` | `repository/A` | `none` | `4b7a12978510808ee8620fff2893180c65006160:docs/specs/A-repository-foundation.md` |
+| `docs/specs/A1-harness-execution-hardening.md` | `harness/A1` | `none` | `4b7a12978510808ee8620fff2893180c65006160:docs/specs/A1-harness-execution-hardening.md` |
+| `docs/specs/B-s1-s2-continuous-entry-and-property-analysis.md` | `state/s02/B` | `none` | `4b7a12978510808ee8620fff2893180c65006160:docs/specs/B-s1-s2-continuous-entry-and-property-analysis.md` |
+| `docs/specs/B1-s1-s2-integrated-stabilization.md` | `state/s02/B1` | `none` | `4b7a12978510808ee8620fff2893180c65006160:docs/specs/B1-s1-s2-integrated-stabilization.md` |
+
+For every legacy body, historical placement, task counts, proposed tasks, fixed decomposition, `do not split` language, deleted dependencies or paths, and superseded authoring, approval, delivery, validation, closeout, lifecycle, routing, or artifact-governance mechanics are historical only. The exact Git blob remains available for completed outcome and acceptance evidence and for compatibility obligations that still apply under current authority.
+
+Old placement never classifies new work. New specs use [Spec Classification and Owning Authority](#spec-classification-and-owning-authority), and authors inspect a Git-only body only for a specific historical question rather than as a forward example.
+
+Removed `docs/source/*_SPEC.md` files were legacy source-document inputs, not implementation specs or stable spec identities. Current durable truth routes to `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN.md`, and `docs/MVP.md`; Git remains available for bounded historical investigation.
+
 ## Bounded Lineage
 
 - `Amends` identifies the stable spec ID whose stated outcome is changed in a bounded way.
@@ -103,6 +120,20 @@ The active artifact type vocabulary is exactly `visual`, `technical`, or `none`.
 - Every artifact reference is an exact repository-relative path or `none`.
 - State artifacts use `docs/contracts/states/sNN-kebab-case-state-name/visual-<descriptor>.png` or `docs/contracts/states/sNN-kebab-case-state-name/technical-<descriptor>.png`.
 - A folder, neighboring file, bare filename, or inferred convention never grants authority.
+
+## Artifact Migration Registry
+
+`migration-pending` is a bounded transition state. It is valid only while the legacy and canonical files both exist and are byte-identical. Each pair migrates independently: prove equality, remove only the legacy file, change only that entry to `canonical`, and verify current consumers. Current consumers use the canonical path in every state; Git preserves deleted legacy bytes.
+
+| Legacy path | Canonical path | State | Equality requirement |
+|---|---|---|---|
+| `references/states/s01-address-entry/visual-default.png` | `docs/contracts/states/s01-address-entry/visual-default.png` | `migration-pending` | exact bytes |
+| `references/states/s01-address-entry/visual-how-it-works-open.png` | `docs/contracts/states/s01-address-entry/visual-how-it-works-open.png` | `migration-pending` | exact bytes |
+| `references/states/s02-property-analysis/visual-property-confirmation.png` | `docs/contracts/states/s02-property-analysis/visual-property-confirmation.png` | `migration-pending` | exact bytes |
+| `references/states/s02-property-analysis/visual-live-roof-assembly.png` | `docs/contracts/states/s02-property-analysis/visual-live-roof-assembly.png` | `migration-pending` | exact bytes |
+| `references/states/s02-property-analysis/technical-persistent-project-assembly.png` | `docs/contracts/states/s02-property-analysis/technical-persistent-project-assembly.png` | `migration-pending` | exact bytes |
+
+When all five entries are `canonical`, no legacy duplicate may remain. No unnamed duplicate or unregistered legacy path is accepted.
 
 ## Templates
 

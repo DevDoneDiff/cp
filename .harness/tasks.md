@@ -151,7 +151,7 @@ Brick_id: harness/H1/legacy-compatibility-registry
 Traceability: F13, F14, F18, F25g
 Priority: P0
 Depends_on: [T-0009]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
