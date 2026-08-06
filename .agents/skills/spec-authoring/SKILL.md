@@ -25,6 +25,7 @@ This skill authors specs only. It does not create tasks, assign task tags, edit 
 
 Apply the narrowest applicable authority without allowing it to contradict a broader durable owner:
 
+- `docs/contracts/README.md` owns spec classification, owning-authority routing, stable identity and filenames, legacy compatibility, bounded lineage, terminal-state routing, and artifact paths
 - `docs/PRODUCT.md` owns durable product truth
 - `docs/ARCHITECTURE.md` owns durable technical and system truth
 - `docs/DESIGN.md` owns durable experience and interaction truth
@@ -43,20 +44,31 @@ When authoritative sources materially conflict, report the exact conflict and st
 
 ## Ownership and Routing
 
-Every spec has exactly one owner and one repository path.
+Every spec has exactly one owner, one `Owning authority`, one stable owner-scoped `Spec ID`, and one current repository path. Classify it by the primary outcome whose acceptance makes the work complete:
 
 ```text
-state outcome
+customer-visible state outcome
+  -> Owning authority: docs/contracts/states/sNN-kebab-case-state-name/sNN-state.md
   -> docs/contracts/states/<owning-state>/specs/
 
-harness outcome
+harness authoring, queue, validation, review, delivery, or lifecycle outcome
+  -> Owning authority: AGENTS.md
   -> docs/contracts/harness/specs/
 
-repository outcome
+repository or hosting outcome meaningful independently of the harness
+  -> Owning authority: docs/REPOSITORY_POLICY.md
   -> docs/contracts/repository/specs/
 ```
 
-Do not create loose specs or a new organizational category.
+A supporting change follows the outcome it enables. If two outcomes remain independently acceptable, they require separate specs. Do not classify by old placement, implementation surface, or delivery convenience, and do not create loose specs or a new organizational category.
+
+## Identity, Lineage, and Legacy Boundary
+
+Copy the stable ID from the owner namespace defined by `docs/contracts/README.md`: `state/sNN/<SEQUENCE>`, `harness/<SEQUENCE>`, or `repository/<SEQUENCE>`. `Sequence` is unique and never reused within that namespace. Save the spec in its canonical owner directory as `<SEQUENCE>-<kebab-case-outcome>.md`; the path may change, but the stable ID does not.
+
+Use `Amends` only for a bounded change to the named prior stable ID. Use `Supersedes` only when the named prior stable ID's forward authority is replaced. `none` means no such relationship. Lineage cannot replace unrelated durable authority, erase evidence, or change either spec's identity.
+
+Resolve prior paths through the exact Legacy Spec Compatibility table in `docs/contracts/README.md`. A legacy row with `Current path: none` is Git-only historical evidence. Discover it by stable ID and inspect its exact historical blob only for one named outcome, acceptance, or compatibility question. Never use a Git-only body as a template or forward authoring example, and ignore its historical placement, task count, proposed tasks, fixed decomposition, `do not split` language, deleted paths, and superseded authoring, approval, delivery, validation, closeout, lifecycle, routing, or artifact-governance mechanics.
 
 ### Cross-State Outcomes
 
@@ -68,7 +80,7 @@ The spec must:
 
 - name that state as the single owning contract;
 - list every affected state contract;
-- keep durable cross-state system truth in `ARCHITECTURE.md` rather than redefining it locally;
+- keep durable cross-state system truth in `docs/ARCHITECTURE.md` rather than redefining it locally;
 - remain one spec only when the cross-state result cannot be accepted truthfully as separate outcomes.
 
 If multiple states each have an independently complete outcome, author separate specs under their respective owners.
@@ -81,7 +93,7 @@ Before drafting:
 
 1. read the applicable global authority sections;
 2. read the owning contract and every affected state contract;
-3. inspect each exact visual, technical, or content artifact required by the outcome;
+3. inspect each exact `visual` or `technical` artifact required by the outcome, or record `none`;
 4. read relevant approved prior specs and repository policy;
 5. inspect applicable annotation headers, source files, tests, routes, schemas, adapters, and validation surfaces;
 6. map the current implementation, existing seams, reusable boundaries, constraints, proven debt, and compatibility obligations;
@@ -115,7 +127,7 @@ Do not convert assumptions into approved decisions.
 For every required artifact:
 
 - use its exact repository-relative path;
-- classify it as `visual`, `technical`, or `content`;
+- classify it as `visual`, `technical`, or `none` using `docs/contracts/README.md`;
 - state what it owns and where it applies;
 - verify that it exists;
 - reject folder-level or inferred authority.
@@ -171,7 +183,7 @@ Do not turn recommendations into requirements without explicit authority.
 ## Workflow
 
 1. ingest the requested outcome or source brief;
-2. determine its single owner, affected contracts, and exact path;
+2. apply the primary-outcome test and determine its single owner, exact `Owning authority`, stable `Spec ID`, `Sequence`, bounded lineage, affected contracts, and canonical path;
 3. perform the repository discovery required above;
 4. identify conflicts, missing material decisions, and artifact gaps;
 5. request resolution only for material ambiguity;
@@ -186,7 +198,7 @@ Do not turn recommendations into requirements without explicit authority.
 MUST:
 
 - define one observable collective completion state;
-- identify the single owner and every affected state;
+- identify the single owner, exact `Owning authority`, stable `Spec ID`, `Sequence`, bounded `Amends` and `Supersedes` lineage, and every affected state;
 - describe the relevant current implementation state discovered in the repository;
 - bound included and excluded outcomes;
 - preserve durable product, architecture, design, MVP, repository, and state truth;
