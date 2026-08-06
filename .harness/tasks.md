@@ -157,48 +157,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0031] Harden exact-base and exact-head delivery
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/exact-base-head-delivery
-Traceability: F5, F6, F8, F9
-Priority: P0
-Depends_on: [T-0029], [T-0030]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Prevent manual or autonomous merge from using a stale base, wrong pull-request head, wrong checks, or bypassed identity.
-Scope:
-- Define exact-head check acceptance, immediate pre-merge base refresh, non-force redelivery on base advance, guarded manual and autonomous merge, and exact merged-identity readback.
-Non_goals:
-- Resolve ambiguous remote command outcomes or perform post-merge local cleanup.
-Acceptance_criteria:
-- Required checks are accepted only for the exact current PR head and exact configured check names.
-- The configured base is fetched immediately before merge and the PR is proven current with that exact base.
-- A base advance requires a non-force branch update and complete validation, review, closeout, push, and exact-head CI redelivery.
-- Manual and autonomous merge use the exact closeout head, exact base, task-tagged subject, squash mode, and no administrator bypass.
-- Merge readback proves the merged PR, exact merge SHA, tagged subject, archive introduction, and synchronized base history.
-- Durable PR evidence records read-only base-advance and completed-merge procedure cases; stale head, stale base, missing checks, wrong identity, or bypass attempts block merge and queue advancement.
-Indivisibility_rationale:
-- High-level repository guardrails and their canonical procedure must land together so policy cannot claim freshness or exact-head safety that execution does not enforce.
-Expected_surfaces:
-- `.harness/validation.md` CI, base-refresh, merge, and completion-readback procedure.
-- `docs/REPOSITORY_POLICY.md` high-level exact-base and exact-head policy.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-- security
-- security-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0031.md
-
 ### [T-0032] Reconcile ambiguous remote outcomes safely
 Type: maintenance
 Bootstrap: false
