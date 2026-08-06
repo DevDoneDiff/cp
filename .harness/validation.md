@@ -21,7 +21,7 @@ PRE_MERGE_BASE_REFRESH_PROCEDURE: Immediately before either manual or autonomous
 MERGE_COMMAND: gh pr merge <PR> --repo DevDoneDiff/cp --squash --delete-branch --match-head-commit <EXPECTED_HEAD_SHA> --subject "<TASK_TAG> <TITLE>"
 MERGE_READBACK_PROCEDURE: Fetch origin/main, reread the same PR as MERGED, bind its base/head identities and reported mergeCommit OID, require that exact OID reachable from fetched origin/main and its first parent equal EXPECTED_BASE_SHA, verify the tagged subject and exact first-parent archive introduction plus active absence, then synchronize local main by fast-forward only
 REMOTE_OUTCOME_READBACK_PROCEDURE: Before each remote mutation record its operation type, repository, exact target, expected before identity, intended after identity or payload digest, EXPECTED_HEAD_SHA and EXPECTED_BASE_SHA when applicable, one immutable non-secret ROOT_OPERATION_ID, and ATTEMPT 0 or 1; after any failure, timeout, interruption, or uncertain response perform operation-specific authenticated readback and classify only proven-applied, proven-not-applied, or unresolved before any retry, reversal, cleanup, or other mutation; one logical root intent permits at most one total mutation retry
-POST_MERGE_CLEANUP_PROCEDURE: After successful guarded merge, fetch and prune; check out and fast-forward BASE_BRANCH; require exact local and remote base SHA equality, clean state, task-tag history proof, merged pull-request proof, and remote task-branch absence; attempt ordinary local branch deletion; permit exact-target force deletion only when squash ancestry alone blocks ordinary deletion
+POST_MERGE_CLEANUP_PROCEDURE: Only after canonical durable completion, run the exact idempotent Post-Merge Cleanup procedure; bind every action to the recorded task, branch, PR, closeout SHA, merge OID, and fetched base, accept already-absent exact branches only after that proof, attempt ordinary local deletion before the guarded squash-only exception, preserve completed state and recovery evidence on failure, and retry only the first incomplete cleanup step
 AGENT_REVIEW_PROCEDURE: dedicated read-only Codex review of the exact candidate-content SHA against BASE_BRANCH
 SECURITY_REVIEW_PROCEDURE: dedicated read-only security review of the exact security-sensitive candidate-content SHA against BASE_BRANCH
 CLOSEOUT_REVIEW_INHERITANCE_PROCEDURE: Require a clean tree at CLOSEOUT_SHA; require `git rev-parse <CLOSEOUT_SHA>^` to equal CANDIDATE_CONTENT_SHA; require `git diff --name-only --no-renames <CANDIDATE_CONTENT_SHA> <CLOSEOUT_SHA>` as a set to equal only `.harness/tasks.md` and `.harness/completed.md`; run `pnpm validate:harness` at CLOSEOUT_SHA to prove the exact two-store transform; record both SHAs, the exact path set, and the harness result in the pull request
@@ -41,7 +41,7 @@ Before any authorized source edit:
 
 1. Inventory the complete current branch, HEAD, index, worktree, active queue, counters, and task scratchpads. Use a narrow read-only lookup that returns only archive identities and the terminal boundary needed to detect duplicate representation or provisional closeout; do not load archived task blocks into ordinary context. Preserve every pre-existing change. An unexplained staged change or overlap with the selected task blocks the claim.
 2. Fetch and prune the configured remote, require authenticated GitHub readback, and prove the local configured base is the exact fetched base. An unavailable or ambiguous remote read blocks autonomous claiming.
-3. Select the first task in active queue order satisfying `Status: queued`, `Ready: true`, `Pass: false`, `Blocker: none`, and the canonical dependency procedure. Prove no other active task is `working` and no provisional closeout is awaiting delivery.
+3. Select the first task in active queue order satisfying `Status: queued`, `Ready: true`, `Pass: false`, `Blocker: none`, and the canonical dependency procedure. Prove no other active task is `working`, no provisional closeout is awaiting delivery, and no prior durably completed task has a retained scratchpad marked `Cleanup status: in-progress` or `Cleanup status: incomplete`. The one-time authorized H1 batch retains its task scratchpads until the combined delivery's post-merge cleanup and is the only exception.
 4. Enumerate and classify every local and remote branch matching `BRANCH_PATTERN` and every open pull request. Separately inspect the current non-task branch and every open non-task pull request for changes to `.harness/tasks.md`, its counters, `.harness/validation.md`, or task-execution authority in `AGENTS.md`. Any different live task claim, same-tag reference, provisional closeout, or active conflicting queue-authoring work blocks selection; an inactive unrelated local non-task branch is preserved but is not a claim.
 5. Derive the one branch named by `BRANCH_PATTERN`. A pre-existing local branch, remote branch, or pull request with that identity is a conflict unless the same-task resumption procedure has just proved its exact identity and explicitly authorized local-branch reuse for a fresh claim. Never overwrite, force-update, or reinterpret a reference.
 6. Create the task branch from the proven base or reuse only the exact local branch authorized by the immediately preceding same-task resumption proof, while preserving inventoried non-overlapping local changes. Change only the selected task from `Status: queued` to `Status: working`, create its ignored scratchpad, and commit a claim whose subject begins with the exact task tag. Do not edit an authorized source surface in the claim commit.
@@ -300,24 +300,27 @@ Record every case first in the task scratchpad. Once the exact PR evidence surfa
 
 ## Post-Merge Cleanup
 
-After a successful merge:
+Cleanup starts only after the canonical completion predicate is durably proven. Rehydrate and record the exact `TASK_TAG`, `Source_spec_id`, `Brick_id`, configured repository, `TASK_BRANCH`, candidate and closeout SHAs, PR identity, `EXPECTED_BASE_SHA`, merge OID, and archived-block identity. Mark `Cleanup status: in-progress` in the ignored scratchpad before the first cleanup mutation.
 
-1. run `git fetch --prune origin`;
-2. check out `BASE_BRANCH`;
-3. fast-forward only from `origin/BASE_BRANCH`;
-4. require local `BASE_BRANCH` and `origin/BASE_BRANCH` to resolve to the same exact SHA;
-5. require a clean working tree;
-6. prove `BASE_BRANCH` history contains `TASK_TAG`;
-7. prove `.harness/completed.md` contains the exact archived task block;
-8. prove the pull request is merged and the remote task branch is absent;
-9. attempt `git branch -d <TASK_BRANCH>`;
-10. if and only if ordinary deletion fails because squash merge left the original task commit outside `BASE_BRANCH` ancestry, run `git branch -D <TASK_BRANCH>`;
-11. verify the exact local task branch is absent;
-12. delete `.harness/work/<TAG>.md`.
+1. Run `git fetch --prune origin` through `REMOTE_OUTCOME_READBACK_PROCEDURE`. Reread the same PR as merged and re-prove its exact branch/base identities, reported merge OID, `mergeCommit^ == EXPECTED_BASE_SHA`, configured-base reachability, tagged subject, exact first-parent archive introduction, active absence, and unchanged archived block. Missing or contradictory durable-completion proof stops cleanup; it never reverses or reopens the task.
+2. Inspect only the exact remote `TASK_BRANCH`. If absent, accept that achieved state only after step 1's complete identity proof. If it remains at the exact recorded closeout SHA, delete only that configured-repository ref using a root-bound remote operation and reconcile its outcome. A different SHA, similarly named ref, unavailable readback, or uncertain deletion is unresolved. Never delete another remote ref or recreate an already-absent branch.
+3. Check out `BASE_BRANCH`, fast-forward only from `origin/BASE_BRANCH`, and require exact local/remote base SHA equality and a clean tracked worktree. A later base tip may be accepted only when the exact task merge OID remains reachable and its immutable task transition still passes step 1.
+4. Inspect only the exact local `TASK_BRANCH`. If absent, accept that achieved state only after steps 1 through 3. If present, require its ref to equal the recorded closeout SHA, require it not to be checked out by any worktree, and attempt `git branch -d <TASK_BRANCH>` first.
+5. If ordinary deletion fails, independently prove that the exact branch ref still equals the closeout SHA, is not current or worktree-bound, the task merge is the exact proven squash merge, and only squash ancestry prevents `git branch -d`. Only then run `git branch -D <TASK_BRANCH>`. Any other failure stops without force deletion. The exception never authorizes force-push, history rewrite, wildcard or computed-target deletion, remote force deletion, or deletion of another branch.
+6. Verify both exact task branches are absent, local `BASE_BRANCH == origin/BASE_BRANCH`, the same merge/archive/active proofs still hold, the tracked worktree and index are clean, and no cleanup mutation is unresolved.
+7. Reconcile and durably record any cleanup-failure/retry evidence on the exact PR while the scratchpad remains available. Then delete `.harness/work/<TAG>.md` as the final cleanup action. Scratchpad deletion is forbidden before every prior proof succeeds.
 
-The force-deletion exception applies only to the exact merged local task branch after every proof above. It never authorizes force-push, shared-history rewrite, remote force deletion, or deletion of any other branch.
+An already-applied branch deletion remains success on retry and is never recreated. If any cleanup step fails or remains unresolved after durable completion:
 
-## Failure Loop
+- never change `Pass`, task status, either task store, the archived block, candidate/closeout/merge history, or implementation evidence;
+- preserve the exact local task branch when it has not been deleted, preserve achieved exact branch absence when deletion already applied, and always preserve the scratchpad;
+- record `Cleanup status: incomplete`, the durable task/PR/merge identities, completed steps, failed root operation and readback classification, observed branch states, and the first incomplete next step in the scratchpad;
+- record the same redacted failure in the exact PR through remote-outcome reconciliation when that evidence surface is available; an uncertain evidence write stops with the scratchpad intact;
+- stop queue advancement.
+
+Cleanup retry begins by re-proving the same canonical durable-completion identity and reading the scratchpad checkpoint. It repeats read-only prerequisite proof, accepts already-achieved exact states, and executes only the first incomplete cleanup action. It never reruns implementation, candidate validation, review, closeout, CI, merge, or completion; never restores a deleted branch; and never reactivates or reverses a durably completed task. The pull request records at least one read-only cleanup-failure and cleanup-only-retry procedure case.
+
+## Pre-Completion Failure Loop
 
 Remote-operation failures enter `REMOTE_OUTCOME_READBACK_PROCEDURE` before this local repair loop. No generic failure step may infer non-application, reverse provisional state, or retry a remote mutation.
 
@@ -333,3 +336,5 @@ Remote-operation failures enter `REMOTE_OUTCOME_READBACK_PROCEDURE` before this 
 10. redeliver the candidate and recheck review and CI.
 
 Set `Status: blocked` only for unresolved user context, unavailable credentials, external outage, or missing validation capability.
+
+This loop applies only before canonical durable completion. Post-merge failure uses the cleanup procedure above and cannot mutate task completion state.
