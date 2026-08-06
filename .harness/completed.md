@@ -1480,3 +1480,47 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0034.md
+
+### [T-0035] Define non-task authoring identity and exclusion
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/non-task-authoring-identity
+Traceability: F2, F11
+Priority: P0
+Depends_on: [T-0016], [T-0026]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Define a truthful authoring-only identity and mutual-exclusion state without manufacturing implementation completion.
+Scope:
+- Establish eligible authoring surfaces, explicit user authority, non-task branch/commit/PR identity, forbidden implementation signals, task-claim exclusion, and an unavailable-until-wired state.
+Non_goals:
+- Activate the delivery lane, duplicate canonical review or merge procedures, record spec approval, or route authoring skills through an incomplete lane.
+Acceptance_criteria:
+- The identity covers specs, approval metadata, contract updates, task decomposition, and directly related authority or queue changes only.
+- Branch, commit, and PR identities are descriptive and contain no implementation task tag.
+- The identity uses no task modes, `Pass`, implementation scratchpad, task closeout, archive transfer, dependency proof, or task-completion history.
+- Explicit user instruction controls authoring delivery and autonomous guarded merge authority independently of task modes.
+- Queue, counter, validation, or execution-authority authoring is mutually exclusive with a live implementation claim, provisional closeout, task branch, or live task PR.
+- Introducing a queued task cannot satisfy that task's dependency or completion proof, and completed-task blocks cannot change.
+- The lane remains explicitly unavailable until the canonical delivery wiring task passes.
+Indivisibility_rationale:
+- Authoring identity, forbidden completion signals, and claim exclusion are one state classification; separating them would create an identity that could collide with implementation work.
+Expected_surfaces:
+- `AGENTS.md` high-level authoring identity and task-claim exclusion.
+- `.harness/validation.md` lane identity, preconditions, and unavailable state.
+- `docs/REPOSITORY_POLICY.md` high-level authoring authority boundary.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+- security
+- security-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0035.md
