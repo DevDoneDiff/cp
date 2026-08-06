@@ -12,6 +12,7 @@
  *   3. Compare both complete stores byte-for-byte after newline normalization.
  * INVARIANTS:
  *   - [INV-H1-BATCH-ONLY] No revision, tag range, source identity, state, or archive other than the authorized H1 lane is recognized.
+ *   - In-flight authority updates and the final empty queue have distinct exact prefix identities.
  * BOUNDARIES:
  *   - Ordinary future closeout, reversal, and single-task squash rules remain owned by harness-task-transitions.mjs.
  * RELATED:
@@ -33,8 +34,10 @@ import {
 const H1_BATCH_BASE_REVISION = "5d515d9f8224ed607219fd5f29d0f20305fdcc16";
 const H1_SOURCE_PATH =
   "docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md";
-const H1_FINAL_ACTIVE_PREFIX_HASH =
+const H1_AUTHORITY_ACTIVE_PREFIX_HASH =
   "74723a431d65cdd1808e0f0a22d9b333bd0d6944a8bf614c8e39ce961cb40ba4";
+const H1_BATCH_FINAL_ACTIVE_PREFIX_HASH =
+  "bb9463a69699ba3865d87d7fca919b9cdc4543188e5992c285d47c6529d27ef7";
 const H1_FINAL_COMPLETED_PREFIX_HASH =
   "e6d402261604c005b94b7ec0c7dc1388606f523399b95edbdbc159c7885283ef";
 const H1_AUTHORITY_BASE_ACTIVE_HASH =
@@ -122,7 +125,7 @@ export function isAuthorizedH1AuthorityUpdate(current, base) {
     baseCompletedHash: H1_AUTHORITY_BASE_COMPLETED_HASH,
     currentActiveHash: H1_AUTHORITY_CURRENT_ACTIVE_HASH,
     currentCompletedHash: H1_AUTHORITY_CURRENT_COMPLETED_HASH,
-    currentActivePrefixHash: H1_FINAL_ACTIVE_PREFIX_HASH,
+    currentActivePrefixHash: H1_AUTHORITY_ACTIVE_PREFIX_HASH,
     currentCompletedPrefixHash: H1_FINAL_COMPLETED_PREFIX_HASH,
     activeTags: H1_AUTHORITY_ACTIVE_TAGS,
     completedTags: H1_AUTHORITY_COMPLETED_TAGS,
@@ -183,7 +186,7 @@ export function validateAuthorizedH1BatchMerge({
   );
   const errors = [];
   if (
-    hash(current.active.prefix) !== H1_FINAL_ACTIVE_PREFIX_HASH ||
+    hash(current.active.prefix) !== H1_BATCH_FINAL_ACTIVE_PREFIX_HASH ||
     hash(current.completed.prefix) !== H1_FINAL_COMPLETED_PREFIX_HASH ||
     current.active.normalized !== expectedActive ||
     !exactTags(current.completed.blocks, [...SEED_TAGS, ...H1_BATCH_TAGS]) ||

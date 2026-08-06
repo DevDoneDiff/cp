@@ -429,6 +429,11 @@ describe("harness integrity validation", () => {
     );
 
     const provisional = positiveHarnessScenarios(context).provisional;
+    const oneNewlineEmptyActive = copySnapshot(provisional, {
+      activeText: provisional.activeText.replace(/\n\n$/, "\n"),
+    });
+    expect(errors(oneNewlineEmptyActive)).toEqual([]);
+
     const invalidReversal = copySnapshot(provisional, {
       activeText: activeStore([working], 42),
       completedText: seed,
@@ -503,7 +508,7 @@ describe("harness integrity validation", () => {
     const merged = copySnapshot(
       positiveHarnessScenarios(context).seededArchive,
       {
-        activeText: renderTaskStore(liveActive, []),
+        activeText: renderTaskStore(liveActive, []).replace(/\n\n$/, "\n"),
         completedText: renderTaskStore(liveCompleted, [
           ...seedBlocks,
           ...passedBlocks,
@@ -515,6 +520,13 @@ describe("harness integrity validation", () => {
       },
     );
     expect(errors(merged)).toEqual([]);
+
+    const wrongEmptySuffix = copySnapshot(merged, {
+      activeText: renderTaskStore(liveActive, []),
+    });
+    expect(errors(wrongEmptySuffix)).toContain(
+      ".harness/completed.md: authorized H1 batch merge must be the exact T-0008 through T-0039 passed and append-only Expected_surfaces transform of checkpoint 5d515d9f8224ed607219fd5f29d0f20305fdcc16",
+    );
 
     const wrongRevision = copySnapshot(merged, {
       mergedBaseRevision: "0".repeat(40),

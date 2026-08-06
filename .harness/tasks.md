@@ -186,6 +186,9 @@ Indivisibility_rationale:
 - none; this task changes only the frontend skill's consumption of one already-approved authority model.
 Expected_surfaces:
 - `.agents/skills/frontend-design/SKILL.md` authority and reference-artifact sections.
+- `scripts/validation/harness-task-transitions.mjs` final-empty active-store newline normalization.
+- `scripts/validation/harness-h1-batch-transition.mjs` distinct final-batch and in-flight authority-prefix identities.
+- `tests/unit/harness-integrity.test.ts` focused final-empty closeout and H1 batch fixtures.
 Reference_artifacts:
 - none
 Validation_sets:

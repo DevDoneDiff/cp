@@ -5,6 +5,7 @@
  * CONTROL_FLOW: parse generations, reject identity drift, then prove one legal transition.
  * INVARIANTS:
  *   - [INV-HARNESS-TRANSFER] Archive changes are limited to one full-store provisional transfer or exact reversal.
+ *   - An empty active queue may normalize only the parser-approved second terminal newline; every non-empty byte remains exact.
  *   - One exact H1 checkpoint may use the separately bounded batch-merge compatibility proof.
  * BOUNDARIES:
  *   - Remote completion and dependency proof are deliberately excluded from this local structural validator.
@@ -43,6 +44,17 @@ function provisionalSource(prior) {
   return working.length === 1 ? working[0] : undefined;
 }
 
+function matchesExpectedActiveStore(currentActive, expectedText) {
+  if (currentActive.normalized === expectedText) {
+    return true;
+  }
+  return (
+    currentActive.blocks.length === 0 &&
+    expectedText.endsWith("\n\n") &&
+    currentActive.normalized === expectedText.slice(0, -1)
+  );
+}
+
 function matchesExactProvisional(current, prior) {
   const source = provisionalSource(prior);
   if (!source) {
@@ -50,7 +62,7 @@ function matchesExactProvisional(current, prior) {
   }
   const expected = expectedProvisional(prior, source);
   return (
-    current.active.normalized === expected.activeText &&
+    matchesExpectedActiveStore(current.active, expected.activeText) &&
     current.completed.normalized === expected.completedText
   );
 }
@@ -127,7 +139,7 @@ function validateProvisional(current, base, errors) {
     return;
   }
   const expected = expectedProvisional(base, source);
-  if (current.active.normalized !== expected.activeText) {
+  if (!matchesExpectedActiveStore(current.active, expected.activeText)) {
     errors.push(
       `.harness/tasks.md: [${source.tag}] provisional closeout did not preserve the complete remaining active store`,
     );
