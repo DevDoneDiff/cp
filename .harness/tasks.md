@@ -142,47 +142,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0008] Quarantine obsolete verification authority
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/obsolete-verification-authority
-Traceability: F3, F7, F25a
-Priority: P0
-Depends_on: none
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Remove obsolete verification and repository-policy authority so later hardening tasks execute against one canonical validation owner.
-Scope:
-- Remove the executable future bootstrap route and stale deleted paths from `$code-change-verification`, route exact review, closeout, merge, and cleanup mechanics to `.harness/validation.md`, and align repository policy on atomic archive closeout and conditional dedicated security review.
-Non_goals:
-- Implement the final closeout, remote-recovery, cleanup, or authoring-lane procedures owned by later H1 bricks.
-Acceptance_criteria:
-- `$code-change-verification` contains no executable future bootstrap branch and no unmapped live `docs/specs/...` path.
-- `Bootstrap: true` and `bootstrap-preflight` remain only as labeled historical compatibility for T-0001.
-- The verification skill delegates exact shared delivery mechanics to `.harness/validation.md` instead of restating a conflicting procedure.
-- `docs/REPOSITORY_POLICY.md` no longer mandates a tasks-only closeout or universal dedicated security review.
-- No product, runtime, queue, or completed-task block changes occur.
-Indivisibility_rationale:
-- The mandatory verification skill and repository policy are both live entrypoints to the same delivery trust rule; changing only one would preserve the blocking contradiction.
-Expected_surfaces:
-- `.agents/skills/code-change-verification/SKILL.md`.
-- `docs/REPOSITORY_POLICY.md`.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-- security
-- security-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0008.md
-
 ### [T-0009] Define forward contract identity and routing
 Type: maintenance
 Bootstrap: false
