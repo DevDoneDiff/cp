@@ -142,47 +142,6 @@ For refactors, use `[R-0001]`, `Type: refactor`, `Bootstrap: false`, and state t
 
 ## Active Queue
 
-### [T-0013] Align global state and artifact ownership
-Type: maintenance
-Bootstrap: false
-Source_spec_id: harness/H1
-Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
-Brick_id: harness/H1/global-state-artifact-ownership
-Traceability: F12, F18
-Priority: P1
-Depends_on: [T-0012]
-Status: working
-Ready: true
-Pass: false
-Objective:
-- Remove the old all-in-one state-specification model from global product, architecture, and design authority.
-Scope:
-- Align the three global documents on durable state semantics, approved appearance, adopted technical depiction, collective implementation outcomes, shared accessibility, and explicit visual departures.
-Non_goals:
-- Define S01 or S02 state-contract content, change product behavior, alter visual files, or rewrite historical implementation specs.
-Acceptance_criteria:
-- No global document says `sNN-state.md` owns implementation, renderer choice, exact artifact assignment, task decomposition, or harness proof procedure.
-- `docs/PRODUCT.md` retains shared product meaning, `docs/ARCHITECTURE.md` retains durable technical truth, and `docs/DESIGN.md` retains shared experience and accessibility rules.
-- State contracts own durable state-specific semantics and authority without becoming implementation specifications.
-- Exact visuals own appearance; technical artifacts own only a depiction explicitly adopted by governing authority or an approved spec.
-- An approved implementation spec owns one collective outcome and any explicit compatible appearance departure.
-- No durable product, architecture, or design invariant is removed or semantically changed.
-Indivisibility_rationale:
-- The live contradiction is created jointly by all three global authority sections; partial alignment would leave a material cross-document conflict that blocks authoring.
-Expected_surfaces:
-- `docs/PRODUCT.md` authority language.
-- `docs/ARCHITECTURE.md` state, renderer, reference, and proof language.
-- `docs/DESIGN.md` state, visual, technical, accessibility, and proof language.
-Reference_artifacts:
-- none
-Validation_sets:
-- baseline
-- agent-review
-Open_questions:
-- none
-Blocker: none
-Scratchpad: .harness/work/T-0013.md
-
 ### [T-0014] Deduplicate the MVP proof boundary
 Type: maintenance
 Bootstrap: false
