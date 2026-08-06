@@ -984,3 +984,51 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0022.md
+
+### [T-0023] Enforce harness integrity in baseline
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/baseline-harness-integrity
+Traceability: F4, F25h
+Priority: P0
+Depends_on: [T-0017], [T-0018], [T-0019], [T-0020], [T-0021], [T-0022]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Make every local baseline and `CI / baseline` run enforce the proven network-free harness-integrity check after all transitional artifact duplicates are gone.
+Scope:
+- Add the callable validator to the ordered baseline and reconcile the validation registry and focused orchestration proof while preserving the two existing CI jobs.
+Non_goals:
+- Add a validation-set name, require GitHub during local validation, or change browser-smoke behavior.
+Acceptance_criteria:
+- All five artifact registry entries are `canonical`, no legacy duplicate remains, and the valid repository passes the complete validator.
+- `pnpm validate` runs harness integrity in a deterministic documented order.
+- An isolated negative fixture makes the harness stage and complete baseline fail with an actionable diagnostic.
+- `CI / baseline` inherits the stage through `pnpm validate` without workflow duplication.
+- `CI / browser-smoke`, required check names, and browser behavior remain unchanged.
+- `.harness/validation.md` distinguishes local structural proof from live Git and GitHub completion proof.
+Indivisibility_rationale:
+- The baseline runner and its canonical registry description must change together so the executable gate and documented proof cannot drift.
+Expected_surfaces:
+- `scripts/run-validation.mjs`.
+- `package.json` only if the callable script requires reconciliation.
+- `.harness/validation.md` proof model and registry wording.
+- Focused validation-orchestration tests if required.
+- `.github/workflows/ci.yml` baseline checkout only.
+- `scripts/validation/harness-integrity.mjs` and its task-schema, transition, transform, and H1 batch-compatibility owners.
+- `scripts/validation/repository-security.mjs` and its exact workflow fixtures and tests.
+- Focused harness-integrity fixtures and tests for exact-head and batch-transition regressions.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+- security
+- security-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0023.md
