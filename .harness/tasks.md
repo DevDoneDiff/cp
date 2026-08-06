@@ -29,13 +29,19 @@ MUST:
 
 - use `[T-####]` for feature, bug, migration, or maintenance work;
 - use `[R-####]` only for behavior-preserving structural work;
-- assign tags monotonically and never reuse them;
+- assign tags monotonically, keep each tag unique across both task stores, and never reuse one;
+- keep `NEXT_TASK_TAG` and `NEXT_REFACTOR_TAG` greater than every assigned tag in their category and never decrease either counter;
 - treat physical active-queue order as authoritative;
 - allow exactly one `Status: working` task;
 - keep every active task at `Pass: false`;
-- link every task to one approved spec;
+- give every forward-schema task both its approved spec's stable `Source_spec_id` and exact current repository-relative `Source_spec` path;
+- give every forward-schema task a stable `Brick_id` formed as `<Source_spec_id>/<kebab-case-brick>` and unique across both task stores;
+- record in `Traceability` the source specification finding or acceptance-area identifiers implemented by the task;
+- record `Indivisibility_rationale` in the committed task block: explain any crossing of independently provable seams, or use `none; <reason>` for a single-seam task;
 - copy exact required reference-artifact paths from the approved spec;
 - create `.harness/work/<TAG>.md` when a task becomes working.
+
+The immutable T-0001 through T-0007 archive seed predates the forward identity fields and is the only schema exception.
 
 MUST NOT:
 
@@ -110,7 +116,10 @@ Delete only after the task tag exists in configured base-branch history.
 ### [T-0001] <title>
 Type: feature | bug | migration | maintenance | refactor
 Bootstrap: false
+Source_spec_id: <stable-owner-scoped-spec-id>
 Source_spec: <exact-approved-spec-path>
+Brick_id: <Source_spec_id>/<kebab-case-brick>
+Traceability: <comma-separated-finding-or-acceptance-area-identifiers>
 Priority: P0 | P1 | P2
 Depends_on: none | [T-####], [R-####]
 Status: queued | working | blocked
@@ -124,6 +133,8 @@ Non_goals:
 - <explicit local exclusions>
 Acceptance_criteria:
 - <task-local observable pass condition>
+Indivisibility_rationale:
+- none; <why this is one independently provable seam> | <why crossing independently provable seams is required>
 Expected_surfaces:
 - <modules, data, APIs, UI areas, docs, or configuration>
 Reference_artifacts:
@@ -151,7 +162,7 @@ Brick_id: harness/H1/active-task-identity-schema
 Traceability: F14, F21, F25h
 Priority: P0
 Depends_on: [T-0010]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
