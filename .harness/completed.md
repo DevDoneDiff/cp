@@ -497,3 +497,41 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0010.md
+
+### [T-0011] Record completed-archive seed provenance
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/archive-seed-provenance
+Traceability: F5, F25d
+Priority: P0
+Depends_on: none
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Record truthful one-time provenance for the seven seeded historical task blocks without changing any block.
+Scope:
+- Add archive-header provenance for T-0001 through T-0007, the exact canonical hash boundary, and the distinction between historical seed compatibility and post-H1 completion proof.
+Non_goals:
+- Modify, reorder, condense, delete, or modernize any completed-task block or implement the archive validator.
+Acceptance_criteria:
+- The archive header states that T-0001 through T-0007 were seeded verbatim during the transition and did not originally execute the new archive-transfer procedure.
+- The canonical hash algorithm is UTF-8 from the first T-0001 heading through the terminal newline with CRLF normalized to LF and no trimming.
+- The block order remains `T-0001, T-0002, T-0003, T-0004, T-0006, T-0005, T-0007`.
+- The canonical combined block SHA-256 remains `2B07112D32C5401991C2224A83E7C53BB36415842C599BAB900F17135F460C1F`.
+- No byte inside any completed-task block changes.
+Indivisibility_rationale:
+- none; the archive header is the single owner of seed provenance outside the immutable blocks.
+Expected_surfaces:
+- `.harness/completed.md` header only.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0011.md
