@@ -695,3 +695,46 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0015.md
+
+### [T-0016] Harden task claim and blocked resumption
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/task-claim-resumption
+Traceability: F2, F10, F11
+Priority: P0
+Depends_on: [T-0015]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Make serialized task selection, claim publication, blocking, and same-task resumption deterministic before source mutation.
+Scope:
+- Align queue eligibility, the externally serialized executor precondition, live branch and pull-request inspection, claim publication, conflicting authoring detection, and same-task resumption across their authority and procedure owners.
+Non_goals:
+- Add a distributed lock, implement closeout or merge proof, or create multi-executor support.
+Acceptance_criteria:
+- Eligibility requires `Status: queued`, `Ready: true`, `Pass: false`, `Blocker: none`, and satisfied canonical dependencies.
+- A blocked task is never eligible and cannot resume merely because an external condition changed.
+- The harness states honestly that autonomous primary invocations are externally serialized and that repository checks are stale-conflict detection rather than a lock.
+- Selection inspects live task branches, pull requests, base working state, provisional closeout, and conflicting queue-authoring work before mutation.
+- Deterministic claim publication precedes source edits; a failed or competing claim blocks work.
+- Same-task resumption proves its existing branch and PR identity, clears the blocker, and reruns readiness, dependency, and claim checks without treating its own claim as a competitor; a read-only procedure case is recorded in durable PR evidence.
+Indivisibility_rationale:
+- State eligibility and the operational claim/resumption procedure must land together; changing only one would leave an unsafe or unusable working-state transition.
+Expected_surfaces:
+- `AGENTS.md` readiness and task-selection rules.
+- `.harness/tasks.md` active states, eligibility, and blocker semantics.
+- `.harness/validation.md` claim and resumption procedure.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+- security
+- security-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0016.md
