@@ -4,11 +4,11 @@ This directory contains the repository's durable product, architecture, design, 
 
 ## Global Authorities
 
-- `PRODUCT.md` owns product identity, actors, lifecycle, commercial behavior, and durable product rules.
-- `ARCHITECTURE.md` owns system authority, state, data, agents, integrations, persistence, and technical boundaries.
-- `DESIGN.md` owns global experience behavior, interaction grammar, continuity, accessibility, and visual-system rules.
-- `MVP.md` owns the current demo scope, proof requirements, seeded boundaries, exclusions, and endpoint.
-- `REPOSITORY_POLICY.md` owns repository-specific security and delivery policy.
+- `docs/PRODUCT.md` owns product identity, actors, lifecycle, commercial behavior, and durable product rules.
+- `docs/ARCHITECTURE.md` owns system authority, state, data, agents, integrations, persistence, and technical boundaries.
+- `docs/DESIGN.md` owns global experience behavior, interaction grammar, continuity, accessibility, and visual-system rules.
+- `docs/MVP.md` owns the current demo scope, proof requirements, seeded boundaries, exclusions, and endpoint.
+- `docs/REPOSITORY_POLICY.md` owns repository-specific security and delivery policy.
 
 ## Contract System
 
@@ -21,7 +21,9 @@ This directory contains the repository's durable product, architecture, design, 
 - supporting visual references;
 - supporting technical infographics.
 
-See `contracts/README.md` for folder ownership and routing.
+See `docs/contracts/README.md` for canonical folder ownership, spec classification, identity, and terminal-state routing. This index does not restate those rules.
+
+The active artifact vocabulary is `visual`, `technical`, or `none`; every assigned artifact uses an exact repository-relative path.
 
 ## Execution System
 
@@ -46,21 +48,26 @@ Harness execution state lives outside `docs/`:
 Store each requirement at its narrowest durable owner.
 
 ```text
-global product truth       -> PRODUCT.md
-global technical truth     -> ARCHITECTURE.md
-global experience truth    -> DESIGN.md
-current demo boundary      -> MVP.md
-repository policy          -> REPOSITORY_POLICY.md
-state-specific truth       -> contracts/states/<state>/sNN-state.md
-state implementation       -> contracts/states/<owning-state>/specs/
-harness implementation     -> contracts/harness/specs/
-repository implementation  -> contracts/repository/specs/
+global product truth       -> docs/PRODUCT.md
+global technical truth     -> docs/ARCHITECTURE.md
+global experience truth    -> docs/DESIGN.md
+current demo boundary      -> docs/MVP.md
+repository policy          -> docs/REPOSITORY_POLICY.md
+state-specific truth       -> docs/contracts/states/<state>/sNN-state.md
+state implementation       -> docs/contracts/states/<owning-state>/specs/
+harness implementation     -> docs/contracts/harness/specs/
+repository implementation  -> docs/contracts/repository/specs/
 active execution           -> .harness/tasks.md
 completed execution        -> .harness/completed.md
-local code truth           -> annotation headers
-behavioral reality         -> code and tests
+proof and delivery          -> .harness/validation.md
+implementation reality     -> code
+executable expectations    -> tests
+local architecture summary -> annotation headers
+history and delivery record -> Git
 ```
 
-A cross-state implementation spec belongs to the terminal state whose completion makes the collective outcome whole and lists every affected state contract.
+Code, tests, and annotation headers are descriptive evidence. Tests may be stale or failing, and annotation headers summarize inspected code without overruling it. Report a code/test mismatch as an implementation or proof defect.
+
+A resolved durable decision is recorded in its owning authority before dependent spec drafting resumes. Use [canonical contract routing](contracts/README.md) for cross-state and owner classification rather than inferring ownership here.
 
 Reference an upstream authority instead of duplicating it.

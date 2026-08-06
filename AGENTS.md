@@ -6,7 +6,7 @@ Operating contract for Codex work in this repository.
 
 ## Authority and Source Ownership
 
-Use each source only for the domain it owns:
+Use each source only for the domain it owns. Normative target authority is distinct from descriptive implementation evidence:
 
 - explicit user instruction owns the current requested decision;
 - `docs/PRODUCT.md` owns durable product truth;
@@ -16,19 +16,21 @@ Use each source only for the domain it owns:
 - `docs/REPOSITORY_POLICY.md` owns repository-specific policy;
 - `docs/contracts/states/<state>/sNN-state.md` owns durable state-specific behavior;
 - exact linked `visual-*.png` files own approved state-specific appearance;
-- exact linked `technical-*.png` files own their approved process depiction within governing prose;
+- exact linked `technical-*.png` files own only the process depiction explicitly adopted by governing prose and otherwise remain guidance;
 - an approved spec owns one collective implementation outcome;
+- `docs/contracts/README.md` owns spec classification, identity, and terminal-state routing;
 - `.harness/tasks.md` owns active task state and execution order;
 - `.harness/completed.md` owns immutable completed-task entries;
-- `.harness/validation.md` owns proof and delivery procedures;
+- `.harness/validation.md` owns registered proof sets and delivery procedures;
 - `.harness/work/<TAG>.md` owns ephemeral task rehydration;
-- annotation headers own current local architectural context;
-- current code and tests own behavioral reality;
-- Git owns history.
+- current code is current implementation reality;
+- tests are executable expectations and evidence that may be stale or failing;
+- annotation headers summarize inspected code for local architectural context and never overrule it;
+- Git owns history and durable delivery evidence.
 
 A narrower source may constrain a broader source within its domain. It may not contradict it.
 
-When authoritative sources materially conflict, stop mutation, identify the exact conflict, and request resolution.
+When normative sources materially conflict, stop mutation, identify the exact conflict, and request resolution. A normative target that differs from current code is an implementation gap unless it exposes an unresolved durable decision. A code/test mismatch is reported and resolved as an implementation or proof defect; neither silently becomes durable target authority.
 
 ## Modes
 
@@ -48,7 +50,7 @@ For the selected task, read in this order:
 
 1. the full active task entry in `.harness/tasks.md`;
 2. the linked approved spec;
-3. the owning contract and every affected state contract named by the spec;
+3. the owning authority and every affected state contract named by the spec, using the classification and terminal-state routing in `docs/contracts/README.md`;
 4. every exact reference artifact assigned by the spec or task;
 5. only relevant sections of global authority documents;
 6. `.harness/work/<TAG>.md` and relevant lessons;
@@ -66,11 +68,12 @@ For UI-bearing work, the implementation source bundle is:
 approved spec
 + owning and affected contracts
 + exact approved visual references
-+ exact approved technical or content references when required
++ exact approved technical references when required
 ```
 
 Rules:
 
+- active reference artifacts are `visual` or `technical`; `none` means no artifact is assigned;
 - visual artifacts own approved appearance within prose constraints;
 - technical infographics own their approved process depiction but cannot introduce unstated behavior or architecture;
 - generated-image defects, fabricated values, and annotation labels are excluded unless explicitly adopted;
@@ -81,6 +84,8 @@ Rules:
 ## Decision Boundary and Implementation Latitude
 
 Codex must resolve routine implementation choices with best judgment using current repository conventions, the approved architecture, framework-native capabilities, and the smallest maintainable approach.
+
+A resolved durable product, architecture, design, state, security, schema, or compatibility decision must be recorded through an explicitly authorized update to its owning authority before dependent spec drafting resumes.
 
 Do not ask the user to choose ordinary algorithms, module shapes, internal abstractions, rendering techniques, or infrastructure mechanics unless the choice changes a durable authority or approved outcome.
 
