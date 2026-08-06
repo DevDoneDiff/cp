@@ -7,19 +7,24 @@ description: Use for new UI, visual frontend changes, restyling, or visual revie
 
 ## Authority
 
-Apply visual direction in this order:
+Resolve each question through the source that owns its domain, not a total precedence list:
 
-1. explicit user instruction
-2. active approved spec
-3. exact approved reference artifacts linked by the spec and task
-4. `docs/DESIGN.md` shared rules
-5. existing design tokens, components, and established UI behavior
-6. this skill
-7. agent judgment
-
-A technical infographic is guidance only. It cannot create architecture, behavior, or data authority absent from approved prose.
+- explicit user instruction owns the current requested decision; a durable change must be recorded in its owning authority before dependent implementation;
+- `docs/PRODUCT.md` owns shared product meaning and truth;
+- `docs/DESIGN.md` owns shared experience, interaction, content, motion, responsive, and accessibility rules;
+- the exact approved `sNN-state.md` owns durable state-specific behavior, semantic content meaning, accessibility, and authority;
+- each exact assigned `visual-*.png` owns approved appearance at its represented state or viewport within governing prose constraints, but does not independently own behavior, accessibility, truthful content, or product meaning;
+- a `technical-*.png` owns only the process depiction explicitly adopted by governing prose and otherwise remains guidance; it cannot independently introduce product behavior, architecture, services, data, or state;
+- an approved implementation spec owns its collective outcome and may require an explicit appearance departure only for that outcome and only when compatible with every governing authority;
+- existing tokens, components, and UI behavior are current implementation evidence and reusable implementation context, not authority over the sources above.
 
 If visual direction, artifact role, or required UI state is missing, contradictory, or materially underspecified, ask targeted questions before visual implementation.
+
+## Reference Artifacts
+
+Use `docs/contracts/README.md` as the canonical owner for artifact schema, type vocabulary, exact path rules, and legacy migration. Do not restate or infer an independent artifact taxonomy here.
+
+Consume only the exact repository-relative artifacts assigned by the approved spec and active task. Never infer authority from a neighboring file, filename similarity, legacy path, or unassigned image. Treat an appearance departure as valid only when the approved implementation spec states it explicitly for the current collective outcome and it remains compatible with shared and state-specific governing authority.
 
 ## Modes
 
