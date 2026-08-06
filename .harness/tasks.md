@@ -166,7 +166,7 @@ Brick_id: harness/H1/responsibility-based-file-review
 Traceability: F23
 Priority: P1
 Depends_on: [T-0012]
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
