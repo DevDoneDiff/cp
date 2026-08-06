@@ -21,6 +21,8 @@ This skill owns task decomposition, task sizing, task order, task tags, dependen
 - preserve existing active work, queue order, and monotonic tag counters;
 - never edit an existing entry in `.harness/completed.md`.
 
+If the explicit instruction also authorizes repository delivery, prove the activated non-task authoring predicate, full task-identity exclusion, and exact descriptive branch through `.harness/validation.md` before the first tracked queue or counter edit. Do not decompose on a delivery path whose activation, identity, exclusion, or base precondition is incomplete.
+
 ## Authority
 
 Apply:
@@ -276,6 +278,8 @@ Return:
 - validation assignments;
 - unresolved conflicts, or `none`;
 - `Readiness: ready | blocked`.
+
+When explicit user instruction also authorizes repository delivery, route the completed queue/counter authoring output only through the activated `Non-Task Authoring Delivery` procedure in `.harness/validation.md`. First prove its durable operational-availability predicate and the required absence of every live task claim, provisional closeout, task branch, and task pull request. If any gate fails, keep the output local and report the blocker; never improvise delivery. The authoring lane may introduce only queued `Pass: false` tasks and cannot claim, start, pass, close out, archive, satisfy, or complete any task it creates.
 
 ## Final Rule
 

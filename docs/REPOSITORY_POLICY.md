@@ -40,7 +40,8 @@ If the hosting plan cannot enforce a required control, the pull-request procedur
 - Explicit user instruction, independent of task `RUN_MODE` and `MERGE_MODE`, authorizes each authoring delivery and whether its guarded merge may be autonomous.
 - Queue, counter, validation-registry, or task-execution-authority authoring is mutually exclusive with a live implementation claim, provisional closeout, task branch, or task pull request. The inverse exclusion applies during task claim and delivery.
 - Introducing a queued task cannot complete it or satisfy a dependency, and completed task blocks remain immutable.
-- This lane remains unavailable until canonical completion proof establishes exact T-0036 on the fetched base and the same merged tree contains the available state, complete canonical delivery procedure, and both producer routes. A local or branch-only state cannot activate it, and authoring skills cannot route work into it before that proof.
+- The lane is operational only after canonical completion proof establishes exact T-0036 on the fetched base and the same merged tree contains the available state, complete canonical delivery procedure, and both producer routes. A local or branch-only state cannot activate it.
+- An activated authoring delivery reuses the canonical local proof, exact-SHA read-only review, exact-head CI, immediate base refresh, guarded squash merge, remote-result reconciliation, synchronized cleanup, and no-bypass controls. Its completed archive must remain byte-identical throughout.
 
 ## Evidence
 

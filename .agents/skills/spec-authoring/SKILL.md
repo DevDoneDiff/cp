@@ -21,6 +21,8 @@ This skill authors specs only. It does not create tasks, assign task tags, edit 
 - inspect the repository deeply enough to align the outcome with current reality
 - read only context relevant to the requested outcome rather than loading the entire repository by default
 
+If the explicit instruction also authorizes repository delivery, prove the activated non-task authoring predicate and enter its exact descriptive branch through `.harness/validation.md` before the first tracked authoring edit. Do not draft on a delivery path whose activation, identity, exclusion, or base precondition is incomplete.
+
 ## Authority Map
 
 Apply the narrowest applicable authority without allowing it to contradict a broader durable owner:
@@ -271,6 +273,8 @@ Return:
 - files created or updated;
 - exact reference artifacts;
 - `Readiness: ready_for_review | blocked`.
+
+When explicit user instruction also authorizes repository delivery, route only the eligible spec, approval-metadata, contract, or directly related authority output through the activated `Non-Task Authoring Delivery` procedure in `.harness/validation.md`. First prove its durable operational-availability predicate and authoring/task exclusion checks. If that predicate does not pass, keep the output local and report the lane unavailable; never push, open a pull request, merge, or improvise a delivery path. Authoring delivery remains descriptive and cannot use task status, `Pass`, an implementation scratchpad, closeout, archive, dependency, or completion identity.
 
 ## Final Rule
 
