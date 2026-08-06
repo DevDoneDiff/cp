@@ -23,8 +23,8 @@ If the hosting plan cannot enforce a required control, the pull-request procedur
 
 ## Guarded autonomous delivery
 
-- Independent read-only content review and security review are mandatory for the recorded reviewed-content SHA.
-- The tasks-only closeout commit has a separate latest-head SHA and must rerun both required checks.
+- Independent read-only correctness review, including security implications, is mandatory for the recorded reviewed-content SHA. Security-sensitive work must assign and run a dedicated security review against that same SHA under the canonical validation registry; a missing assignment is a blocking task-authoring defect.
+- Task closeout atomically transfers the final task block from the active queue to the completed archive. The metadata-only closeout commit has a separate latest-head SHA and must rerun both required checks.
 - Before merge, fetch `origin/main`; a base advance requires a non-force branch update and complete redelivery.
 - Merge uses `--squash`, `--delete-branch`, and `--match-head-commit <EXPECTED_HEAD_SHA>` with no `--admin` option.
 - The squash subject starts with the task tag so base-branch history preserves execution authority.
@@ -33,3 +33,5 @@ If the hosting plan cannot enforce a required control, the pull-request procedur
 ## Evidence
 
 The pull request, independent review results, GitHub check runs, protection API readback, guarded merge result, and `origin/main` history are the durable evidence. Local credentials and task scratchpads remain uncommitted.
+
+`.harness/validation.md` owns the exact review, closeout, reversal, merge, recovery, and cleanup procedures.

@@ -151,7 +151,7 @@ Brick_id: harness/H1/obsolete-verification-authority
 Traceability: F3, F7, F25a
 Priority: P0
 Depends_on: none
-Status: queued
+Status: working
 Ready: true
 Pass: false
 Objective:
