@@ -1568,3 +1568,44 @@ Open_questions:
 - none
 Blocker: none
 Scratchpad: .harness/work/T-0036.md
+
+### [T-0037] Add status-only approval recording
+Type: maintenance
+Bootstrap: false
+Source_spec_id: harness/H1
+Source_spec: docs/contracts/harness/specs/H1-harness-transition-integrity-hardening.md
+Brick_id: harness/H1/status-only-approval-recording
+Traceability: F1
+Priority: P0
+Depends_on: [T-0027], [T-0036]
+Status: passed
+Ready: true
+Pass: true
+Objective:
+- Allow `$spec-authoring` to record a later explicit user approval without self-approving or silently revising reviewed content.
+Scope:
+- Add the approval-evidence precondition, metadata-only transition, content-diff guard, reporting, and non-task delivery route to the spec-authoring workflow.
+Non_goals:
+- Let drafting approve itself, infer approval, revise approved content, or use implementation-task completion identity.
+Acceptance_criteria:
+- Drafting always ends at `State: draft` and `Approved: false` unless a later explicit user approval exists.
+- A status-only recording run names the explicit approval evidence and changes approval metadata only.
+- Any content change requires separate explicit revision authority and cannot be hidden inside approval recording.
+- Executable or reviewed diff evidence rejects a purported status-only transition that changes non-metadata content.
+- The transition is delivered through the non-task authoring lane and creates no task Pass, closeout, dependency, or completion evidence.
+- Approved specs remain closed to amendment unless explicitly reopened or changed through bounded lineage.
+Indivisibility_rationale:
+- none; approval recording is one trust-boundary workflow in the spec-authoring skill after its safe delivery lane exists.
+Expected_surfaces:
+- `.agents/skills/spec-authoring/SKILL.md` status, workflow, and output sections.
+Reference_artifacts:
+- none
+Validation_sets:
+- baseline
+- agent-review
+- security
+- security-review
+Open_questions:
+- none
+Blocker: none
+Scratchpad: .harness/work/T-0037.md
