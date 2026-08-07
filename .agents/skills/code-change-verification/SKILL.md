@@ -1,6 +1,6 @@
 ---
 name: code-change-verification
-description: Required for product/code, configuration, schema, migration, test, build-system, or runtime behavior changes. Prove the active implementation task, deliver it through its task branch and pull request, and control Pass state.
+description: Required for runtime product/code implementation, including implementation-owned configuration, schema, migration, tests, build-system, and behavior changes. Prove the active implementation task, deliver it through its task branch and pull request, and control Pass state.
 ---
 
 # Code Change Verification
@@ -9,7 +9,7 @@ description: Required for product/code, configuration, schema, migration, test, 
 
 Own focused proof and delivery for the active implementation task. `.harness/validation.md` owns the exact registry, branch, CI, closeout, merge, and cleanup procedure.
 
-This skill does not govern harness or repository-governance maintenance. Explicit `$harness-maintenance` work remains local, uncommitted control-plane state.
+This skill does not govern non-runtime product/repository-authority documentation or harness/repository-governance machinery maintenance. Authority work uses the lightweight direct-main workflow; explicit `$harness-maintenance` work remains local, uncommitted control-plane state.
 
 ## Preconditions
 
@@ -17,7 +17,7 @@ Before implementation mutation require one task with `Status: working`, `Ready: 
 
 Create or resume `codex/<TAG>-<slug>` from the configured base. Inventory the working tree first. Preserve unrelated work and uncommitted harness-maintenance changes; they are not a competing claim and must not be stashed, reset, restored, or deleted.
 
-Never push directly to the base branch, force-push, or mix implementation tasks on one branch.
+During implementation, never push directly to the base branch, force-push, or mix implementation tasks on one branch.
 
 ## Working Loop
 

@@ -18,7 +18,6 @@ interface SecurityFixture {
   lockfile: string;
   workflow: string;
   envExample: string;
-  repositoryPolicy: string;
   repositoryFiles: string[];
 }
 
@@ -65,7 +64,7 @@ describe("repository security validation", () => {
     ).toEqual([]);
   });
 
-  it("rejects dependency, toolchain, workflow, lockfile, environment, and policy drift", async () => {
+  it("rejects dependency, toolchain, workflow-security, lockfile, and environment drift", async () => {
     const fixture = await readFixture("negative");
     const errors = validateSecuritySnapshot({
       ...fixture,
@@ -132,9 +131,16 @@ describe("repository security validation", () => {
     );
   });
 
-  it("rejects baseline checkout without exact-head task-store history", async () => {
+  it("does not treat delivery workflow preferences as security invariants", async () => {
     const fixture = await readFixture("positive");
     const workflow = fixture.workflow
+      .replace("  pull_request:\n    branches:\n      - main\n", "")
+      .replace(
+        "concurrency:\n  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}\n  cancel-in-progress: true\n",
+        "",
+      )
+      .replace("    name: CI / baseline\n", "    name: Baseline evidence\n")
+      .replace("    name: CI / browser-smoke\n", "    name: Browser evidence\n")
       .replace(
         "          ref: ${{ github.event.pull_request.head.sha || github.ref }}\n",
         "",
@@ -147,30 +153,7 @@ describe("repository security validation", () => {
         workflow,
         manifest: manifest(),
       }),
-    ).toContain(
-      "baseline checkout must use the exact pull-request head or pushed ref with fetch-depth 3",
-    );
-  });
-
-  it("rejects exact-head inputs misplaced outside the checkout step", async () => {
-    const fixture = await readFixture("positive");
-    const checkoutInputs =
-      "          ref: ${{ github.event.pull_request.head.sha || github.ref }}\n          fetch-depth: 3\n";
-    const setupAction =
-      "      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0\n";
-    const workflow = fixture.workflow
-      .replace(checkoutInputs, "")
-      .replace(setupAction, `${setupAction}        with:\n${checkoutInputs}`);
-
-    expect(
-      validateSecuritySnapshot({
-        ...fixture,
-        workflow,
-        manifest: manifest(),
-      }),
-    ).toContain(
-      "baseline checkout must use the exact pull-request head or pushed ref with fetch-depth 3",
-    );
+    ).toEqual([]);
   });
 
   it("accepts the materialized repository contract", async () => {

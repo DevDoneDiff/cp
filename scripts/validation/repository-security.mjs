@@ -1,7 +1,7 @@
 /**
- * ROLE: Prove pinned dependency, workflow, repository-policy, secret-hygiene, and runtime trust-boundary security.
- * BOUNDARY: Live hosting protection and merge state are read through the delivery procedure, not this local validator.
- * RELATIONS: package.json owns direct pins; .github/workflows/ci.yml owns remote checks; docs/REPOSITORY_POLICY.md owns delivery security.
+ * ROLE: Prove pinned dependency, workflow supply-chain, secret-hygiene, and runtime trust-boundary security.
+ * BOUNDARY: Git delivery preferences, hosting protection, and merge state are not security invariants owned by this validator.
+ * RELATIONS: package.json owns direct pins; .github/workflows/ci.yml owns least-privilege remote execution.
  * VALIDATION: tests/integration/repository-security.test.ts and runtime-security.test.ts exercise policy and hostile input.
  */
 import { spawnSync } from "node:child_process";
@@ -49,21 +49,6 @@ const REQUIRED_SCRIPTS = [
   "validate:security",
   "validate",
 ];
-const POLICY_PHRASES = [
-  "visibility: public",
-  "private: false",
-  "CI / baseline",
-  "CI / browser-smoke",
-  "zero human approvals",
-  "resolved review conversations",
-  "linear history",
-  "no force push",
-  "no administrator bypass",
-  "--match-head-commit",
-  "--squash",
-  "--delete-branch",
-  "task tag",
-];
 const EXPECTED_ACTION_LINES = new Map([
   [
     "uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
@@ -109,7 +94,6 @@ export async function readSecuritySnapshot(root) {
     lockfile: await readText(root, "pnpm-lock.yaml"),
     workflow: await readText(root, ".github/workflows/ci.yml"),
     envExample: await readText(root, ".env.example"),
-    repositoryPolicy: await readText(root, "docs/REPOSITORY_POLICY.md"),
     repositoryFiles: listRepositoryFiles(root),
   };
 }
@@ -242,35 +226,8 @@ function validateWorkflow(snapshot, errors) {
   if (/\$\{\{\s*secrets\./.test(workflow)) {
     errors.push("foundation workflow must not reference secrets");
   }
-  if (
-    !/^\s*pull_request:\s*$/m.test(workflow) ||
-    !/^\s*push:\s*$/m.test(workflow)
-  ) {
-    errors.push("workflow must run on pull requests and pushes");
-  }
-  const mainBranchEntries = workflow.match(/^\s+- main\s*$/gm) ?? [];
-  if (mainBranchEntries.length < 2) {
-    errors.push(
-      "workflow pull-request and push triggers must both target main",
-    );
-  }
-  if (
-    !workflow.includes(
-      "group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}",
-    ) ||
-    !workflow.includes("cancel-in-progress: true")
-  ) {
-    errors.push(
-      "workflow concurrency must be deterministic and cancel superseded commits",
-    );
-  }
   if ((workflow.match(/runs-on:\s*ubuntu-24\.04/g) ?? []).length !== 2) {
     errors.push("both CI jobs must use ubuntu-24.04");
-  }
-  for (const checkName of ["CI / baseline", "CI / browser-smoke"]) {
-    if (!workflow.includes(`name: ${checkName}`)) {
-      errors.push(`workflow is missing exact check name ${checkName}`);
-    }
   }
   if (
     (workflow.match(/run:\s*pnpm install --frozen-lockfile/g) ?? []).length !==
@@ -326,27 +283,6 @@ function validateWorkflow(snapshot, errors) {
   ) {
     errors.push("both checkout steps must disable persisted credentials");
   }
-
-  const baselineJob = workflow
-    .split(/^  baseline:\s*$/m)[1]
-    ?.split(/^  browser-smoke:\s*$/m)[0];
-  const exactBaselineCheckout =
-    /^\s+- (?:name:[^\r\n]+\r?\n\s+)?uses: actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1\r?\n\s+with:\r?\n\s+persist-credentials:\s*false\r?\n\s+ref:\s*\$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.ref \}\}\r?\n\s+fetch-depth:\s*3\s*$/m;
-  if (!baselineJob || !exactBaselineCheckout.test(baselineJob)) {
-    errors.push(
-      "baseline checkout must use the exact pull-request head or pushed ref with fetch-depth 3",
-    );
-  }
-
-  const browserJob = workflow.split(/^  browser-smoke:\s*$/m)[1] ?? "";
-  const smokeIndex = browserJob.indexOf("run: pnpm test:smoke");
-  const e2eIndex = browserJob.indexOf("run: pnpm test:e2e");
-  if (smokeIndex < 0 || e2eIndex < 0 || smokeIndex >= e2eIndex) {
-    errors.push("browser-smoke must invoke production smoke before Playwright");
-  }
-  if (/run:\s*pnpm build/.test(browserJob)) {
-    errors.push("browser-smoke must not perform a second production build");
-  }
 }
 
 function validateRepositoryHygiene(snapshot, errors) {
@@ -383,13 +319,6 @@ function validateRepositoryHygiene(snapshot, errors) {
     errors.push(
       ".env.example must remain nonempty and comment-only during foundation",
     );
-  }
-
-  const normalizedPolicy = snapshot.repositoryPolicy.toLowerCase();
-  for (const phrase of POLICY_PHRASES) {
-    if (!normalizedPolicy.includes(phrase.toLowerCase())) {
-      errors.push(`repository policy is missing required contract: ${phrase}`);
-    }
   }
 }
 

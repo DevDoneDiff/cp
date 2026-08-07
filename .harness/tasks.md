@@ -4,7 +4,7 @@
 
 Canonical queue for approved product and code implementation work.
 
-Harness construction, repair, simplification, repository-governance maintenance, and one-off validation work do not enter this queue. They run only through an explicitly invoked `$harness-maintenance` procedure and consume no task identity.
+Harness construction, repair, simplification, repository-governance machinery maintenance, and one-off validation work do not enter this queue. They run only through an explicitly invoked `$harness-maintenance` procedure and consume no task identity. Non-runtime repository policy and documentation authoring also consumes no task identity and follows the lightweight authority path in `.harness/validation.md`.
 
 ## Control
 
@@ -90,6 +90,6 @@ Blocker: none
 Scratchpad: .harness/work/T-####.md
 ```
 
-Use `[R-####]` only for behavior-preserving structural implementation. Product/code maintenance may use a task; harness or repository-governance maintenance may not.
+Use `[R-####]` only for behavior-preserving structural implementation. Product/code maintenance may use a task; harness or repository-governance machinery maintenance may not.
 
 ## Active Queue

@@ -9,7 +9,7 @@ description: Explicitly invoke to decompose one approved product spec into small
 
 Convert one approved product spec into ordered implementation tasks. Do not write code, claim work, change `Pass`, edit completed tasks, or create tasks for harness construction, repair, simplification, validation tuning, or repository-governance maintenance.
 
-Harness maintenance runs only through `$harness-maintenance` and consumes no task identity.
+Harness and repository-governance machinery maintenance run only through `$harness-maintenance` and consume no task identity.
 
 ## Preconditions
 
@@ -47,7 +47,7 @@ Do not create stable brick IDs, traceability tokens, indivisibility essays, migr
 
 ## Delivery
 
-Task authoring is separate from implementation. Leave changes local unless explicit user instruction requests authoring delivery. If requested, use a descriptive `codex/authoring-<slug>` branch and pull request without task claim, `Pass`, implementation scratchpad, closeout, archive, dependency, or completion claims. Queue authoring must not race a live implementation claim.
+Task authoring is separate from implementation. Unless the user requests local-only work, inspect the intended diff, run a useful focused check when one applies, commit directly on `main`, push `main` normally, and stop. Do not create an implementation task or branch, pull request, independent review, task claim, `Pass`, implementation scratchpad, closeout, archive transfer, delivery proof, or pre-push CI gate. Queue authoring must not race a live implementation claim.
 
 ## Output
 

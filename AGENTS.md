@@ -10,12 +10,13 @@ Global Codex instructions govern reasoning style, evidence handling, self-manage
 
 ## Control Plane and Implementation Plane
 
-The repository has two separate operating domains:
+The repository has three separate operating paths:
 
-- control plane: harness files, harness validation machinery, harness skills, and repository-governance maintenance;
-- implementation plane: product specs, implementation tasks, runtime code, tests, validation, Git delivery, pull requests, CI, merge, and implementation history.
+- control plane: harness files, harness validation machinery, harness skills, and maintenance of repository-governance machinery;
+- product-authority plane: non-runtime product and repository documentation, state contracts, implementation specs, and task-authoring metadata;
+- implementation plane: implementation tasks, runtime code, tests, validation, Git delivery, pull requests, CI, merge, and implementation history.
 
-Harness construction, repair, simplification, and repository-governance maintenance are governed only by an explicitly invoked `$harness-maintenance` skill.
+Harness construction, repair, simplification, and maintenance of repository-governance machinery are governed only by an explicitly invoked `$harness-maintenance` skill. Editing non-runtime repository policy or documentation without changing that machinery belongs to the product-authority path.
 
 Harness maintenance must not:
 
@@ -92,7 +93,16 @@ Product authoring must not be used for:
 - harness migrations;
 - harness cleanup.
 
-Product authoring may use a descriptive `codex/authoring-<slug>` branch and descriptive commit and pull-request titles without consuming an implementation task identity.
+Product authoring and other non-runtime authority work use the lightweight repository-authority workflow unless the user explicitly requests local-only work:
+
+1. inspect the required sources;
+2. make the bounded documentation or authority change;
+3. run a useful focused check when one applies;
+4. commit directly on `main`;
+5. push `main` normally;
+6. stop.
+
+This workflow does not create an implementation task or branch, pull request, independent review, closeout, archive transfer, delivery proof, or pre-push CI gate. If CI runs after the push, allow it to run normally; investigate a later failure as new downstream evidence.
 
 Authoring that mutates the active implementation queue must not race a live implementation claim.
 
@@ -209,9 +219,11 @@ MUST NOT:
 - add or replace production dependencies without resolved authority;
 - change approved architecture, public contracts, or schemas outside task scope;
 - create abstractions without a concrete stable responsibility;
-- push directly to the configured base branch;
+- push implementation work directly to the configured base branch;
 - force-push or rewrite shared history during normal product implementation;
 - create harness exceptions, recovery validators, compatibility bridges, or new lifecycle machinery to overcome implementation or delivery failures.
+
+Outside normal product implementation, authorized documentation and repository-authority delivery uses ordinary non-force pushes from `main`. Use `--force-with-lease` only when an intentional history rewrite is actually required and one current remote-ref read confirms that unexpected remote work will not be destroyed. Never use unconditional `--force`.
 
 ## Annotation Headers
 

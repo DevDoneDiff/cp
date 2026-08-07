@@ -9,7 +9,7 @@ description: Explicitly invoke to define one product implementation outcome from
 
 This skill authors one product implementation spec. It does not create tasks, assign tags, write runtime code, approve its own output, or construct/repair the harness.
 
-Harness and repository-governance maintenance run only through explicitly invoked `$harness-maintenance` and have no spec route.
+Harness and repository-governance machinery maintenance run only through explicitly invoked `$harness-maintenance` and have no spec route.
 
 ## Authority and Routing
 
@@ -37,7 +37,7 @@ Do not prescribe task decomposition, internal module shapes, dependencies, task 
 
 New specs end as `State: draft`, `Approved: false`, with `Open Questions: none` only when review-ready. A later explicit user approval of that exact draft may change only those two status fields.
 
-Product authoring remains separate from implementation. Leave authoring local unless explicit user instruction requests repository delivery. If delivery is requested, use a descriptive `codex/authoring-<slug>` branch and pull request without implementation task status, `Pass`, scratchpad, closeout, archive, dependency, or completion claims. Do not race a live implementation claim.
+Product authoring remains separate from implementation. Unless the user requests local-only work, inspect the intended diff, run a useful focused check when one applies, commit directly on `main`, push `main` normally, and stop. Do not create an implementation task or branch, pull request, independent review, closeout, archive transfer, delivery proof, or pre-push CI gate. Do not race a live implementation claim.
 
 ## Output
 

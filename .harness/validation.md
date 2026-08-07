@@ -14,13 +14,15 @@ Harness maintenance is outside this lifecycle. An explicitly invoked `$harness-m
 BASE_BRANCH: main
 BRANCH_PATTERN: codex/<TAG>-<slug>
 PUSH_COMMAND: git push -u origin HEAD
-PR_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --watch --required
+PR_STATUS_COMMAND: gh pr checks <PR> --repo DevDoneDiff/cp --watch
 CI_ENABLED: true
 REQUIRED_CHECKS: CI / baseline, CI / browser-smoke
 MERGE_COMMAND: gh pr merge <PR> --repo DevDoneDiff/cp --squash --delete-branch --match-head-commit <EXPECTED_HEAD_SHA> --subject "<TASK_TAG> <TITLE>"
 ```
 
 A task cannot be `Ready: true` when an assigned validation set or required delivery command is unavailable.
+
+`REQUIRED_CHECKS` are implementation-lifecycle gates, not GitHub branch-protection settings. The status command observes the pull request's checks; delivery confirms both exact configured contexts pass for the candidate head before merge.
 
 ## Local Harness-Maintenance Coexistence
 
@@ -92,7 +94,7 @@ If implementation content changes after closeout, reverse the closeout, restore 
 
 Immediately before merge, fetch `origin/main` once and record `EXPECTED_BASE_SHA`. Require it to be an ancestor of the unchanged `EXPECTED_HEAD_SHA`, and confirm the remote task branch and pull-request head still equal that SHA. If the base advanced incompatibly, merge the fetched base without rewriting published history, reverse closeout if implementation repair is needed, and rerun proof invalidated by the merge.
 
-In manual merge mode, stop at the review-ready CI-green pull request. In autonomous merge mode, use the configured guarded squash command without administrator bypass.
+In manual merge mode, stop at the review-ready CI-green pull request. In autonomous merge mode, use the configured squash command after the repository-required checks pass.
 
 One readback of the same pull request must establish `MERGED`, its merge commit reachable from fetched `origin/main`, the tagged subject, task presence in the completed store, task absence from the active store, and remote task-branch absence. Then fast-forward local `main`, verify a clean synchronized implementation state apart from preserved local harness-maintenance changes, delete the exact local task branch, and delete the task scratchpad.
 
@@ -104,8 +106,12 @@ A plausibly transient remote operation may be retried once. If its result is amb
 
 If GitHub, CI, or another required external service remains unavailable, preserve the task, branch, scratchpad, commits, and established evidence; record the blocker and stop delivery. An outage never authorizes a validator, recovery transition, compatibility bridge, task-specific exception, permanent lesson, alternate lifecycle, or weaker validation semantics.
 
-## Product Authoring
+## Documentation and Repository-Authority Authoring
 
-Product spec and task authoring remain separate from implementation. When explicit user instruction requests delivery, use a descriptive `codex/authoring-<slug>` branch and pull request without task status, `Pass`, implementation scratchpad, closeout, archive mutation, dependency proof, or completion identity. Authoring that changes the active queue must not race a live implementation claim.
+Non-runtime product and repository authority—including state contracts, product documentation, implementation specs, and task-authoring metadata—remains separate from implementation. Unless the user requests local-only work, use the lightweight path: inspect, edit, run a useful focused check when one applies, commit directly on `main`, push `main` normally, and stop.
 
-Harness or repository-governance maintenance never uses this authoring path.
+This path has no implementation task or branch, pull request, independent review, task status, `Pass`, scratchpad, closeout, archive mutation, dependency proof, completion identity, delivery proof, or pre-push CI gate. Authoring that changes the active queue must not race a live implementation claim. If CI runs after a direct push, allow it to run normally; a later failure is new downstream evidence.
+
+Ordinary authoring pushes are non-force. Use `--force-with-lease` only for an explicitly intentional history rewrite after one current remote-ref read; never use unconditional `--force`.
+
+Harness construction, repair, or repository-governance machinery maintenance never uses this authoring path. Editing non-runtime repository policy or documentation alone does.
